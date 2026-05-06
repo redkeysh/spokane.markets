@@ -31,9 +31,6 @@ export function SiteLogo() {
             </>
           )}
         </span>
-        <span className="hidden text-xs font-medium uppercase tracking-wider text-muted-foreground sm:block">
-          & Vendors
-        </span>
       </div>
     </Link>
   );

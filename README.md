@@ -2,6 +2,8 @@
 
 Discover local markets, craft fairs, and vendor events across Spokane.
 
+Public-facing social updates use the **Spokane Markets** Facebook business page. Vendor and coordinator discussion (calls, onboarding context, etc.) lives in the private Facebook group **Spokane Markets - Vendors & Coordinators**.
+
 Spokane Markets is a Next.js application with role-based workflows for admins, organizers, vendors, and shoppers. It includes event discovery, market and venue management, moderation workflows, newsletter/digest tooling, and production deployment via Docker + GitHub Actions.
 
 ## Highlights

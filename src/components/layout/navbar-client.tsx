@@ -2,7 +2,19 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Menu, X, Home, Bell, User, LayoutDashboard, Store, Shield, LogOut } from "lucide-react";
+import {
+  Menu,
+  X,
+  Home,
+  Bell,
+  User,
+  LayoutDashboard,
+  Store,
+  Shield,
+  LogOut,
+  Calendar,
+  Inbox,
+} from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { NotificationBell } from "@/components/notification-bell";
 import { SiteLogo } from "@/components/layout/site-logo";
@@ -15,9 +27,9 @@ import type { Session } from "@/lib/auth";
 function getNavLinks(session: Session | null) {
   const base = [
     { href: "/", label: "Home", icon: Home },
-    { href: "/events", label: "Events" },
-    { href: "/vendors", label: "Vendors" },
-    { href: "/submit", label: "Submit Event" },
+    { href: "/events", label: "Events", icon: Calendar },
+    { href: "/vendors", label: "Vendors", icon: Store },
+    { href: "/submit", label: "Submit Event", icon: Inbox },
   ];
   if (session?.user?.role === "VENDOR" || session?.user?.role === "ORGANIZER") {
     base.push({ href: "/vendor-survey", label: "Vendor Survey" });

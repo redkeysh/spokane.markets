@@ -16,7 +16,7 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: `Meet the founder — ${SITE_NAME}`,
   description:
-    "Meet Hunter, the founder of Spokane Markets & Vendors - Navy veteran, engineer, and Spokane local building community discovery for markets, events, and small businesses.",
+    "Meet Hunter, the founder of Spokane Markets — Navy veteran, engineer, and Spokane local building community discovery for markets, events, and small businesses.",
 };
 
 const cream = "#fcf8f1";
@@ -95,7 +95,7 @@ export default function BackstoryPage() {
             className="font-heading text-[clamp(2rem,6vw,3.125rem)] font-black leading-[1.05] tracking-tight"
             style={{ color: cedar }}
           >
-            {`${SITE_NAME} & Vendors`}
+            {SITE_NAME}
           </h1>
           <p
             className="mt-2 font-heading text-[clamp(1.25rem,3.5vw,1.9375rem)] font-bold"
@@ -146,7 +146,7 @@ export default function BackstoryPage() {
             </h2>
             <p className="mt-4 text-[clamp(1.0625rem,2.5vw,1.4375rem)] font-light leading-[1.55]">
               I&apos;m a former Navy servicemember, former cybersecurity engineer, and current
-              Avista employee. I started {`${SITE_NAME} & Vendors`} to make it easier for our
+              Avista employee. I started {SITE_NAME} to make it easier for our
               community to find markets, events, and the small businesses behind them.
             </p>
           </div>

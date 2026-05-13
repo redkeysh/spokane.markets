@@ -91,7 +91,7 @@ export function StatusButton({
   analyticsEventName,
   analyticsParams,
 }: {
-  action: () => Promise<void>;
+  action: () => Promise<unknown>;
   label: string;
   variant?: "default" | "destructive" | "outline";
   onSuccess?: () => void;

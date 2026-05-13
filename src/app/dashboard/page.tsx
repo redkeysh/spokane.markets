@@ -154,6 +154,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             email={user.email}
             image={user.image}
             role={user.role}
+            compact
           />
           <div className="space-y-2 border-t border-border pt-4">
             {accountActions.map((action) => (

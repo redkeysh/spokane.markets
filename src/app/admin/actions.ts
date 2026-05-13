@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -12,6 +13,38 @@ import {
   type AdminPermissionKey,
 } from "@/lib/admin/permissions";
 import { approveSubmissionWithEvent } from "@/lib/submission-approval";
+
+const editSubmissionSchema = z.object({
+  eventTitle: z.string().trim().min(1, "Event title is required"),
+  eventDescription: z.string().trim().max(20000).nullable().optional(),
+  eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Event date must be YYYY-MM-DD"),
+  eventTime: z.string().regex(/^\d{2}:\d{2}$/, "Start time must be HH:mm"),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "End date must be YYYY-MM-DD").nullable().optional(),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/, "End time must be HH:mm").nullable().optional(),
+  allDay: z.boolean(),
+  venueName: z.string().trim().min(1, "Venue name is required"),
+  venueAddress: z.string().trim().min(1, "Venue address is required"),
+  venueCity: z.string().trim().nullable().optional(),
+  venueState: z.string().trim().nullable().optional(),
+  venueZip: z.string().trim().nullable().optional(),
+  imageUrl: z.string().trim().nullable().optional(),
+  facebookUrl: z.string().trim().nullable().optional(),
+  instagramUrl: z.string().trim().nullable().optional(),
+  websiteUrl: z.string().trim().nullable().optional(),
+  notes: z.string().trim().max(20000).nullable().optional(),
+});
+
+function optionalUrlOrNull(value: string | null | undefined): string | null {
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed) return null;
+  try {
+    // Accept only absolute URLs to stay consistent with current validators.
+    const parsed = new URL(trimmed);
+    return parsed.toString();
+  } catch {
+    throw new Error("Links must be valid absolute URLs (including https://).");
+  }
+}
 
 async function requireAdminAction(permission: AdminPermissionKey) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -314,54 +347,145 @@ export async function updateSubmissionStatus(
   status: "APPROVED" | "REJECTED",
   options?: { reviewNotes?: string | null }
 ) {
-  const session = await requireAdminAction("admin.moderation.manage");
-  if (status === "APPROVED") {
-    await approveSubmissionWithEvent(id, session.user.id);
+  try {
+    const session = await requireAdminAction("admin.moderation.manage");
+    if (status === "APPROVED") {
+      try {
+        await approveSubmissionWithEvent(id, session.user.id);
+      } catch (error) {
+        return {
+          ok: false as const,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to approve submission. Please review required fields and try again.",
+        };
+      }
+      revalidatePath("/admin/submissions");
+      revalidatePath(`/admin/submissions/${id}`);
+      revalidatePath("/admin/queues");
+      return { ok: true as const };
+    }
+
+    const submission = await db.submission.findUnique({
+      where: { id },
+      select: { submitterEmail: true, status: true },
+    });
+    if (!submission) {
+      return { ok: false as const, error: "Submission not found." };
+    }
+
+    const trimmedNotes = options?.reviewNotes?.trim() ?? "";
+    const reviewNotes =
+      options && "reviewNotes" in options ? (trimmedNotes === "" ? null : trimmedNotes) : undefined;
+
+    await db.submission.update({
+      where: { id },
+      data: {
+        status,
+        reviewerId: session.user.id,
+        ...(reviewNotes !== undefined ? { reviewNotes } : {}),
+      },
+    });
+    const user = await db.user.findUnique({
+      where: { email: submission.submitterEmail },
+      select: { id: true },
+    });
+    if (user) {
+      await createNotification({
+        userId: user.id,
+        type: "SUBMISSION_REJECTED",
+        title: "Your event submission was rejected",
+        link: "/submit",
+        objectType: "submission",
+        objectId: id,
+      });
+    }
+    await logAudit(session.user.id, "UPDATE_SUBMISSION_STATUS", "SUBMISSION", id, {
+      previousValue: { status: submission.status },
+      newValue: { status, ...(reviewNotes !== undefined ? { reviewNotes } : {}) },
+    });
     revalidatePath("/admin/submissions");
     revalidatePath(`/admin/submissions/${id}`);
     revalidatePath("/admin/queues");
-    return;
+    return { ok: true as const };
+  } catch (error) {
+    return {
+      ok: false as const,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unable to update submission status right now.",
+    };
   }
+}
 
-  const submission = await db.submission.findUnique({
-    where: { id },
-    select: { submitterEmail: true, status: true },
-  });
-  if (!submission) return;
+export async function updateSubmissionDraft(
+  id: string,
+  input: z.input<typeof editSubmissionSchema>
+) {
+  try {
+    const session = await requireAdminAction("admin.moderation.manage");
+    const parsed = editSubmissionSchema.safeParse(input);
+    if (!parsed.success) {
+      const firstError = parsed.error.issues[0]?.message ?? "Invalid submission edits.";
+      return { ok: false as const, error: firstError };
+    }
 
-  const trimmedNotes = options?.reviewNotes?.trim() ?? "";
-  const reviewNotes =
-    options && "reviewNotes" in options ? (trimmedNotes === "" ? null : trimmedNotes) : undefined;
-
-  await db.submission.update({
-    where: { id },
-    data: {
-      status,
-      reviewerId: session.user.id,
-      ...(reviewNotes !== undefined ? { reviewNotes } : {}),
-    },
-  });
-  const user = await db.user.findUnique({
-    where: { email: submission.submitterEmail },
-    select: { id: true },
-  });
-  if (user) {
-    await createNotification({
-      userId: user.id,
-      type: "SUBMISSION_REJECTED",
-      title: "Your event submission was rejected",
-      link: "/submit",
-      objectType: "submission",
-      objectId: id,
+    const existing = await db.submission.findUnique({
+      where: { id },
+      select: { id: true, status: true },
     });
+    if (!existing) {
+      return { ok: false as const, error: "Submission not found." };
+    }
+    if (existing.status !== "PENDING") {
+      return { ok: false as const, error: "Only pending submissions can be edited." };
+    }
+
+    const data = parsed.data;
+    const next = {
+      eventTitle: data.eventTitle,
+      eventDescription: data.eventDescription?.trim() ? data.eventDescription.trim() : null,
+      eventDate: data.eventDate,
+      eventTime: data.eventTime,
+      endDate: data.endDate?.trim() ? data.endDate.trim() : null,
+      endTime: data.endTime?.trim() ? data.endTime.trim() : null,
+      allDay: data.allDay,
+      venueName: data.venueName,
+      venueAddress: data.venueAddress,
+      venueCity: data.venueCity?.trim() ? data.venueCity.trim() : null,
+      venueState: data.venueState?.trim() ? data.venueState.trim() : null,
+      venueZip: data.venueZip?.trim() ? data.venueZip.trim() : null,
+      imageUrl: optionalUrlOrNull(data.imageUrl),
+      facebookUrl: optionalUrlOrNull(data.facebookUrl),
+      instagramUrl: optionalUrlOrNull(data.instagramUrl),
+      websiteUrl: optionalUrlOrNull(data.websiteUrl),
+      notes: data.notes?.trim() ? data.notes.trim() : null,
+    };
+
+    await db.submission.update({
+      where: { id },
+      data: next,
+    });
+
+    await logAudit(session.user.id, "UPDATE_SUBMISSION", "SUBMISSION", id, {
+      newValue: next,
+    });
+
+    revalidatePath("/admin/submissions");
+    revalidatePath(`/admin/submissions/${id}`);
+    revalidatePath("/admin/queues");
+    return { ok: true as const };
+  } catch (error) {
+    return {
+      ok: false as const,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to save submission edits.",
+    };
   }
-  await logAudit(session.user.id, "UPDATE_SUBMISSION_STATUS", "SUBMISSION", id, {
-    previousValue: { status: submission.status },
-    newValue: { status, ...(reviewNotes !== undefined ? { reviewNotes } : {}) },
-  });
-  revalidatePath("/admin/submissions");
-  revalidatePath(`/admin/submissions/${id}`);
-  revalidatePath("/admin/queues");
 }
 
 export async function updateReviewStatus(id: string, status: "APPROVED" | "REJECTED") {

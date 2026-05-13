@@ -13,6 +13,7 @@ interface ProfileFormProps {
   email: string;
   image: string | null;
   role: string;
+  compact?: boolean;
 }
 
 export function ProfileForm({
@@ -20,6 +21,7 @@ export function ProfileForm({
   email,
   image,
   role,
+  compact = false,
 }: ProfileFormProps) {
   const router = useRouter();
   const [editing, setEditing] = React.useState(false);
@@ -63,14 +65,25 @@ export function ProfileForm({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <ProfileImageUpload
-          currentImage={image}
-          fallbackLetter={(name || email).charAt(0).toUpperCase()}
-        />
-        <div className="flex-1 min-w-0">
+      <div className={compact ? "block" : "flex items-center gap-4"}>
+        {!compact ? (
+          <ProfileImageUpload
+            currentImage={image}
+            fallbackLetter={(name || email).charAt(0).toUpperCase()}
+          />
+        ) : null}
+        <div className={compact ? "" : "flex-1 min-w-0"}>
           {editing ? (
             <form onSubmit={handleSave} className="space-y-3">
+              {compact ? null : (
+                <div className="flex items-center gap-3">
+                  <ProfileImageUpload
+                    currentImage={image}
+                    fallbackLetter={(name || email).charAt(0).toUpperCase()}
+                  />
+                  <p className="text-sm text-muted-foreground">Update your photo and display name.</p>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="profile-name">Display name</Label>
                 <Input
@@ -98,17 +111,21 @@ export function ProfileForm({
             </form>
           ) : (
             <>
-              <p className="text-lg font-bold text-foreground">
-                {name.trim() || "—"}
-              </p>
-              <p className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <Mail className="h-4 w-4 shrink-0" />
-                {email}
-              </p>
-              <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-primary">
-                <Shield className="h-4 w-4 shrink-0" />
-                {role}
-              </p>
+              {compact ? null : (
+                <>
+                  <p className="text-lg font-bold text-foreground">
+                    {name.trim() || "—"}
+                  </p>
+                  <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+                    <Mail className="h-4 w-4 shrink-0" />
+                    {email}
+                  </p>
+                  <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-primary">
+                    <Shield className="h-4 w-4 shrink-0" />
+                    {role}
+                  </p>
+                </>
+              )}
               <Button
                 type="button"
                 variant="outline"

@@ -7,7 +7,7 @@ import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { updateSubmissionStatus } from "@/app/admin/actions";
+import { updateSubmissionDraft, updateSubmissionStatus } from "@/app/admin/actions";
 import {
   formatSubmissionScheduleSummary,
   parseSubmissionScheduleRows,
@@ -72,7 +72,28 @@ export function AdminSubmissionReview({ submission }: { submission: AdminSubmiss
   const [rejectReason, setRejectReason] = useState("");
   const [isRejecting, startRejectTransition] = useTransition();
   const [isApproving, startApproveTransition] = useTransition();
+  const [isSavingEdits, startSaveEditsTransition] = useTransition();
   const [actionError, setActionError] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editDraft, setEditDraft] = useState({
+    eventTitle: submission.eventTitle,
+    eventDescription: submission.eventDescription ?? "",
+    eventDate: submission.eventDate,
+    eventTime: submission.eventTime,
+    endDate: submission.endDate ?? "",
+    endTime: submission.endTime ?? "",
+    allDay: submission.allDay,
+    venueName: submission.venueName,
+    venueAddress: submission.venueAddress,
+    venueCity: submission.venueCity ?? "",
+    venueState: submission.venueState ?? "",
+    venueZip: submission.venueZip ?? "",
+    imageUrl: submission.imageUrl ?? "",
+    facebookUrl: submission.facebookUrl ?? "",
+    instagramUrl: submission.instagramUrl ?? "",
+    websiteUrl: submission.websiteUrl ?? "",
+    notes: submission.notes ?? "",
+  });
 
   const scheduleSummary = formatSubmissionScheduleSummary(submission);
   const scheduleRows = parseSubmissionScheduleRows(submission);
@@ -106,7 +127,11 @@ export function AdminSubmissionReview({ submission }: { submission: AdminSubmiss
     setActionError(null);
     startRejectTransition(async () => {
       try {
-        await updateSubmissionStatus(submission.id, "REJECTED", { reviewNotes: trimmed });
+        const result = await updateSubmissionStatus(submission.id, "REJECTED", { reviewNotes: trimmed });
+        if (!result.ok) {
+          setActionError(result.error);
+          return;
+        }
         trackEvent("admin_submission_rejected", {
           submission_id: submission.id,
           surface: "submission_review",
@@ -122,7 +147,11 @@ export function AdminSubmissionReview({ submission }: { submission: AdminSubmiss
     setActionError(null);
     startApproveTransition(async () => {
       try {
-        await updateSubmissionStatus(submission.id, "APPROVED");
+        const result = await updateSubmissionStatus(submission.id, "APPROVED");
+        if (!result.ok) {
+          setActionError(result.error);
+          return;
+        }
         trackEvent("admin_submission_approved", {
           submission_id: submission.id,
           surface: "submission_review",
@@ -131,6 +160,37 @@ export function AdminSubmissionReview({ submission }: { submission: AdminSubmiss
       } catch (err) {
         setActionError(err instanceof Error ? err.message : "Failed to approve submission.");
       }
+    });
+  };
+
+  const handleSaveEdits = () => {
+    setActionError(null);
+    startSaveEditsTransition(async () => {
+      const result = await updateSubmissionDraft(submission.id, {
+        eventTitle: editDraft.eventTitle,
+        eventDescription: editDraft.eventDescription,
+        eventDate: editDraft.eventDate,
+        eventTime: editDraft.eventTime,
+        endDate: editDraft.endDate || null,
+        endTime: editDraft.endTime || null,
+        allDay: editDraft.allDay,
+        venueName: editDraft.venueName,
+        venueAddress: editDraft.venueAddress,
+        venueCity: editDraft.venueCity || null,
+        venueState: editDraft.venueState || null,
+        venueZip: editDraft.venueZip || null,
+        imageUrl: editDraft.imageUrl || null,
+        facebookUrl: editDraft.facebookUrl || null,
+        instagramUrl: editDraft.instagramUrl || null,
+        websiteUrl: editDraft.websiteUrl || null,
+        notes: editDraft.notes || null,
+      });
+      if (!result.ok) {
+        setActionError(result.error);
+        return;
+      }
+      setEditMode(false);
+      router.refresh();
     });
   };
 
@@ -154,6 +214,15 @@ export function AdminSubmissionReview({ submission }: { submission: AdminSubmiss
 
           {pending && !rejectMode ? (
             <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isApproving || isRejecting || isSavingEdits}
+                onClick={() => setEditMode((current) => !current)}
+              >
+                {editMode ? "Close edits" : "Edit details"}
+              </Button>
               <Button
                 type="button"
                 size="sm"
@@ -197,6 +266,179 @@ export function AdminSubmissionReview({ submission }: { submission: AdminSubmiss
             >
               {isRejecting ? "Rejecting…" : "Confirm rejection"}
             </Button>
+          </div>
+        ) : null}
+        {pending && editMode ? (
+          <div className="mt-4 grid gap-3 border-t border-border pt-4 md:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="edit-title">Event title</Label>
+              <input
+                id="edit-title"
+                value={editDraft.eventTitle}
+                onChange={(e) => setEditDraft((prev) => ({ ...prev, eventTitle: e.target.value }))}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="edit-date">Event date</Label>
+              <input
+                id="edit-date"
+                type="date"
+                value={editDraft.eventDate}
+                onChange={(e) => setEditDraft((prev) => ({ ...prev, eventDate: e.target.value }))}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="edit-start-time">Start time</Label>
+              <input
+                id="edit-start-time"
+                type="time"
+                value={editDraft.eventTime}
+                onChange={(e) => setEditDraft((prev) => ({ ...prev, eventTime: e.target.value }))}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="edit-end-date">End date</Label>
+              <input
+                id="edit-end-date"
+                type="date"
+                value={editDraft.endDate}
+                onChange={(e) => setEditDraft((prev) => ({ ...prev, endDate: e.target.value }))}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="edit-end-time">End time</Label>
+              <input
+                id="edit-end-time"
+                type="time"
+                value={editDraft.endTime}
+                onChange={(e) => setEditDraft((prev) => ({ ...prev, endTime: e.target.value }))}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <label className="flex items-center gap-2 pt-7 text-sm">
+              <input
+                type="checkbox"
+                checked={editDraft.allDay}
+                onChange={(e) => setEditDraft((prev) => ({ ...prev, allDay: e.target.checked }))}
+              />
+              All day
+            </label>
+            <div className="space-y-1">
+              <Label htmlFor="edit-venue-name">Venue name</Label>
+              <input
+                id="edit-venue-name"
+                value={editDraft.venueName}
+                onChange={(e) => setEditDraft((prev) => ({ ...prev, venueName: e.target.value }))}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="edit-venue-address">Venue address</Label>
+              <input
+                id="edit-venue-address"
+                value={editDraft.venueAddress}
+                onChange={(e) => setEditDraft((prev) => ({ ...prev, venueAddress: e.target.value }))}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="edit-venue-city">City</Label>
+              <input
+                id="edit-venue-city"
+                value={editDraft.venueCity}
+                onChange={(e) => setEditDraft((prev) => ({ ...prev, venueCity: e.target.value }))}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="edit-venue-state">State</Label>
+              <input
+                id="edit-venue-state"
+                value={editDraft.venueState}
+                onChange={(e) => setEditDraft((prev) => ({ ...prev, venueState: e.target.value }))}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="edit-venue-zip">ZIP</Label>
+              <input
+                id="edit-venue-zip"
+                value={editDraft.venueZip}
+                onChange={(e) => setEditDraft((prev) => ({ ...prev, venueZip: e.target.value }))}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="edit-image-url">Image URL</Label>
+              <input
+                id="edit-image-url"
+                value={editDraft.imageUrl}
+                onChange={(e) => setEditDraft((prev) => ({ ...prev, imageUrl: e.target.value }))}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="edit-website-url">Website URL</Label>
+              <input
+                id="edit-website-url"
+                value={editDraft.websiteUrl}
+                onChange={(e) => setEditDraft((prev) => ({ ...prev, websiteUrl: e.target.value }))}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="edit-facebook-url">Facebook URL</Label>
+              <input
+                id="edit-facebook-url"
+                value={editDraft.facebookUrl}
+                onChange={(e) => setEditDraft((prev) => ({ ...prev, facebookUrl: e.target.value }))}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="edit-instagram-url">Instagram URL</Label>
+              <input
+                id="edit-instagram-url"
+                value={editDraft.instagramUrl}
+                onChange={(e) => setEditDraft((prev) => ({ ...prev, instagramUrl: e.target.value }))}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-1 md:col-span-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <textarea
+                id="edit-description"
+                rows={4}
+                value={editDraft.eventDescription}
+                onChange={(e) => setEditDraft((prev) => ({ ...prev, eventDescription: e.target.value }))}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-1 md:col-span-2">
+              <Label htmlFor="edit-notes">Submitter notes</Label>
+              <textarea
+                id="edit-notes"
+                rows={3}
+                value={editDraft.notes}
+                onChange={(e) => setEditDraft((prev) => ({ ...prev, notes: e.target.value }))}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isSavingEdits}
+                onClick={handleSaveEdits}
+              >
+                {isSavingEdits ? "Saving..." : "Save edits"}
+              </Button>
+            </div>
           </div>
         ) : null}
         {actionError ? (

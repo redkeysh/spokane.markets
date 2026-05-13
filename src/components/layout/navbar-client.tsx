@@ -14,6 +14,7 @@ import {
   LogOut,
   Calendar,
   Inbox,
+  ClipboardList,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { NotificationBell } from "@/components/notification-bell";
@@ -32,7 +33,7 @@ function getNavLinks(session: Session | null) {
     { href: "/submit", label: "Submit Event", icon: Inbox },
   ];
   if (session?.user?.role === "VENDOR" || session?.user?.role === "ORGANIZER") {
-    base.push({ href: "/vendor-survey", label: "Vendor Survey" });
+    base.push({ href: "/vendor-survey", label: "Vendor Survey", icon: ClipboardList });
   }
   return base;
 }

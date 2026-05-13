@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { headers } from "next/headers";
-import type { ComponentType } from "react";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
@@ -14,8 +13,6 @@ import {
 } from "@/components/ui/card";
 import {
   Heart,
-  Shield,
-  KeyRound,
   Calendar,
   Filter,
   Bookmark,
@@ -42,25 +39,8 @@ interface DashboardPageProps {
   searchParams: Promise<{ pendingVerification?: string }>;
 }
 
-const actionLinkClassName =
-  "flex min-h-[44px] items-center gap-2 rounded-lg border border-border p-3 font-medium text-foreground transition-colors hover:bg-muted";
 const compactActionLinkClassName =
   "inline-flex min-h-[44px] items-center rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-muted";
-
-type ActionLinkProps = {
-  href: string;
-  label: string;
-  icon?: ComponentType<{ className?: string }>;
-};
-
-function ActionLink({ href, label, icon: Icon }: ActionLinkProps) {
-  return (
-    <Link href={href} className={actionLinkClassName}>
-      {Icon ? <Icon className="h-4 w-4" /> : null}
-      {label}
-    </Link>
-  );
-}
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -100,15 +80,17 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const hasOrganizerOwnershipOrMembership =
     organizerOwnedMarketsCount > 0 || organizerSubmittedEventsCount > 0;
   const showFirstRunOnboarding = !user.vendorProfile && !hasOrganizerOwnershipOrMembership;
-  const accountActions = [
-    {
-      href: "/auth/request-password-reset",
-      label: "Change password",
-      icon: KeyRound,
-    },
-    ...(user.role === "ADMIN"
-      ? [{ href: "/admin", label: "Admin Dashboard", icon: Shield }]
-      : []),
+  const roleDashboardAction =
+    user.role === "ADMIN"
+      ? { href: "/admin", label: "Admin Dashboard" }
+      : user.role === "ORGANIZER"
+        ? { href: "/organizer/dashboard", label: "Organizer Dashboard" }
+        : user.role === "VENDOR"
+          ? { href: "/vendor/dashboard", label: "Vendor Dashboard" }
+          : null;
+  const profileActions = [
+    { href: "/auth/request-password-reset", label: "Change password" },
+    ...(roleDashboardAction ? [roleDashboardAction] : []),
   ];
   const onboardingActions = [
     { href: "/vendor/profile/edit", label: "Create Vendor Profile" },
@@ -155,17 +137,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             image={user.image}
             role={user.role}
             compact
+            actionLinks={profileActions}
           />
-          <div className="space-y-2 border-t border-border pt-4">
-            {accountActions.map((action) => (
-              <ActionLink
-                key={action.href}
-                href={action.href}
-                label={action.label}
-                icon={action.icon}
-              />
-            ))}
-          </div>
         </div>
       </DashboardHeaderCard>
 

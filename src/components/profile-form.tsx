@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mail, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,11 @@ interface ProfileFormProps {
   image: string | null;
   role: string;
   compact?: boolean;
+  actionLinks?: Array<{ href: string; label: string }>;
 }
+
+const inlineActionClassName =
+  "inline-flex min-h-[44px] items-center rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-muted";
 
 export function ProfileForm({
   initialName,
@@ -22,6 +27,7 @@ export function ProfileForm({
   image,
   role,
   compact = false,
+  actionLinks = [],
 }: ProfileFormProps) {
   const router = useRouter();
   const [editing, setEditing] = React.useState(false);
@@ -126,15 +132,20 @@ export function ProfileForm({
                   </p>
                 </>
               )}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-2"
-                onClick={() => setEditing(true)}
-              >
-                Edit profile
-              </Button>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className={inlineActionClassName}
+                  onClick={() => setEditing(true)}
+                >
+                  Edit profile
+                </button>
+                {actionLinks.map((action) => (
+                  <Link key={action.href} href={action.href} className={inlineActionClassName}>
+                    {action.label}
+                  </Link>
+                ))}
+              </div>
             </>
           )}
         </div>

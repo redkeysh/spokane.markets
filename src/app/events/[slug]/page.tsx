@@ -8,9 +8,13 @@ import {
 } from "@/lib/services/event-occurrence-service";
 import { getBannerImages } from "@/lib/banner-images";
 import { getSession } from "@/lib/auth-utils";
-import { getDirectionsUrl, formatTime12hr, formatEventTimeFromSchedule } from "@/lib/utils";
+import {
+  filterUpcomingScheduleDays,
+  formatEventTimeFromSchedule,
+  formatTime12hr,
+  getDirectionsUrl,
+} from "@/lib/utils";
 import { TrackedExternalLink } from "@/components/analytics/tracked-external-link";
-import { EventTimeLabel } from "@/components/event/event-time-label";
 import { MapPreviewLazy as MapPreview } from "@/components/event/map-preview-lazy";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -141,6 +145,9 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const selfReportedVisible =
     participationConfig.publicIntentListEnabled && selfReportedTotal > 0;
   const showVendorsSection = rosterVisible || selfReportedVisible;
+  const upcomingScheduleDays = filterUpcomingScheduleDays(event.scheduleDays, {
+    timeZone: "America/Los_Angeles",
+  });
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const eventUrl = `${baseUrl}/events/${event.slug}`;
@@ -396,22 +403,19 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             <div>
               <p className="text-sm font-medium text-muted-foreground">When</p>
               <p className="mt-0.5 text-lg font-semibold text-foreground">
-                {event.scheduleDays?.length ? (
-                  formatEventTimeFromSchedule(event.scheduleDays)
+                {upcomingScheduleDays.length ? (
+                  formatEventTimeFromSchedule(upcomingScheduleDays)
                 ) : (
-                  <EventTimeLabel
-                    startDate={event.startDate}
-                    endDate={event.endDate}
-                  />
+                  "No upcoming dates scheduled"
                 )}
               </p>
-              {event.scheduleDays && event.scheduleDays.length > 1 && (
+              {upcomingScheduleDays.length > 1 && (
                 <details open className="mt-3 rounded-lg border border-border bg-background">
                   <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide hover:bg-muted/50">
-                    Schedule ({event.scheduleDays.length} days)
+                    Schedule ({upcomingScheduleDays.length} days)
                   </summary>
                   <ul className="space-y-1.5 border-t border-border px-3 py-2 text-sm">
-                    {event.scheduleDays.map((d) => (
+                    {upcomingScheduleDays.map((d) => (
                       <li
                         key={d.id}
                         className="flex justify-between gap-2 text-foreground"

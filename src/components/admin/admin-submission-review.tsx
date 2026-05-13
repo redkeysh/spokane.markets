@@ -7,7 +7,6 @@ import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { StatusButton } from "@/components/admin/action-buttons";
 import { updateSubmissionStatus } from "@/app/admin/actions";
 import {
   formatSubmissionScheduleSummary,
@@ -72,6 +71,8 @@ export function AdminSubmissionReview({ submission }: { submission: AdminSubmiss
   const [rejectMode, setRejectMode] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [isRejecting, startRejectTransition] = useTransition();
+  const [isApproving, startApproveTransition] = useTransition();
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const scheduleSummary = formatSubmissionScheduleSummary(submission);
   const scheduleRows = parseSubmissionScheduleRows(submission);
@@ -95,20 +96,41 @@ export function AdminSubmissionReview({ submission }: { submission: AdminSubmiss
   const afterDecision = () => {
     setRejectMode(false);
     setRejectReason("");
-    router.push("/admin/submissions?status=PENDING");
-    router.refresh();
+    setActionError(null);
+    router.replace("/admin/submissions?status=PENDING&page=1");
   };
 
   const handleConfirmReject = () => {
     const trimmed = rejectReason.trim();
     if (!trimmed) return;
+    setActionError(null);
     startRejectTransition(async () => {
-      await updateSubmissionStatus(submission.id, "REJECTED", { reviewNotes: trimmed });
-      trackEvent("admin_submission_rejected", {
-        submission_id: submission.id,
-        surface: "submission_review",
-      });
-      afterDecision();
+      try {
+        await updateSubmissionStatus(submission.id, "REJECTED", { reviewNotes: trimmed });
+        trackEvent("admin_submission_rejected", {
+          submission_id: submission.id,
+          surface: "submission_review",
+        });
+        afterDecision();
+      } catch (err) {
+        setActionError(err instanceof Error ? err.message : "Failed to reject submission.");
+      }
+    });
+  };
+
+  const handleApprove = () => {
+    setActionError(null);
+    startApproveTransition(async () => {
+      try {
+        await updateSubmissionStatus(submission.id, "APPROVED");
+        trackEvent("admin_submission_approved", {
+          submission_id: submission.id,
+          surface: "submission_review",
+        });
+        afterDecision();
+      } catch (err) {
+        setActionError(err instanceof Error ? err.message : "Failed to approve submission.");
+      }
     });
   };
 
@@ -132,13 +154,14 @@ export function AdminSubmissionReview({ submission }: { submission: AdminSubmiss
 
           {pending && !rejectMode ? (
             <div className="flex flex-wrap gap-2">
-              <StatusButton
-                action={updateSubmissionStatus.bind(null, submission.id, "APPROVED")}
-                label="Approve"
-                analyticsEventName="admin_submission_approved"
-                analyticsParams={{ submission_id: submission.id, surface: "submission_review" }}
-                onSuccess={afterDecision}
-              />
+              <Button
+                type="button"
+                size="sm"
+                disabled={isApproving || isRejecting}
+                onClick={handleApprove}
+              >
+                {isApproving ? "Approving..." : "Approve"}
+              </Button>
               <Button type="button" variant="destructive" size="sm" onClick={() => setRejectMode(true)}>
                 Reject
               </Button>
@@ -174,6 +197,11 @@ export function AdminSubmissionReview({ submission }: { submission: AdminSubmiss
             >
               {isRejecting ? "Rejecting…" : "Confirm rejection"}
             </Button>
+          </div>
+        ) : null}
+        {actionError ? (
+          <div className="mt-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {actionError}
           </div>
         ) : null}
       </div>

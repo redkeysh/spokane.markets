@@ -215,6 +215,30 @@ export function formatDateShort(date: Date): string {
 /** Pacific timezone for Spokane area. */
 const PST = "America/Los_Angeles";
 
+/** Returns YYYY-MM-DD for a Date in a specific timezone. */
+export function getDateOnlyInTimezone(date: Date, timeZone: string = PST): string {
+  const d = new Date(date);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "00";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+/** Filter schedule days to today-or-later in the given timezone (date-only compare). */
+export function filterUpcomingScheduleDays<T extends { date: Date }>(
+  scheduleDays: T[],
+  opts?: { now?: Date; timeZone?: string }
+): T[] {
+  const now = opts?.now ?? new Date();
+  const timeZone = opts?.timeZone ?? PST;
+  const today = getDateOnlyInTimezone(now, timeZone);
+  return scheduleDays.filter((day) => formatDateOnlyUTC(day.date) >= today);
+}
+
 /** Get local date/time parts in a timezone. Use for heuristics instead of getHours/getDate. */
 function getPartsInTimezone(date: Date, timeZone: string): { year: number; month: number; date: number; hours: number; minutes: number } {
   const d = new Date(date);

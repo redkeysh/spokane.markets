@@ -5,7 +5,12 @@ import { SITE_NAME } from "@/lib/constants";
 import Image from "next/image";
 import { db } from "@/lib/db";
 import { getBannerImages } from "@/lib/banner-images";
-import { isBannerUnoptimized } from "@/lib/utils";
+import {
+  filterUpcomingScheduleDays,
+  formatDateOnlyUTC,
+  getDateOnlyInTimezone,
+  isBannerUnoptimized,
+} from "@/lib/utils";
 import { TrackedLink } from "@/components/analytics/tracked-link";
 import { getSession } from "@/lib/auth-utils";
 import { EventCard } from "@/components/event/event-card";
@@ -53,60 +58,61 @@ export async function generateMetadata({ searchParams }: EventsPageProps): Promi
   };
 }
 
-function getDateRange(filter: string): { gte: Date; lt: Date } {
+const PACIFIC_TZ = "America/Los_Angeles";
+
+function addDaysToDateOnly(dateOnly: string, days: number): string {
+  const d = new Date(`${dateOnly}T12:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return formatDateOnlyUTC(d);
+}
+
+function getWeekdayIndexInTimezone(date: Date, timeZone: string): number {
+  const weekday = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    weekday: "short",
+  }).format(new Date(date));
+  const mapping: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+  return mapping[weekday] ?? 0;
+}
+
+function getDateRange(filter: string): { gteDate: string; ltDate: string } {
   const now = new Date();
+  const today = getDateOnlyInTimezone(now, PACIFIC_TZ);
 
   switch (filter) {
-    case "today": {
-      const start = new Date(now);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(start);
-      end.setDate(end.getDate() + 1);
-      return { gte: start, lt: end };
-    }
+    case "today":
+      return { gteDate: today, ltDate: addDaysToDateOnly(today, 1) };
     case "weekend": {
-      const day = now.getDay();
-      const start = new Date(now);
-      if (day === 0) {
-        start.setHours(0, 0, 0, 0);
-      } else if (day === 6) {
-        start.setHours(0, 0, 0, 0);
-      } else {
-        start.setDate(now.getDate() + (6 - day));
-        start.setHours(0, 0, 0, 0);
-      }
-      const end = new Date(start);
-      end.setDate(start.getDate() + (start.getDay() === 6 ? 2 : 1));
-      end.setHours(23, 59, 59, 999);
-      return { gte: start, lt: end };
+      const weekday = getWeekdayIndexInTimezone(now, PACIFIC_TZ);
+      const daysUntilSaturday = weekday === 0 ? 6 : 6 - weekday;
+      const saturday = addDaysToDateOnly(today, daysUntilSaturday);
+      return { gteDate: saturday, ltDate: addDaysToDateOnly(saturday, 2) };
     }
-    case "week": {
-      const start = new Date(now);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(start);
-      end.setDate(end.getDate() + 7);
-      return { gte: start, lt: end };
-    }
+    case "week":
+      return { gteDate: today, ltDate: addDaysToDateOnly(today, 7) };
     case "plan-ahead": {
-      const start = new Date(now);
-      start.setDate(now.getDate() + 14);
-      start.setHours(0, 0, 0, 0);
-      const lt = new Date(start);
-      lt.setDate(start.getDate() + 15);
-      return { gte: start, lt };
+      const start = addDaysToDateOnly(today, 14);
+      return { gteDate: start, ltDate: addDaysToDateOnly(start, 1) };
     }
     case "month": {
-      const start = new Date(now.getFullYear(), now.getMonth(), 1);
-      const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-      return { gte: start, lt: end };
+      const [y, m] = today.split("-").map((v) => Number(v));
+      const start = `${String(y).padStart(4, "0")}-${String(m).padStart(2, "0")}-01`;
+      const nextYear = m === 12 ? y + 1 : y;
+      const nextMonth = m === 12 ? 1 : m + 1;
+      const end = `${String(nextYear).padStart(4, "0")}-${String(nextMonth).padStart(2, "0")}-01`;
+      return { gteDate: start, ltDate: end };
     }
     case "all":
-    default: {
-      const start = new Date(now);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date("2100-01-01");
-      return { gte: start, lt: end };
-    }
+    default:
+      return { gteDate: today, ltDate: "2100-01-01" };
   }
 }
 
@@ -136,13 +142,11 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
     getNeighborhoodOptions(),
   ]);
 
-  const { gte, lt } = getDateRange(dateRange);
+  const { gteDate, ltDate } = getDateRange(dateRange);
 
   const where: Prisma.EventWhereInput = {
     status: "PUBLISHED",
     deletedAt: null,
-    startDate: { lte: lt },
-    endDate: { gte: gte },
   };
 
   if (neighborhood) {
@@ -164,30 +168,48 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
     ];
   }
 
-  const [events, totalCount] = await Promise.all([
-    db.event.findMany({
-      where,
-      include: {
-        venue: true,
-        tags: true,
-        features: true,
-        _count: { select: { vendorEvents: true } },
-        scheduleDays: { orderBy: { date: "asc" } },
-      },
-      orderBy: { startDate: "asc" },
-      skip: (page - 1) * limit,
-      take: limit,
-    }),
-    db.event.count({ where }),
-  ]);
+  const eventsRaw = await db.event.findMany({
+    where,
+    include: {
+      venue: true,
+      tags: true,
+      features: true,
+      _count: { select: { vendorEvents: true } },
+      scheduleDays: { orderBy: { date: "asc" } },
+    },
+  });
 
-  const eventIds = events.map((e) => e.id);
+  const filteredEvents = eventsRaw
+    .map((event) => {
+      const upcomingScheduleDays = filterUpcomingScheduleDays(event.scheduleDays, {
+        timeZone: PACIFIC_TZ,
+      }).filter((day) => {
+        const dayDate = formatDateOnlyUTC(day.date);
+        return dayDate >= gteDate && dayDate < ltDate;
+      });
+      return {
+        ...event,
+        scheduleDays: upcomingScheduleDays,
+      };
+    })
+    .filter((event) => event.scheduleDays.length > 0)
+    .sort((a, b) => {
+      const aFirst = formatDateOnlyUTC(a.scheduleDays[0].date);
+      const bFirst = formatDateOnlyUTC(b.scheduleDays[0].date);
+      if (aFirst < bFirst) return -1;
+      if (aFirst > bFirst) return 1;
+      return a.title.localeCompare(b.title);
+    });
+
+  const totalCount = filteredEvents.length;
+  const totalPages = Math.ceil(totalCount / limit);
+  const pagedEvents = filteredEvents.slice((page - 1) * limit, page * limit);
+
+  const eventIds = pagedEvents.map((e) => e.id);
   const [attendanceMap, vendorParticipationMap] = await Promise.all([
     getAttendanceCountsByEventIds(eventIds),
     getVendorParticipationCountsByEventIds(eventIds),
   ]);
-
-  const totalPages = Math.ceil(totalCount / limit);
   const hasQuery = query.trim().length > 0;
   const hasFiltersOnly =
     !hasQuery &&
@@ -308,10 +330,10 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
               {totalCount} {totalCount === 1 ? "event" : "events"} found
             </p>
 
-            {events.length > 0 ? (
+            {pagedEvents.length > 0 ? (
               <>
                 <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-2">
-                  {events.map((event, index) => (
+                  {pagedEvents.map((event, index) => (
                     <EventCard
                       key={event.id}
                       event={{

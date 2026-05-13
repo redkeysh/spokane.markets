@@ -3,9 +3,11 @@ import {
   extractSocialHandle,
   buildFacebookUrl,
   buildInstagramUrl,
+  filterUpcomingScheduleDays,
   formatPhoneNumber,
   formatPhoneInput,
   getFacebookDisplayUrl,
+  getDateOnlyInTimezone,
   getInstagramDisplayUrl,
   normalizeUrlToHttps,
 } from "./utils";
@@ -124,5 +126,25 @@ describe("getFacebookDisplayUrl / getInstagramDisplayUrl", () => {
     expect(getInstagramDisplayUrl("@johndoe")).toBe("https://instagram.com/johndoe");
     expect(getFacebookDisplayUrl("")).toBeNull();
     expect(getInstagramDisplayUrl(undefined)).toBeNull();
+  });
+});
+
+describe("upcoming schedule helpers", () => {
+  it("derives pacific date-only value from UTC now", () => {
+    const now = new Date("2026-04-04T07:30:00.000Z");
+    expect(getDateOnlyInTimezone(now, "America/Los_Angeles")).toBe("2026-04-04");
+  });
+
+  it("keeps only schedule rows that are today-or-later in Pacific", () => {
+    const rows = [
+      { id: "past", date: new Date("2026-04-03T12:00:00.000Z") },
+      { id: "today", date: new Date("2026-04-04T12:00:00.000Z") },
+      { id: "future", date: new Date("2026-04-05T12:00:00.000Z") },
+    ];
+    const upcoming = filterUpcomingScheduleDays(rows, {
+      now: new Date("2026-04-04T18:00:00.000Z"),
+      timeZone: "America/Los_Angeles",
+    });
+    expect(upcoming.map((r) => r.id)).toEqual(["today", "future"]);
   });
 });

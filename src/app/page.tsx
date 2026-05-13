@@ -8,11 +8,12 @@ import { FeaturedEventCard } from "@/components/event/featured-event-card";
 import { VendorOfWeekCard } from "@/components/vendor/vendor-of-week-card";
 import { Input } from "@/components/ui/input";
 import { getBannerImages } from "@/lib/banner-images";
-import { isBannerUnoptimized } from "@/lib/utils";
 import {
-  getUpcomingWeekRange,
-  getPlanAheadRange,
-} from "@/lib/date-ranges";
+  filterUpcomingScheduleDays,
+  formatDateOnlyUTC,
+  getDateOnlyInTimezone,
+  isBannerUnoptimized,
+} from "@/lib/utils";
 import { SITE_NAME } from "@/lib/constants";
 import { HomeScrollDepth } from "@/components/analytics/home-scroll-depth";
 import { getVendorOfWeek } from "@/lib/vendor-of-week";
@@ -27,12 +28,37 @@ export const metadata: Metadata = {
     "Discover farmers markets, craft fairs, and community events in Spokane. Browse this week's markets, plan ahead, and never miss a local event.",
 };
 
+const PACIFIC_TZ = "America/Los_Angeles";
+const MAX_WEEK_EVENTS = 12;
+const MAX_PLAN_AHEAD_EVENTS = 6;
+
+function addDaysToDateOnly(dateOnly: string, days: number): string {
+  const d = new Date(`${dateOnly}T12:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return formatDateOnlyUTC(d);
+}
+
+function sortByFirstUpcomingDay<T extends { title: string; scheduleDays: Array<{ date: Date }> }>(
+  items: T[]
+): T[] {
+  return [...items].sort((a, b) => {
+    const aFirst = formatDateOnlyUTC(a.scheduleDays[0].date);
+    const bFirst = formatDateOnlyUTC(b.scheduleDays[0].date);
+    if (aFirst < bFirst) return -1;
+    if (aFirst > bFirst) return 1;
+    return a.title.localeCompare(b.title);
+  });
+}
+
 export default async function HomePage() {
   const banners = await getBannerImages();
-  const { start, end } = getUpcomingWeekRange();
-  const planAheadRange = getPlanAheadRange();
+  const today = getDateOnlyInTimezone(new Date(), PACIFIC_TZ);
+  const weekStartDate = today;
+  const weekEndExclusiveDate = addDaysToDateOnly(today, 7);
+  const planAheadStartDate = addDaysToDateOnly(today, 14);
+  const planAheadEndExclusiveDate = addDaysToDateOnly(today, 29);
 
-  const [promotions, weekEvents, planAheadEvents, vendorOfWeek] = await Promise.all([
+  const [promotionsRaw, weekCandidatesRaw, planAheadCandidatesRaw, vendorOfWeek] = await Promise.all([
     db.promotion.findMany({
       where: {
         eventId: { not: null },
@@ -52,14 +78,13 @@ export default async function HomePage() {
         },
       },
       orderBy: [{ sortOrder: "asc" }, { startDate: "asc" }],
-      take: 5,
+      take: 24,
     }),
     db.event.findMany({
       where: {
         status: "PUBLISHED",
         deletedAt: null,
-        startDate: { lte: end },
-        endDate: { gte: start },
+        endDate: { gte: new Date() },
       },
       include: {
         venue: true,
@@ -68,15 +93,14 @@ export default async function HomePage() {
         _count: { select: { vendorEvents: true } },
         scheduleDays: { orderBy: { date: "asc" } },
       },
-      orderBy: { startDate: "asc" },
-      take: 12,
+      orderBy: { updatedAt: "desc" },
+      take: 96,
     }),
     db.event.findMany({
       where: {
         status: "PUBLISHED",
         deletedAt: null,
-        startDate: { lte: planAheadRange.end },
-        endDate: { gte: planAheadRange.start },
+        endDate: { gte: new Date() },
       },
       include: {
         venue: true,
@@ -85,11 +109,72 @@ export default async function HomePage() {
         _count: { select: { vendorEvents: true } },
         scheduleDays: { orderBy: { date: "asc" } },
       },
-      orderBy: { startDate: "asc" },
-      take: 6,
+      orderBy: { updatedAt: "desc" },
+      take: 96,
     }),
     getVendorOfWeek(),
   ]);
+
+  const promotions = promotionsRaw
+    .map((promotion) => {
+      if (!promotion.event) return null;
+      const scheduleDays = filterUpcomingScheduleDays(promotion.event.scheduleDays, {
+        timeZone: PACIFIC_TZ,
+      });
+      if (!scheduleDays.length) return null;
+      return {
+        ...promotion,
+        event: {
+          ...promotion.event,
+          scheduleDays,
+        },
+      };
+    })
+    .filter((promotion): promotion is NonNullable<typeof promotion> => promotion !== null)
+    .sort((a, b) => {
+      const aFirst = formatDateOnlyUTC(a.event.scheduleDays[0].date);
+      const bFirst = formatDateOnlyUTC(b.event.scheduleDays[0].date);
+      if (aFirst < bFirst) return -1;
+      if (aFirst > bFirst) return 1;
+      return a.event.title.localeCompare(b.event.title);
+    })
+    .slice(0, 5);
+
+  const weekEvents = sortByFirstUpcomingDay(
+    weekCandidatesRaw
+      .map((event) => {
+        const upcomingScheduleDays = filterUpcomingScheduleDays(event.scheduleDays, {
+          timeZone: PACIFIC_TZ,
+        }).filter((day) => {
+          const dayDate = formatDateOnlyUTC(day.date);
+          return dayDate >= weekStartDate && dayDate < weekEndExclusiveDate;
+        });
+        if (!upcomingScheduleDays.length) return null;
+        return {
+          ...event,
+          scheduleDays: upcomingScheduleDays,
+        };
+      })
+      .filter((event): event is NonNullable<typeof event> => event !== null)
+  ).slice(0, MAX_WEEK_EVENTS);
+
+  const planAheadEvents = sortByFirstUpcomingDay(
+    planAheadCandidatesRaw
+      .map((event) => {
+        const upcomingScheduleDays = filterUpcomingScheduleDays(event.scheduleDays, {
+          timeZone: PACIFIC_TZ,
+        }).filter((day) => {
+          const dayDate = formatDateOnlyUTC(day.date);
+          return dayDate >= planAheadStartDate && dayDate < planAheadEndExclusiveDate;
+        });
+        if (!upcomingScheduleDays.length) return null;
+        return {
+          ...event,
+          scheduleDays: upcomingScheduleDays,
+        };
+      })
+      .filter((event): event is NonNullable<typeof event> => event !== null)
+  ).slice(0, MAX_PLAN_AHEAD_EVENTS);
 
   const eventIdsForAttendance = new Set<string>();
   for (const e of weekEvents) eventIdsForAttendance.add(e.id);

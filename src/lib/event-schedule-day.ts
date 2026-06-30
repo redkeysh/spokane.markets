@@ -34,13 +34,16 @@ export type ScheduleDayInput = {
 };
 
 /**
- * Derives `allDay` for API from explicit times (checkbox removed from admin UI).
- * Preserves "All day" on cards when the span is midnight–11:59 PM.
+ * Derives `allDay` for the API. When a day has explicit times, they are
+ * authoritative (a partial-day span clears allDay, a midnight-11:59 PM span sets
+ * it). When a day has no times (e.g. an all-day recurring day), the explicit
+ * allDay flag is preserved; otherwise it would be flipped to false and the
+ * legacy startDate/endDate sync below would be skipped, saving stale dates.
  */
 export function mapScheduleDaysForSubmit(days: ScheduleDayInput[]): ScheduleDayInput[] {
   return days.map((d) => ({
     ...d,
-    allDay: isFullDayTimeRange(d.startTime, d.endTime),
+    allDay: d.startTime ? isFullDayTimeRange(d.startTime, d.endTime) : d.allDay,
   }));
 }
 

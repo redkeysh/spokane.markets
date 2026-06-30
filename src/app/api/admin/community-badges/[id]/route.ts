@@ -38,6 +38,17 @@ export async function PATCH(
       return apiError("Unable to generate a valid slug", 400);
     }
 
+    // Only LISTING_COMMUNITY badges may be edited here (matches the DELETE
+    // guard). Without this, this endpoint could overwrite auto-granted
+    // achievement badge definitions.
+    const existing = await db.badgeDefinition.findUnique({
+      where: { id },
+      select: { category: true },
+    });
+    if (!existing || existing.category !== "LISTING_COMMUNITY") {
+      return apiError("Community badge not found", 404);
+    }
+
     const updated = await db.badgeDefinition.update({
       where: { id },
       data: {

@@ -65,7 +65,7 @@ export async function buildVendorPrefillVariables(vendorId: string): Promise<Rec
   if (!vendor || vendor.deletedAt) return {};
   return {
     VENDOR_NAME: vendor.businessName,
-    HANDLE: vendor.instagramUrl ?? "",
+    HANDLE: (vendor.instagramUrl ?? "").replace(/^@/, ""),
     LISTING_URL: vendorListingUrl(vendor.slug),
     VENDOR_CATEGORY: vendor.primaryCategory ?? "",
     VENDOR_LOCATION: vendor.serviceAreaLabel ?? "",
@@ -144,7 +144,10 @@ export async function buildEntityPrefillVariables(entityIds: {
   if (entityIds.eventId) parts.push(buildEventPrefillVariables(entityIds.eventId));
   if (entityIds.marketId) parts.push(buildMarketPrefillVariables(entityIds.marketId));
   const resolved = await Promise.all(parts);
-  return resolved.reduce((acc, next) => ({ ...acc, ...next }), {});
+  // First entity wins on key conflicts. INSTAGRAM_URL/FACEBOOK_URL are emitted
+  // by all three builders but map to the vendor in the placeholder catalog, so a
+  // later entity must not silently overwrite an earlier one's social URLs.
+  return resolved.reduce((acc, next) => ({ ...next, ...acc }), {});
 }
 
 export type MarketingEntitySearchResult = {

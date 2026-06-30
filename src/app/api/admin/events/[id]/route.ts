@@ -39,8 +39,9 @@ export async function PUT(
     let endDate = new Date(data.endDate);
 
     if (scheduleDays?.length) {
-      const first = scheduleDays[0];
-      const last = scheduleDays[scheduleDays.length - 1];
+      const sortedDays = [...scheduleDays].sort((a, b) => a.date.localeCompare(b.date));
+      const first = sortedDays[0];
+      const last = sortedDays[sortedDays.length - 1];
       const firstStart = first.allDay ? "00:00" : (first.startTime ?? "00:00");
       const lastEnd = last.allDay ? "23:59" : (last.endTime ?? "23:59");
       startDate = parseDateTimeInTimezone(first.date, firstStart, tz);

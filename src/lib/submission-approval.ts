@@ -65,8 +65,9 @@ export function buildEventDataFromSubmission(
         endTime?: string;
       }[]
     );
-    const first = mapped[0];
-    const last = mapped[mapped.length - 1];
+    const sortedMapped = [...mapped].sort((a, b) => a.date.localeCompare(b.date));
+    const first = sortedMapped[0];
+    const last = sortedMapped[sortedMapped.length - 1];
     const firstStart = first.allDay ? "00:00" : (first.startTime ?? "00:00");
     const lastEnd = last.allDay ? "23:59" : (last.endTime ?? "23:59");
     const startDateIso = parseDateTimeInTimezone(first.date, firstStart, TZ).toISOString();

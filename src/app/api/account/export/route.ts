@@ -12,8 +12,15 @@ export async function GET() {
 
   const userId = session.user.id;
 
-  const [user, attendances, savedFilters, favoriteVendors, reviews] =
-    await Promise.all([
+  const [
+    user,
+    attendances,
+    savedFilters,
+    favoriteVendors,
+    reviews,
+    vendorProfile,
+    notificationPreference,
+  ] = await Promise.all([
       db.user.findUnique({
         where: { id: userId },
         select: {
@@ -63,6 +70,8 @@ export async function GET() {
           market: { select: { name: true, slug: true } },
         },
       }),
+      db.vendorProfile.findUnique({ where: { userId } }),
+      db.notificationPreference.findUnique({ where: { userId } }),
     ]);
 
   const exportData = {
@@ -80,6 +89,8 @@ export async function GET() {
       createdAt: fv.createdAt,
     })),
     reviews,
+    vendorProfile,
+    notificationPreference,
   };
 
   return new NextResponse(JSON.stringify(exportData, null, 2), {

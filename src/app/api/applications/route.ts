@@ -49,8 +49,13 @@ export async function POST(request: Request) {
 
     // Validate required fields
     const fields = form.fields as Array<{ id: string; label: string; required?: boolean }>;
+    const isBlankAnswer = (value: string | string[] | undefined): boolean => {
+      if (value == null) return true;
+      if (Array.isArray(value)) return value.every((v) => !v.trim());
+      return !value.trim();
+    };
     const missing = fields
-      .filter((f) => f.required && !answers[f.id]?.toString().trim())
+      .filter((f) => f.required && isBlankAnswer(answers[f.id]))
       .map((f) => f.label);
     if (missing.length > 0) {
       return NextResponse.json(

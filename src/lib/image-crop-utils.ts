@@ -65,6 +65,10 @@ export async function getCroppedImageBlob(
   } = options;
 
   const image = await loadImageElement(imageSrc);
+  // Clamp the source rectangle: a degenerate crop (zero/negative width or
+  // height, negative offsets) would make ctx.drawImage throw or render blank.
+  const sx = Math.max(0, Math.round(pixelCrop.x));
+  const sy = Math.max(0, Math.round(pixelCrop.y));
   const w = Math.max(1, Math.round(pixelCrop.width));
   const h = Math.max(1, Math.round(pixelCrop.height));
 
@@ -76,17 +80,7 @@ export async function getCroppedImageBlob(
     throw new Error("Could not get canvas context");
   }
 
-  ctx.drawImage(
-    image,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
-    0,
-    0,
-    w,
-    h
-  );
+  ctx.drawImage(image, sx, sy, w, h, 0, 0, w, h);
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(

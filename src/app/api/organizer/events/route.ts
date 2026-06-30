@@ -93,15 +93,19 @@ export async function POST(request: Request) {
     }
   }
 
-  const hasVerifiedMarket = await db.market.findFirst({
-    where: {
-      verificationStatus: "VERIFIED",
-      ...organizerManageMarketWhere(session.user.id),
-    },
-    select: { id: true },
-  });
+  // Publish only when the event is attached to a VERIFIED market. Previously
+  // this checked whether the organizer owned ANY verified market, which let an
+  // event for an unverified (or no) market skip moderation.
+  let isVerifiedMarket = false;
+  if (data.marketId) {
+    const market = await db.market.findUnique({
+      where: { id: data.marketId },
+      select: { verificationStatus: true },
+    });
+    isVerifiedMarket = market?.verificationStatus === "VERIFIED";
+  }
 
-  const status = hasVerifiedMarket ? "PUBLISHED" : "PENDING";
+  const status = isVerifiedMarket ? "PUBLISHED" : "PENDING";
 
   const event = await db.event.create({
     data: {

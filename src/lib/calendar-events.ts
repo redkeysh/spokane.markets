@@ -1,3 +1,7 @@
+import { getDateOnlyInTimezone } from "@/lib/utils";
+
+const PACIFIC_TZ = "America/Los_Angeles";
+
 type CalendarScheduleDay = {
   date: Date | string;
 };
@@ -38,15 +42,19 @@ export function getEventDaysInMonth(
     return [...daysToShow].sort((a, b) => a - b);
   }
 
-  const start = toDate(event.startDate);
-  start.setHours(0, 0, 0, 0);
-  const end = toDate(event.endDate);
-  end.setHours(23, 59, 59, 999);
-
-  for (let day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) {
-    if (day.getFullYear() === year && day.getMonth() === month) {
-      daysToShow.add(day.getDate());
+  // Bucket the start-end span by Pacific calendar days, matching the
+  // scheduleDays branch (which reads UTC-midnight @db.Date values). Local server
+  // getters drifted the day by one on UTC-deployed servers.
+  const startStr = getDateOnlyInTimezone(toDate(event.startDate), PACIFIC_TZ);
+  const endStr = getDateOnlyInTimezone(toDate(event.endDate), PACIFIC_TZ);
+  // Anchor each calendar day at UTC noon so DST never shifts the day index.
+  const cursor = new Date(`${startStr}T12:00:00Z`);
+  const endAnchor = new Date(`${endStr}T12:00:00Z`);
+  while (cursor <= endAnchor) {
+    if (cursor.getUTCFullYear() === year && cursor.getUTCMonth() === month) {
+      daysToShow.add(cursor.getUTCDate());
     }
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
 
   return [...daysToShow].sort((a, b) => a - b);

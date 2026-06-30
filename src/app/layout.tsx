@@ -13,6 +13,7 @@ import { AnalyticsLoader } from "@/components/analytics/analytics-loader";
 import { SITE_NAME, SITE_OG_IMAGE_PATH } from "@/lib/constants";
 import { getSiteAnnouncement } from "@/lib/site-announcement";
 import { getSiteTheme } from "@/lib/site-theme";
+import { toJsonLdScript } from "@/lib/utils";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -101,7 +102,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: toJsonLdScript(websiteJsonLd) }}
         />
         {umamiWebsiteId && (
           <script

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { findMarketBySlug } from "@/lib/services/market-series-service";
 import { getSession } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
+import { toJsonLdScript } from "@/lib/utils";
 import { TrackedExternalLink } from "@/components/analytics/tracked-external-link";
 import { TrackedLink } from "@/components/analytics/tracked-link";
 import { Badge } from "@/components/ui/badge";
@@ -127,7 +128,7 @@ export default async function MarketDetailPage({ params }: PageProps) {
     <div className="mx-auto max-w-6xl px-4 py-8 lg:px-8">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(marketJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: toJsonLdScript(marketJsonLd) }}
       />
       <TrackMarketView
         marketId={market.id}

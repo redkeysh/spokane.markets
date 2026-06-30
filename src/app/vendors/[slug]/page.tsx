@@ -4,6 +4,7 @@ import { SITE_NAME } from "@/lib/constants";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { toJsonLdScript } from "@/lib/utils";
 import { TrackVendorView } from "@/components/track-content-view";
 import { VendorProfileHeader } from "@/components/vendor/vendor-profile-header";
 import { VendorProfileLeftRail } from "@/components/vendor/vendor-profile-left-rail";
@@ -155,7 +156,7 @@ export default async function VendorProfilePage({ params, searchParams }: PagePr
     <div className="mx-auto max-w-6xl px-4 py-8 lg:px-8">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(vendorJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: toJsonLdScript(vendorJsonLd) }}
       />
       <TrackVendorView
         vendorId={vendor.id}

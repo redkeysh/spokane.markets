@@ -11,6 +11,23 @@ export function isBannerUnoptimized(url: string): boolean {
   return url.startsWith("/uploads/") || url.startsWith("http://") || url.startsWith("https://");
 }
 
+/**
+ * Serialize a value for embedding inside a <script type="application/ld+json">
+ * block. JSON.stringify alone does not escape `<`, `>`, or `&`, so an
+ * attacker-controlled field containing `</script>` would break out of the
+ * script element and execute injected markup. Escaping these (and the
+ * U+2028/U+2029 line separators) keeps the JSON valid while making it
+ * HTML-safe.
+ */
+export function toJsonLdScript(value: unknown): string {
+  return JSON.stringify(value)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+}
+
 /** Returns display label for a neighborhood/baseArea slug, or title-cased fallback. */
 export function formatNeighborhoodLabel(slug: string | null | undefined): string {
   if (!slug) return "";

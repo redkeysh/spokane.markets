@@ -13,6 +13,7 @@ import {
   formatEventTimeFromSchedule,
   formatTime12hr,
   getDirectionsUrl,
+  toJsonLdScript,
 } from "@/lib/utils";
 import { TrackedExternalLink } from "@/components/analytics/tracked-external-link";
 import { MapPreviewLazy as MapPreview } from "@/components/event/map-preview-lazy";
@@ -188,7 +189,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     <div className="mx-auto max-w-6xl px-4 py-8 lg:px-8">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: toJsonLdScript(eventJsonLd) }}
       />
       <TrackEventView
         eventId={event.id}

@@ -79,8 +79,11 @@ export async function POST(
     },
   });
 
-  await db.user.update({
-    where: { id: parsed.data.userId },
+  // Grant organizer access, but never downgrade an ADMIN (this mutates a
+  // different user than the caller, so an unconditional write could strip a
+  // target admin's privileges app-wide).
+  await db.user.updateMany({
+    where: { id: parsed.data.userId, role: { not: "ADMIN" } },
     data: { role: "ORGANIZER" },
   });
 
@@ -110,14 +113,20 @@ export async function PATCH(
     );
   }
 
-  const member = await db.marketMembership.update({
+  const updated = await db.marketMembership.updateMany({
+    where: { marketId, userId: parsed.data.userId },
+    data: { role: parsed.data.role },
+  });
+  if (updated.count === 0) {
+    return NextResponse.json({ error: "Member not found" }, { status: 404 });
+  }
+  const member = await db.marketMembership.findUnique({
     where: {
       marketId_userId: {
         marketId,
         userId: parsed.data.userId,
       },
     },
-    data: { role: parsed.data.role },
   });
 
   await logAudit(session.user.id, "UPDATE_MARKET_MEMBER_ROLE", "MARKET", marketId, {
@@ -146,14 +155,12 @@ export async function DELETE(
     );
   }
 
-  await db.marketMembership.delete({
-    where: {
-      marketId_userId: {
-        marketId,
-        userId: parsed.data.userId,
-      },
-    },
+  const deleted = await db.marketMembership.deleteMany({
+    where: { marketId, userId: parsed.data.userId },
   });
+  if (deleted.count === 0) {
+    return NextResponse.json({ error: "Member not found" }, { status: 404 });
+  }
 
   await logAudit(session.user.id, "REMOVE_MARKET_MEMBER", "MARKET", marketId, {
     memberUserId: parsed.data.userId,

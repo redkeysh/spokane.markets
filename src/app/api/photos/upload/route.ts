@@ -47,6 +47,44 @@ export async function POST(request: Request) {
     );
   }
 
+  const reviewId = formData.get("reviewId") as string | null;
+  const eventId = formData.get("eventId") as string | null;
+  const marketId = formData.get("marketId") as string | null;
+
+  // Validate attachment targets before writing the file: a non-existent id must
+  // return a clean 4xx instead of an unhandled foreign-key 500, and a user may
+  // only attach photos to their own review.
+  if (reviewId) {
+    const review = await db.review.findUnique({
+      where: { id: reviewId },
+      select: { userId: true },
+    });
+    if (!review) {
+      return NextResponse.json({ error: "Review not found" }, { status: 404 });
+    }
+    if (review.userId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
+  if (eventId) {
+    const event = await db.event.findUnique({
+      where: { id: eventId },
+      select: { id: true },
+    });
+    if (!event) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+  }
+  if (marketId) {
+    const market = await db.market.findUnique({
+      where: { id: marketId },
+      select: { id: true },
+    });
+    if (!market) {
+      return NextResponse.json({ error: "Market not found" }, { status: 404 });
+    }
+  }
+
   const MIME_TO_EXT: Record<string, string> = {
     "image/jpeg": "jpg",
     "image/png": "png",
@@ -62,21 +100,23 @@ export async function POST(request: Request) {
   const bytes = new Uint8Array(await file.arrayBuffer());
   await writeFile(join(UPLOAD_DIR, filename), bytes);
 
-  const reviewId = formData.get("reviewId") as string | null;
-  const eventId = formData.get("eventId") as string | null;
-  const marketId = formData.get("marketId") as string | null;
-
-  const photo = await db.photo.create({
-    data: {
-      url: `/uploads/photos/${filename}`,
-      alt: file.name,
-      status: "PENDING",
-      uploadedById: session.user.id!,
-      reviewId: reviewId || null,
-      eventId: eventId || null,
-      marketId: marketId || null,
-    },
-  });
+  let photo;
+  try {
+    photo = await db.photo.create({
+      data: {
+        url: `/uploads/photos/${filename}`,
+        alt: file.name,
+        status: "PENDING",
+        uploadedById: session.user.id!,
+        reviewId: reviewId || null,
+        eventId: eventId || null,
+        marketId: marketId || null,
+      },
+    });
+  } catch (err) {
+    console.error("Photo create error:", err);
+    return NextResponse.json({ error: "Failed to save photo" }, { status: 500 });
+  }
 
   return NextResponse.json(photo, { status: 201 });
 }

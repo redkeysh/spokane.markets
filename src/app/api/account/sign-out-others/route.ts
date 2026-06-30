@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
 export async function POST() {
@@ -9,15 +9,16 @@ export async function POST() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const cookieStore = await cookies();
-  const sessionToken =
-    cookieStore.get("better-auth.session_token")?.value ??
-    cookieStore.get("__Secure-better-auth.session_token")?.value;
+  // Exclude the current session by its raw DB token. The session cookie value
+  // is signed ("<token>.<signature>"), so comparing it against the unsigned
+  // Session.token column never matches the current row and would delete every
+  // session, including this one. Use the token from the resolved session.
+  const currentToken = session.session?.token;
 
   await db.session.deleteMany({
     where: {
       userId: session.user.id,
-      ...(sessionToken ? { token: { not: sessionToken } } : {}),
+      ...(currentToken ? { token: { not: currentToken } } : {}),
     },
   });
 

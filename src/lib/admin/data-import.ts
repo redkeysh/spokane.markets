@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getNeighborhoodSlugSet } from "@/lib/neighborhoods";
 import { slugify } from "@/lib/utils";
@@ -66,26 +67,32 @@ export type ImportResult = {
   errors: string[];
 };
 
-async function findOrCreateTag(name: string): Promise<string> {
+async function findOrCreateTag(
+  client: Prisma.TransactionClient,
+  name: string
+): Promise<string> {
   const slug = slugify(name) || "tag";
-  let tag = await db.tag.findFirst({
+  let tag = await client.tag.findFirst({
     where: { OR: [{ name }, { slug }] },
   });
   if (!tag) {
-    tag = await db.tag.create({
+    tag = await client.tag.create({
       data: { name, slug: slug || `tag-${Date.now()}` },
     });
   }
   return tag.id;
 }
 
-async function findOrCreateFeature(name: string): Promise<string> {
+async function findOrCreateFeature(
+  client: Prisma.TransactionClient,
+  name: string
+): Promise<string> {
   const slug = slugify(name) || "feature";
-  let feature = await db.feature.findFirst({
+  let feature = await client.feature.findFirst({
     where: { OR: [{ name }, { slug }] },
   });
   if (!feature) {
-    feature = await db.feature.create({
+    feature = await client.feature.create({
       data: { name, slug: slug || `feature-${Date.now()}` },
     });
   }
@@ -183,14 +190,22 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
           continue;
         }
         const slug = row.slug || slugify(row.name) || `market-${Date.now()}-${i}`;
+        // Create-only: skip a slug that already exists (a pre-existing market or
+        // an earlier row in this batch) instead of silently overwriting it via
+        // upsert and miscounting it as a new creation.
+        if (marketIdBySlug.has(slug)) {
+          result.errors.push(
+            `Market ${i + 1} (${row.name}): slug "${slug}" already exists, skipped`
+          );
+          continue;
+        }
         const baseArea = normalizeNeighborhood(
           row.baseArea,
           "baseArea",
           `Market ${i + 1} (${row.name})`
         );
-        const market = await db.market.upsert({
-          where: { slug },
-          create: {
+        const market = await db.market.create({
+          data: {
             name: row.name,
             slug,
             venueId,
@@ -203,19 +218,6 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
             typicalSchedule: row.typicalSchedule || null,
             contactEmail: row.contactEmail || null,
             contactPhone: row.contactPhone || null,
-          },
-          update: {
-            name: row.name,
-            venueId,
-            description: row.description ?? undefined,
-            imageUrl: row.imageUrl ?? undefined,
-            websiteUrl: row.websiteUrl ?? undefined,
-            facebookUrl: row.facebookUrl ?? undefined,
-            instagramUrl: row.instagramUrl ?? undefined,
-            baseArea: baseArea ?? undefined,
-            typicalSchedule: row.typicalSchedule ?? undefined,
-            contactEmail: row.contactEmail ?? undefined,
-            contactPhone: row.contactPhone ?? undefined,
           },
         });
         marketIdBySlug.set(market.slug, market.id);
@@ -250,31 +252,36 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
           result.errors.push(`Event ${i + 1} (${row.title}): invalid dates`);
           continue;
         }
-        let tagIds: string[] = row.tagIds ?? [];
-        if (row.tagNames?.length) {
-          tagIds = await Promise.all(row.tagNames.map(findOrCreateTag));
-        }
-        let featureIds: string[] = row.featureIds ?? [];
-        if (row.featureNames?.length) {
-          featureIds = await Promise.all(row.featureNames.map(findOrCreateFeature));
-        }
-        await db.event.create({
-          data: {
-            title: row.title,
-            slug,
-            description: row.description || null,
-            startDate,
-            endDate,
-            venueId,
-            marketId,
-            imageUrl: row.imageUrl || null,
-            status: row.status ?? "DRAFT",
-            websiteUrl: row.websiteUrl || null,
-            facebookUrl: row.facebookUrl || null,
-            instagramUrl: row.instagramUrl || null,
-            tags: tagIds.length ? { connect: tagIds.map((id) => ({ id })) } : undefined,
-            features: featureIds.length ? { connect: featureIds.map((id) => ({ id })) } : undefined,
-          },
+        // Create tags/features and the event in one transaction so a failed
+        // event insert (e.g. a duplicate slug) rolls back any tags/features
+        // created for it instead of leaving them orphaned.
+        await db.$transaction(async (tx) => {
+          const tagIds: string[] = [...(row.tagIds ?? [])];
+          for (const name of row.tagNames ?? []) {
+            tagIds.push(await findOrCreateTag(tx, name));
+          }
+          const featureIds: string[] = [...(row.featureIds ?? [])];
+          for (const name of row.featureNames ?? []) {
+            featureIds.push(await findOrCreateFeature(tx, name));
+          }
+          await tx.event.create({
+            data: {
+              title: row.title,
+              slug,
+              description: row.description || null,
+              startDate,
+              endDate,
+              venueId,
+              marketId,
+              imageUrl: row.imageUrl || null,
+              status: row.status ?? "DRAFT",
+              websiteUrl: row.websiteUrl || null,
+              facebookUrl: row.facebookUrl || null,
+              instagramUrl: row.instagramUrl || null,
+              tags: tagIds.length ? { connect: tagIds.map((id) => ({ id })) } : undefined,
+              features: featureIds.length ? { connect: featureIds.map((id) => ({ id })) } : undefined,
+            },
+          });
         });
         result.eventsCreated++;
       } catch (e) {
@@ -323,8 +330,14 @@ function parseCsvLine(line: string): string[] {
   for (let i = 0; i < line.length; i++) {
     const c = line[i];
     if (c === '"') {
-      inQuotes = !inQuotes;
-    } else if ((c === "," && !inQuotes) || (c === "\n" && !inQuotes)) {
+      if (inQuotes && line[i + 1] === '"') {
+        // RFC 4180 escaped quote ("") inside a quoted field -> literal quote.
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if ((c === "," || c === "\n") && !inQuotes) {
       result.push(current.trim());
       current = "";
     } else {

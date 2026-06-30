@@ -166,17 +166,28 @@ export async function processMarketingRenderById(renderId: string): Promise<void
   if (!render) {
     throw new Error("Render job not found");
   }
-  if (render.status !== MarketingRenderStatus.QUEUED && render.status !== MarketingRenderStatus.PROCESSING) {
+  // Don't resurrect a soft-deleted job.
+  if (render.deletedAt) {
     return;
   }
-  await db.marketingRender.update({
-    where: { id: renderId },
+  // Atomically claim the job: only a QUEUED row transitions to PROCESSING, so
+  // two concurrent invocations cannot both render the same job. A row already
+  // PROCESSING is treated as claimed and left alone.
+  const claim = await db.marketingRender.updateMany({
+    where: {
+      id: renderId,
+      status: MarketingRenderStatus.QUEUED,
+      deletedAt: null,
+    },
     data: {
       status: MarketingRenderStatus.PROCESSING,
       startedAt: new Date(),
       errorMessage: null,
     },
   });
+  if (claim.count === 0) {
+    return;
+  }
 
   try {
     const variables = render.variablesJson as Record<string, string>;

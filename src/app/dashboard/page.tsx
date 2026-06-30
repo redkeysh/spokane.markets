@@ -22,7 +22,7 @@ import {
 import { ProfileForm } from "@/components/profile-form";
 import { DashboardHeaderCard } from "@/components/dashboard-header-card";
 import { evaluateAndGrantBadges } from "@/lib/badges";
-import { SITE_NAME } from "@/lib/constants";
+import { ACTION_PILL_CLASS, SITE_NAME } from "@/lib/constants";
 import { PendingVerificationModal } from "@/components/pending-verification-modal";
 import { VendorVerifiedBadge } from "@/components/vendor/vendor-verified-badge";
 import { organizerAnyMarketWhere } from "@/lib/market-membership";
@@ -38,9 +38,6 @@ export const metadata = {
 interface DashboardPageProps {
   searchParams: Promise<{ pendingVerification?: string }>;
 }
-
-const compactActionLinkClassName =
-  "inline-flex min-h-[44px] items-center rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-muted";
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -152,7 +149,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-3">
             {onboardingActions.map((action) => (
-              <Link key={action.href} href={action.href} className={compactActionLinkClassName}>
+              <Link key={action.href} href={action.href} className={ACTION_PILL_CLASS}>
                 {action.label}
               </Link>
             ))}
@@ -257,7 +254,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </div>
             <Link
               href="/vendors"
-              className={compactActionLinkClassName}
+              className={ACTION_PILL_CLASS}
             >
               Browse Vendors
             </Link>

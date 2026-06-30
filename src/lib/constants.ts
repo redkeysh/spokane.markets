@@ -14,6 +14,14 @@ export const LEGAL_ENTITY = "Spokane Market Hive, LLC";
 /** Legal entity with DBA for formal legal text. */
 export const LEGAL_ENTITY_WITH_DBA = "Spokane Market Hive, LLC, doing business as Spokane Markets";
 
+/**
+ * Shared style for compact "pill" action links and buttons (44px touch target,
+ * bordered, with a themed focus-visible ring). Used for dashboard quick-links
+ * and the profile form's inline actions.
+ */
+export const ACTION_PILL_CLASS =
+  "inline-flex min-h-[44px] items-center rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
 export const DATE_FILTERS = [
   { label: "Today", value: "today" },
   { label: "This Weekend", value: "weekend" },

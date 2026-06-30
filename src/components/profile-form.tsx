@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ProfileImageUpload } from "@/components/profile-image-upload";
+import { ACTION_PILL_CLASS } from "@/lib/constants";
 
 interface ProfileFormProps {
   initialName: string | null;
@@ -17,9 +18,6 @@ interface ProfileFormProps {
   compact?: boolean;
   actionLinks?: Array<{ href: string; label: string }>;
 }
-
-const inlineActionClassName =
-  "inline-flex min-h-[44px] items-center rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-muted";
 
 export function ProfileForm({
   initialName,
@@ -135,13 +133,13 @@ export function ProfileForm({
               <div className="mt-2 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  className={inlineActionClassName}
+                  className={ACTION_PILL_CLASS}
                   onClick={() => setEditing(true)}
                 >
                   Edit profile
                 </button>
                 {actionLinks.map((action) => (
-                  <Link key={action.href} href={action.href} className={inlineActionClassName}>
+                  <Link key={action.href} href={action.href} className={ACTION_PILL_CLASS}>
                     {action.label}
                   </Link>
                 ))}

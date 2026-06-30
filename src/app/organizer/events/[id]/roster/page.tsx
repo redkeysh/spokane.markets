@@ -25,7 +25,17 @@ export default async function OrganizerRosterPage({
 
   const event = await db.event.findUnique({
     where: { id },
-    include: { market: true, venue: true },
+    include: {
+      market: {
+        include: {
+          memberships: {
+            where: { role: { in: ["OWNER", "MANAGER"] } },
+            select: { userId: true, role: true },
+          },
+        },
+      },
+      venue: true,
+    },
   });
 
   if (!event) notFound();

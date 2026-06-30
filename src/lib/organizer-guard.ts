@@ -1,4 +1,5 @@
 import type { Event } from "@prisma/client";
+import { db } from "@/lib/db";
 
 export interface EventWithMarket extends Event {
   market?: {
@@ -30,4 +31,27 @@ export function canManageEventRoster(
     return true;
   }
   return false;
+}
+
+/**
+ * Loads an event together with the market and its OWNER/MANAGER memberships,
+ * which is exactly what canManageEventRoster needs. Roster handlers must load
+ * the event through this helper: a bare `include: { market: true }` omits
+ * `market.memberships`, so the membership branch of the guard silently never
+ * matches and legitimate market managers are denied.
+ */
+export function loadEventForRosterAuth(eventId: string) {
+  return db.event.findUnique({
+    where: { id: eventId },
+    include: {
+      market: {
+        include: {
+          memberships: {
+            where: { role: { in: ["OWNER", "MANAGER"] } },
+            select: { userId: true, role: true },
+          },
+        },
+      },
+    },
+  });
 }

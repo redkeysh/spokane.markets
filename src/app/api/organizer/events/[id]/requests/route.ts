@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { canManageEventRoster } from "@/lib/organizer-guard";
+import { canManageEventRoster, loadEventForRosterAuth } from "@/lib/organizer-guard";
 
 export async function GET(
   _request: Request,
@@ -16,10 +16,7 @@ export async function GET(
 
     const { id: eventId } = await params;
 
-    const event = await db.event.findUnique({
-      where: { id: eventId },
-      include: { market: true },
-    });
+    const event = await loadEventForRosterAuth(eventId);
     if (!event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }

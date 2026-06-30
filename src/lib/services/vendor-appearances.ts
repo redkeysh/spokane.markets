@@ -116,9 +116,12 @@ export function splitAppearancesByTime(
   past: VendorAppearanceRow[];
 } {
   const pastLimit = opts?.pastLimit ?? 24;
-  const upcoming = rows.filter((r) => r.event.startDate >= now);
+  // An event is upcoming/current until it ends. Classifying by startDate alone
+  // pushed in-progress multi-day events into "past", where the limit could drop
+  // them from the list entirely.
+  const upcoming = rows.filter((r) => r.event.endDate >= now);
   const past = rows
-    .filter((r) => r.event.startDate < now)
+    .filter((r) => r.event.endDate < now)
     .sort((a, b) => b.event.startDate.getTime() - a.event.startDate.getTime())
     .slice(0, pastLimit);
   return { upcoming, past };

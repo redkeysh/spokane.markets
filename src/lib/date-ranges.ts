@@ -19,7 +19,9 @@ export function getUpcomingWeekendRange(): { start: Date; end: Date } {
   }
 
   const end = new Date(start);
-  end.setDate(start.getDate() + (start.getDay() === 6 ? 2 : 1));
+  // Inclusive end of the weekend is Sunday: from a Saturday start that is +1
+  // day; from a Sunday start (today is Sunday) it is the same day (+0).
+  end.setDate(start.getDate() + (start.getDay() === 6 ? 1 : 0));
   end.setHours(23, 59, 59, 999);
 
   return { start, end };

@@ -39,6 +39,22 @@ export async function POST(request: Request) {
     );
   }
 
+  if (eventId && marketId) {
+    return NextResponse.json(
+      { error: "Provide either eventId or marketId, not both" },
+      { status: 400 }
+    );
+  }
+
+  // Validate the target exists so a bad id returns 404 instead of an unhandled
+  // foreign-key 500.
+  const targetFound = eventId
+    ? (await db.event.findUnique({ where: { id: eventId }, select: { id: true } })) != null
+    : (await db.market.findUnique({ where: { id: marketId! }, select: { id: true } })) != null;
+  if (!targetFound) {
+    return NextResponse.json({ error: "Target not found" }, { status: 404 });
+  }
+
   const existing = await db.review.findFirst({
     where: {
       userId: session.user.id!,

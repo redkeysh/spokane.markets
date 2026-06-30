@@ -62,6 +62,26 @@ export async function POST(
       return NextResponse.json({ error }, { status: 400 });
     }
 
+    // Don't let a re-request downgrade an intent the organizer has already acted
+    // on (reset an APPROVED/ATTENDING/WAITLISTED vendor back to REQUESTED and
+    // re-notify). A declined/withdrawn vendor may still re-apply.
+    const existingIntent = await db.eventVendorIntent.findUnique({
+      where: {
+        eventId_vendorProfileId: {
+          eventId: event.id,
+          vendorProfileId: profile.id,
+        },
+      },
+      select: { status: true },
+    });
+    const decidedStatuses = ["APPROVED", "ATTENDING", "WAITLISTED"];
+    if (existingIntent && decidedStatuses.includes(existingIntent.status)) {
+      return NextResponse.json(
+        { error: "Your request for this event has already been reviewed." },
+        { status: 409 }
+      );
+    }
+
     const intent = await db.eventVendorIntent.upsert({
       where: {
         eventId_vendorProfileId: {

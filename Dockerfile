@@ -17,6 +17,10 @@ COPY . .
 RUN mkdir -p public
 # prisma generate needs DATABASE_URL in config; placeholder suffices (no DB connection)
 ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+# better-auth builds its instance at module load during `next build`. The real
+# secret is read at runtime (env_file), so a build-time placeholder just avoids
+# the default-secret error during prerendering; it is not used at runtime.
+ENV BETTER_AUTH_SECRET="build-time-placeholder-not-used-at-runtime"
 # NEXT_PUBLIC_* are embedded in client bundle at build time (not secrets).
 ARG NEXT_PUBLIC_APP_URL=http://localhost:3000
 ARG NEXT_PUBLIC_GTM_ID=

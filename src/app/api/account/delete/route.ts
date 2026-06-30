@@ -53,8 +53,18 @@ export async function POST(request: Request) {
     }
   }
 
-  await db.user.delete({
-    where: { id: session.user.id },
+  // Soft-delete the user's vendor profile in the same transaction. Deleting the
+  // user only nulls VendorProfile.userId (onDelete: SetNull), which would leave
+  // the listing orphaned but still publicly visible (the public query filters
+  // on deletedAt, not userId).
+  await db.$transaction(async (tx) => {
+    await tx.vendorProfile.updateMany({
+      where: { userId: session.user.id, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
+    await tx.user.delete({
+      where: { id: session.user.id },
+    });
   });
 
   return NextResponse.json({ success: true });

@@ -2,6 +2,7 @@ import { requireApiAdminPermission } from "@/lib/api-auth";
 import { apiError, apiValidationError, handleApiError } from "@/lib/api-response";
 import { db } from "@/lib/db";
 import { eventSchema } from "@/lib/validations";
+import { geocodeAddress } from "@/lib/geocode";
 import {
   pickOnboardingFields,
   toEventOnboardingPrismaData,
@@ -50,14 +51,35 @@ export async function PUT(
 
     let venueId = data.venueId?.trim() || null;
     if (!venueId && data.venueName?.trim() && data.venueAddress?.trim() && data.venueCity?.trim() && data.venueState?.trim() && data.venueZip?.trim()) {
-      const lat =
+      const providedLat =
         typeof data.venueLat === "number" && !Number.isNaN(data.venueLat)
           ? data.venueLat
-          : 47.6588;
-      const lng =
+          : null;
+      const providedLng =
         typeof data.venueLng === "number" && !Number.isNaN(data.venueLng)
           ? data.venueLng
-          : -117.426;
+          : null;
+      let coords: { lat: number; lng: number };
+      if (providedLat !== null && providedLng !== null) {
+        coords = { lat: providedLat, lng: providedLng };
+      } else {
+        // No coordinates from the client (address typed without picking a Mapbox
+        // suggestion). Geocode server-side rather than fabricating a location;
+        // reject if it can't be resolved.
+        const geocoded = await geocodeAddress({
+          address: data.venueAddress.trim(),
+          city: data.venueCity.trim(),
+          state: data.venueState.trim(),
+          zip: data.venueZip.trim(),
+        });
+        if (!geocoded) {
+          return apiError(
+            "Could not determine the venue's location. Select the address from the suggestions, or double-check the street, city, state, and ZIP.",
+            400
+          );
+        }
+        coords = geocoded;
+      }
       const venue = await db.venue.create({
         data: {
           name: data.venueName.trim(),
@@ -65,8 +87,8 @@ export async function PUT(
           city: data.venueCity.trim(),
           state: data.venueState.trim(),
           zip: data.venueZip.trim(),
-          lat,
-          lng,
+          lat: coords.lat,
+          lng: coords.lng,
         },
       });
       venueId = venue.id;

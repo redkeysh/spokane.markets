@@ -1,10 +1,9 @@
 import { db } from "@/lib/db";
 import { parseDateOnlyToUTCNoon, parseDateTimeInTimezone } from "@/lib/utils";
+import { geocodeAddress } from "@/lib/geocode";
 import type { EventStatus, ParticipationMode } from "@prisma/client";
 
 const EVENT_TIMEZONE = "America/Los_Angeles";
-const DEFAULT_LAT = 47.6588;
-const DEFAULT_LNG = -117.426;
 
 interface ScheduleDayInput {
   date: string;
@@ -88,20 +87,27 @@ export function computeEventDatesFromSchedule(
   return { startDate, endDate };
 }
 
+export type ResolveVenueResult =
+  | { venueId: string }
+  | { venueId: null; error?: string };
+
 /**
- * Resolves a venue ID — either uses an existing ID, creates a new venue from
- * provided address fields, or returns null if no venue info is available.
+ * Resolves a venue — either uses an existing ID, creates a new venue from
+ * provided address fields (geocoding server-side when the caller didn't supply
+ * coordinates), or returns a null venueId when no usable venue info is
+ * available. `error` distinguishes "address given but could not be geocoded"
+ * from "no address at all".
  */
 export async function resolveVenueId(
   input: VenueInput
-): Promise<string | null> {
+): Promise<ResolveVenueResult> {
   const venueId = input.venueId?.trim() || null;
   if (venueId) {
     const activeVenue = await db.venue.findFirst({
       where: { id: venueId, deletedAt: null },
       select: { id: true },
     });
-    return activeVenue?.id ?? null;
+    return activeVenue ? { venueId: activeVenue.id } : { venueId: null };
   }
 
   if (
@@ -111,14 +117,34 @@ export async function resolveVenueId(
     input.venueState?.trim() &&
     input.venueZip?.trim()
   ) {
-    const lat =
+    const providedLat =
       typeof input.venueLat === "number" && !Number.isNaN(input.venueLat)
         ? input.venueLat
-        : DEFAULT_LAT;
-    const lng =
+        : null;
+    const providedLng =
       typeof input.venueLng === "number" && !Number.isNaN(input.venueLng)
         ? input.venueLng
-        : DEFAULT_LNG;
+        : null;
+    let coords: { lat: number; lng: number };
+    if (providedLat !== null && providedLng !== null) {
+      coords = { lat: providedLat, lng: providedLng };
+    } else {
+      // No coordinates supplied (e.g. an approved submission carries only an
+      // address). Geocode server-side instead of fabricating a location.
+      const geocoded = await geocodeAddress({
+        address: input.venueAddress.trim(),
+        city: input.venueCity.trim(),
+        state: input.venueState.trim(),
+        zip: input.venueZip.trim(),
+      });
+      if (!geocoded) {
+        return {
+          venueId: null,
+          error: "Could not determine the venue's location from the address provided.",
+        };
+      }
+      coords = geocoded;
+    }
     const venue = await db.venue.create({
       data: {
         name: input.venueName.trim(),
@@ -126,14 +152,14 @@ export async function resolveVenueId(
         city: input.venueCity.trim(),
         state: input.venueState.trim(),
         zip: input.venueZip.trim(),
-        lat,
-        lng,
+        lat: coords.lat,
+        lng: coords.lng,
       },
     });
-    return venue.id;
+    return { venueId: venue.id };
   }
 
-  return null;
+  return { venueId: null };
 }
 
 /**
@@ -168,10 +194,14 @@ export async function createEvent(
     scheduleDays
   );
 
-  const venueId = await resolveVenueId(rest);
-  if (!venueId) {
-    return { event: null, error: "Select a venue or enter an address" };
+  const resolvedVenue = await resolveVenueId(rest);
+  if (resolvedVenue.venueId === null) {
+    return {
+      event: null,
+      error: resolvedVenue.error ?? "Select a venue or enter an address",
+    };
   }
+  const venueId = resolvedVenue.venueId;
 
   const status = options.status ?? rest.status ?? "DRAFT";
 
@@ -240,10 +270,14 @@ export async function updateEvent(
     scheduleDays
   );
 
-  const venueId = await resolveVenueId(rest);
-  if (!venueId) {
-    return { event: null, error: "Select a venue or enter an address" };
+  const resolvedVenue = await resolveVenueId(rest);
+  if (resolvedVenue.venueId === null) {
+    return {
+      event: null,
+      error: resolvedVenue.error ?? "Select a venue or enter an address",
+    };
   }
+  const venueId = resolvedVenue.venueId;
 
   const existing = await db.event.findFirst({
     where: { id: eventId, deletedAt: null },

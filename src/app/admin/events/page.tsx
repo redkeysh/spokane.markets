@@ -10,7 +10,7 @@ import { Pagination } from "@/components/pagination";
 import { deleteEvent, restoreEvent } from "../actions";
 import Link from "next/link";
 import type { EventStatus } from "@prisma/client";
-import { parseAdminPagination, parseFlag, parseQuery } from "@/lib/admin/table-query";
+import { parseAdminPagination, parseFlag, parseQuery, parseEnumParam } from "@/lib/admin/table-query";
 import { buildAdminEventsWhere, resolveAdminEventsTimeScope } from "@/lib/admin/events-query";
 import {
   buildAdminEventsOrderBy,
@@ -63,7 +63,10 @@ export default async function AdminEventsPage({
   await requireAdmin();
 
   const params = await searchParams;
-  const statusFilter = params.status as EventStatus | undefined;
+  const statusFilter = parseEnumParam(
+    params.status,
+    ["DRAFT", "PENDING", "PUBLISHED", "REJECTED", "CANCELLED"] as const
+  );
   const archived = parseFlag(params.archived);
   const past = parseFlag(params.past);
   const timeScope = resolveAdminEventsTimeScope({ archived, past });

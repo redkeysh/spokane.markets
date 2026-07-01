@@ -15,6 +15,7 @@ import { formatDate, cn } from "@/lib/utils";
 import { getReportTargetInfo } from "@/lib/report-target";
 import Link from "next/link";
 import { BulkActionButton } from "@/components/admin/bulk-action-button";
+import { parseEnumParam } from "@/lib/admin/table-query";
 
 export const dynamic = "force-dynamic";
 
@@ -34,19 +35,16 @@ export default async function AdminReportsPage({
   await requireAdminPermission("admin.moderation.manage");
 
   const params = await searchParams;
-  const statusFilter = (params.status ?? "PENDING") as "PENDING" | "RESOLVED" | "DISMISSED";
-  const severityFilter = params.severity as
-    | "LOW"
-    | "MEDIUM"
-    | "HIGH"
-    | "CRITICAL"
-    | undefined;
-  const escalationFilter = params.escalation as
-    | "NEW"
-    | "TRIAGED"
-    | "ESCALATED"
-    | "CLOSED"
-    | undefined;
+  const statusFilter =
+    parseEnumParam(params.status, ["PENDING", "RESOLVED", "DISMISSED"] as const) ?? "PENDING";
+  const severityFilter = parseEnumParam(
+    params.severity,
+    ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const
+  );
+  const escalationFilter = parseEnumParam(
+    params.escalation,
+    ["NEW", "TRIAGED", "ESCALATED", "CLOSED"] as const
+  );
   const page = Math.max(1, parseInt(params.page ?? "1", 10));
   const limit = Math.min(100, Math.max(1, parseInt(params.limit ?? String(DEFAULT_LIMIT), 10)));
 

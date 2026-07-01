@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DeleteButton, StatusButton } from "@/components/admin/action-buttons";
 import { AdminEventTableRow } from "@/components/admin/admin-event-table-row";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { AdminTable } from "@/components/admin/admin-table";
 import { Pagination } from "@/components/pagination";
 import { deleteVendor, restoreVendor, verifyVendor } from "../actions";
 import { parseAdminPagination, parseFlag, parseQuery } from "@/lib/admin/table-query";
@@ -125,13 +127,11 @@ export default async function AdminVendorsPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Vendors</h1>
-          <p className="mt-1 text-muted-foreground">
-            Manage vendor profiles. Create, edit, or delete.
-          </p>
-          <div className="mt-2 flex gap-2">
+      <AdminPageHeader
+        title="Vendors"
+        description="Manage vendor profiles. Create, edit, or delete."
+        actions={
+          <>
             <Button
               variant={orphanedOnly ? "default" : "outline"}
               size="sm"
@@ -158,12 +158,12 @@ export default async function AdminVendorsPage({
                 {archived ? "Hide archived" : "Show archived"}
               </Link>
             </Button>
-          </div>
-        </div>
-        <Button asChild>
-          <Link href="/admin/vendors/new">Create Vendor</Link>
-        </Button>
-      </div>
+            <Button asChild>
+              <Link href="/admin/vendors/new">Create Vendor</Link>
+            </Button>
+          </>
+        }
+      />
 
       <form className="flex items-center gap-2">
         <Input name="q" defaultValue={q} placeholder="Search business, slug, specialty..." />
@@ -182,8 +182,7 @@ export default async function AdminVendorsPage({
         </Button>
       </form>
 
-      <div className="rounded-lg border border-border overflow-hidden">
-        <table className="w-full text-sm">
+      <AdminTable>
           <thead className="bg-muted/50">
             <tr>
               <th className="px-4 py-3 text-left font-medium">
@@ -296,8 +295,7 @@ export default async function AdminVendorsPage({
               ))
             )}
           </tbody>
-        </table>
-      </div>
+      </AdminTable>
       <Pagination page={page} totalPages={totalPages} totalItems={total} limit={limit} />
     </div>
   );

@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -34,12 +35,10 @@ export default async function AdminSystemHealthPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">System Health</h1>
-        <p className="mt-1 text-muted-foreground">
-          Operational queue depth and admin-facing workload signals.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="System Health"
+        description="Operational queue depth and admin-facing workload signals."
+      />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {checks.map((check) => (
           <Card key={check.label}>

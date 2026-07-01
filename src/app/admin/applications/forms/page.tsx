@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { FormsEditorClient } from "./forms-editor-client";
 
 export const dynamic = "force-dynamic";
@@ -24,14 +25,10 @@ export default async function AdminApplicationFormsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          Application Form Fields
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Configure form fields for Vendor, Market, and Vendor Verification applications.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Application Form Fields"
+        description="Configure form fields for Vendor, Market, and Vendor Verification applications."
+      />
       <FormsEditorClient initialForms={serialized} />
     </div>
   );

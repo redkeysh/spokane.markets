@@ -2,6 +2,7 @@ import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
 import { extractSocialHandle } from "@/lib/utils";
 import { AdminVendorForm } from "@/components/admin/vendor-form";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { getListingCommunityBadgeOptions } from "@/lib/listing-community-badges";
 import { notFound } from "next/navigation";
 
@@ -65,7 +66,13 @@ export default async function EditVendorPage({
 
   return (
     <div className="max-w-7xl space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Edit Vendor</h1>
+      <AdminPageHeader
+        title="Edit Vendor"
+        breadcrumbs={[
+          { label: "Vendors", href: "/admin/vendors" },
+          { label: "Edit" },
+        ]}
+      />
       <AdminVendorForm
         initialData={initialData}
         listingCommunityBadgeOptions={listingCommunityBadgeOptions}

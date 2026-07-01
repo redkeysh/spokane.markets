@@ -10,6 +10,7 @@ import Image from "next/image";
 import type { ModerationStatus } from "@prisma/client";
 import { BulkActionButton } from "@/components/admin/bulk-action-button";
 import { parseAdminPagination, parseEnumParam } from "@/lib/admin/table-query";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -57,7 +58,7 @@ export default async function AdminPhotosPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Photos</h1>
+      <AdminPageHeader title="Photos" />
 
       <div className="flex gap-2 border-b border-border pb-2">
         {STATUS_TABS.map((tab) => (

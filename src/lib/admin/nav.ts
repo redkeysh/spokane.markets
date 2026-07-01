@@ -13,7 +13,6 @@ import {
   Map,
   Tag,
   BadgeCheck,
-  LayoutGrid,
   ClipboardList,
   Inbox,
   MessageSquare,
@@ -53,7 +52,6 @@ export const ADMIN_NAV: AdminNavSection[] = [
       { label: "Neighborhoods", href: "/admin/neighborhoods", icon: Map },
       { label: "Tags & Features", href: "/admin/tags", icon: Tag },
       { label: "Community Badges", href: "/admin/badges", icon: BadgeCheck },
-      { label: "Categories", href: "/admin/categories", icon: LayoutGrid },
     ],
   },
   {
@@ -94,7 +92,6 @@ export const ADMIN_NAV: AdminNavSection[] = [
     href: "/admin/settings",
     items: [
       { label: "Settings", href: "/admin/settings", icon: Settings },
-      { label: "Content", href: "/admin/content", icon: FileText },
       { label: "Data", href: "/admin/data", icon: Database },
       { label: "System Health", href: "/admin/system-health", icon: Activity },
       { label: "Audit Log", href: "/admin/audit-log", icon: ScrollText },

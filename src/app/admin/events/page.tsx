@@ -12,6 +12,8 @@ import Link from "next/link";
 import type { EventStatus } from "@prisma/client";
 import { parseAdminPagination, parseFlag, parseQuery, parseEnumParam } from "@/lib/admin/table-query";
 import { buildAdminEventsWhere, resolveAdminEventsTimeScope } from "@/lib/admin/events-query";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { AdminTable } from "@/components/admin/admin-table";
 import {
   buildAdminEventsOrderBy,
   parseAdminEventsSort,
@@ -144,19 +146,21 @@ export default async function AdminEventsPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Events</h1>
-        <div className="flex items-center gap-2">
-          <Button asChild variant={archived ? "default" : "outline"}>
-            <Link href={archived ? buildEventsHref({ archived: undefined, page: "1" }) : buildEventsHref({ archived: "1", page: "1" })}>
-              {archived ? "Hide all records" : "Show all records"}
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link href="/admin/events/new">Create Event</Link>
-          </Button>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Events"
+        actions={
+          <>
+            <Button asChild variant={archived ? "default" : "outline"}>
+              <Link href={archived ? buildEventsHref({ archived: undefined, page: "1" }) : buildEventsHref({ archived: "1", page: "1" })}>
+                {archived ? "Hide all records" : "Show all records"}
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/admin/events/new">Create Event</Link>
+            </Button>
+          </>
+        }
+      />
 
       <div className="flex gap-2 border-b border-border pb-2">
         <Link
@@ -218,8 +222,7 @@ export default async function AdminEventsPage({
         ))}
       </div>
 
-      <div className="border border-border rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
+      <AdminTable>
           <thead className="bg-muted/50">
             <tr>
               <th className="text-left p-3 font-medium">
@@ -304,8 +307,7 @@ export default async function AdminEventsPage({
               ))
             )}
           </tbody>
-        </table>
-      </div>
+      </AdminTable>
       <Pagination page={page} totalPages={totalPages} totalItems={total} limit={limit} />
     </div>
   );

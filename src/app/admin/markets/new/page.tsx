@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { MarketForm } from "@/components/admin/market-form";
 import { getListingCommunityBadgeOptions } from "@/lib/listing-community-badges";
 import { getNeighborhoodOptions } from "@/lib/neighborhoods";
@@ -20,7 +21,13 @@ export default async function NewMarketPage() {
 
   return (
     <div className="max-w-7xl space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Create Market</h1>
+      <AdminPageHeader
+        title="Create Market"
+        breadcrumbs={[
+          { label: "Markets", href: "/admin/markets" },
+          { label: "New market" },
+        ]}
+      />
       <MarketForm
         venues={venues}
         neighborhoods={neighborhoods}

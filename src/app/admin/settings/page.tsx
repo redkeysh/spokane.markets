@@ -9,6 +9,7 @@ import { BannerEditor } from "@/components/admin/banner-editor";
 import { MaintenanceForm } from "@/components/admin/maintenance-form";
 import { SiteAnnouncementForm } from "@/components/admin/site-announcement-form";
 import { SiteThemeSelector } from "@/components/admin/site-theme-selector";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 const BANNER_LABELS: Record<BannerKey, string> = {
   hero: "Homepage hero",
@@ -33,13 +34,11 @@ export default async function AdminSettingsPage() {
   ]);
 
   return (
-    <div className="space-y-12">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Site Settings</h1>
-        <p className="mt-1 text-muted-foreground">
-          Manage site-wide visuals, maintenance mode, and presentation defaults.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <AdminPageHeader
+        title="Site Settings"
+        description="Manage site-wide visuals, maintenance mode, and presentation defaults."
+      />
 
       <section className="space-y-6">
         <h2 className="text-xl font-semibold">Color palette</h2>

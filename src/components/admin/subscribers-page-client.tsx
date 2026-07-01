@@ -48,16 +48,11 @@ export function SubscribersPageClient({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Subscribers</h1>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">
-            {total} total
-          </span>
-          <Button onClick={openCreate} size="sm">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Subscriber
-          </Button>
-        </div>
+        <span className="text-sm text-muted-foreground">{total} total</span>
+        <Button onClick={openCreate} size="sm">
+          <Plus className="mr-2 h-4 w-4" />
+          Add Subscriber
+        </Button>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-border">

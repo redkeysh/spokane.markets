@@ -16,6 +16,7 @@ import { getReportTargetInfo } from "@/lib/report-target";
 import Link from "next/link";
 import { BulkActionButton } from "@/components/admin/bulk-action-button";
 import { parseAdminPagination, parseEnumParam } from "@/lib/admin/table-query";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -67,7 +68,7 @@ export default async function AdminReportsPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
+      <AdminPageHeader title="Reports" />
 
       <div className="flex gap-2">
         {STATUS_TABS.map((s) => (

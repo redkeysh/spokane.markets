@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DeleteRenderButton } from "@/components/admin/marketing/delete-render-button";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { AdminTable } from "@/components/admin/admin-table";
 import { parseEnumParam } from "@/lib/admin/table-query";
 
 export const dynamic = "force-dynamic";
@@ -51,17 +53,15 @@ export default async function MarketingAssetStudioHistoryPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Render History</h1>
-          <p className="mt-1 text-muted-foreground">
-            Re-download, duplicate, or delete past renders.
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/admin/marketing/asset-studio/new">New Render</Link>
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Render History"
+        description="Re-download, duplicate, or delete past renders."
+        actions={
+          <Button asChild>
+            <Link href="/admin/marketing/asset-studio/new">New Render</Link>
+          </Button>
+        }
+      />
 
       <form className="flex items-center gap-2">
         <Input name="q" placeholder="Search template name or slug..." defaultValue={q} />
@@ -69,8 +69,7 @@ export default async function MarketingAssetStudioHistoryPage({
         <Button type="submit" variant="outline">Filter</Button>
       </form>
 
-      <div className="rounded-lg border border-border overflow-hidden">
-        <table className="w-full text-sm">
+      <AdminTable>
           <thead className="bg-muted/50">
             <tr>
               <th className="px-4 py-3 text-left font-medium">Date</th>
@@ -126,8 +125,7 @@ export default async function MarketingAssetStudioHistoryPage({
               })
             )}
           </tbody>
-        </table>
-      </div>
+      </AdminTable>
     </div>
   );
 }

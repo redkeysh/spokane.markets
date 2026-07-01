@@ -9,6 +9,7 @@ import Link from "next/link";
 import type { ModerationStatus } from "@prisma/client";
 import { parseAdminPagination, parseEnumParam } from "@/lib/admin/table-query";
 import { BulkActionButton } from "@/components/admin/bulk-action-button";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +64,7 @@ export default async function AdminReviewsPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Reviews</h1>
+      <AdminPageHeader title="Reviews" />
 
       {userId && userForFilter && (
         <p className="text-sm text-muted-foreground">

@@ -3,6 +3,8 @@ import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { AdminTable } from "@/components/admin/admin-table";
 
 export const dynamic = "force-dynamic";
 
@@ -31,25 +33,23 @@ export default async function MarketingAssetStudioPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Marketing Asset Studio</h1>
-          <p className="mt-1 text-muted-foreground">
-            Pick a template, prefill from vendor/event/market records, and queue supersampled renders.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/admin/marketing/asset-studio/history">History</Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/admin/marketing/asset-studio/templates">Manage Templates</Link>
-          </Button>
-          <Button asChild>
-            <Link href="/admin/marketing/asset-studio/new">New Render</Link>
-          </Button>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Marketing Asset Studio"
+        description="Pick a template, prefill from vendor/event/market records, and queue supersampled renders."
+        actions={
+          <>
+            <Button variant="outline" asChild>
+              <Link href="/admin/marketing/asset-studio/history">History</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/admin/marketing/asset-studio/templates">Manage Templates</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/admin/marketing/asset-studio/new">New Render</Link>
+            </Button>
+          </>
+        }
+      />
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">Templates</h2>
@@ -91,8 +91,7 @@ export default async function MarketingAssetStudioPage() {
             View all
           </Link>
         </div>
-        <div className="rounded-lg border border-border overflow-hidden">
-          <table className="w-full text-sm">
+        <AdminTable>
             <thead className="bg-muted/50">
               <tr>
                 <th className="px-4 py-3 text-left font-medium">When</th>
@@ -129,8 +128,7 @@ export default async function MarketingAssetStudioPage() {
                 ))
               )}
             </tbody>
-          </table>
-        </div>
+        </AdminTable>
       </section>
     </div>
   );

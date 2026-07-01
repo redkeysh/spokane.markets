@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
 import { EventForm } from "@/components/admin/event-form";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,13 @@ export default async function NewEventPage() {
 
   return (
     <div className="max-w-7xl space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Create Event</h1>
+      <AdminPageHeader
+        title="Create Event"
+        breadcrumbs={[
+          { label: "Events", href: "/admin/events" },
+          { label: "New event" },
+        ]}
+      />
       <EventForm
         venues={venues}
         markets={markets}

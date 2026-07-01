@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/auth-utils";
 import { UserForm } from "@/components/admin/user-form";
-import Link from "next/link";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -9,18 +9,14 @@ export default async function NewUserPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link
-          href="/admin/users"
-          className="text-sm text-muted-foreground hover:text-foreground"
-        >
-          ← Users
-        </Link>
-      </div>
-      <h1 className="text-3xl font-bold tracking-tight">Create User</h1>
-      <p className="text-muted-foreground">
-        Add a new user account. They can sign in with the email and password you set.
-      </p>
+      <AdminPageHeader
+        title="Create User"
+        description="Add a new user account. They can sign in with the email and password you set."
+        breadcrumbs={[
+          { label: "Users", href: "/admin/users" },
+          { label: "New user" },
+        ]}
+      />
       <UserForm />
     </div>
   );

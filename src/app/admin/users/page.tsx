@@ -6,6 +6,8 @@ import { UserResetPasswordButton } from "@/components/admin/user-reset-password-
 import { UserAccountStatusSelect } from "@/components/admin/user-account-status-select";
 import { Pagination } from "@/components/pagination";
 import { UserFilters } from "@/components/admin/user-filters";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { AdminTable } from "@/components/admin/admin-table";
 import Link from "next/link";
 import type { Role } from "@prisma/client";
 import { parseAdminPagination } from "@/lib/admin/table-query";
@@ -67,25 +69,24 @@ export default async function AdminUsersPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Users</h1>
-          <p className="mt-1 text-muted-foreground">
-            Manage user accounts and roles. Changing a role affects what dashboards and features the user can access.
-          </p>
-        </div>
-        <Link
-          href="/admin/users/new"
-          className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          Create user
-        </Link>
-      </div>
+      <AdminPageHeader
+        title="Users"
+        description="Manage user accounts and roles. Changing a role affects what dashboards and features the user can access."
+        actions={
+          <>
+            <Link
+              href="/admin/users/new"
+              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              Create user
+            </Link>
+          </>
+        }
+      />
 
       <UserFilters q={q} role={roleParam || ""} roles={ROLES} />
 
-      <div className="border border-border rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
+      <AdminTable>
           <thead className="bg-muted/50">
             <tr>
               <th className="text-left p-3 font-medium">Name</th>
@@ -173,8 +174,7 @@ export default async function AdminUsersPage({
               ))
             )}
           </tbody>
-        </table>
-      </div>
+      </AdminTable>
       <Pagination page={page} totalPages={totalPages} totalItems={total} limit={limit} />
     </div>
   );

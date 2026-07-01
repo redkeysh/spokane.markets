@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/auth-utils";
 import { AdminVendorForm } from "@/components/admin/vendor-form";
 import { getListingCommunityBadgeOptions } from "@/lib/listing-community-badges";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,13 @@ export default async function NewVendorPage() {
 
   return (
     <div className="max-w-7xl space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Create Vendor</h1>
+      <AdminPageHeader
+        title="Create Vendor"
+        breadcrumbs={[
+          { label: "Vendors", href: "/admin/vendors" },
+          { label: "New vendor" },
+        ]}
+      />
       <AdminVendorForm listingCommunityBadgeOptions={listingCommunityBadgeOptions} />
     </div>
   );

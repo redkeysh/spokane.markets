@@ -12,6 +12,7 @@ import type { ModerationStatus } from "@prisma/client";
 import { parseAdminPagination, parseEnumParam } from "@/lib/admin/table-query";
 import { BulkActionButton } from "@/components/admin/bulk-action-button";
 import { Button } from "@/components/ui/button";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -67,7 +68,7 @@ export default async function AdminSubmissionsPage({
           surface: "dashboard",
         }}
       />
-      <h1 className="text-3xl font-bold tracking-tight">Submissions</h1>
+      <AdminPageHeader title="Submissions" />
 
       <div className="flex gap-2 border-b border-border pb-2">
         {STATUS_TABS.map((tab) => (

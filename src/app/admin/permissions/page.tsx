@@ -5,6 +5,7 @@ import {
   normalizePermissionMatrix,
 } from "@/lib/admin/permissions";
 import { PermissionsMatrix } from "@/components/admin/permissions-matrix";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -19,12 +20,10 @@ export default async function AdminPermissionsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Permissions</h1>
-        <p className="mt-1 text-muted-foreground">
-          Configure granular permissions per role for the admin surface.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Permissions"
+        description="Configure granular permissions per role for the admin surface."
+      />
       <PermissionsMatrix initialMatrix={initialMatrix} />
     </div>
   );

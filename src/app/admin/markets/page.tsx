@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DeleteButton, StatusButton } from "@/components/admin/action-buttons";
 import { AdminEventTableRow } from "@/components/admin/admin-event-table-row";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { AdminTable } from "@/components/admin/admin-table";
 import { Pagination } from "@/components/pagination";
 import { deleteMarket, restoreMarket, verifyMarket } from "../actions";
 import Link from "next/link";
@@ -127,25 +129,27 @@ export default async function AdminMarketsPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Markets</h1>
-        <div className="flex items-center gap-2">
-          <Button asChild variant={archived ? "default" : "outline"}>
-            <Link
-              href={
-                archived
-                  ? buildMarketsHref({ archived: undefined, page: "1" })
-                  : buildMarketsHref({ archived: "1", page: "1" })
-              }
-            >
-              {archived ? "Hide archived" : "Show archived"}
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link href="/admin/markets/new">Create Market</Link>
-          </Button>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Markets"
+        actions={
+          <>
+            <Button asChild variant={archived ? "default" : "outline"}>
+              <Link
+                href={
+                  archived
+                    ? buildMarketsHref({ archived: undefined, page: "1" })
+                    : buildMarketsHref({ archived: "1", page: "1" })
+                }
+              >
+                {archived ? "Hide archived" : "Show archived"}
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/admin/markets/new">Create Market</Link>
+            </Button>
+          </>
+        }
+      />
 
       <form className="flex items-center gap-2">
         <Input name="q" defaultValue={q} placeholder="Search market, slug, owner..." />
@@ -163,8 +167,7 @@ export default async function AdminMarketsPage({
         </Button>
       </form>
 
-      <div className="border border-border rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
+      <AdminTable>
           <thead className="bg-muted/50">
             <tr>
               <th className="text-left p-3 font-medium">
@@ -271,8 +274,7 @@ export default async function AdminMarketsPage({
               ))
             )}
           </tbody>
-        </table>
-      </div>
+      </AdminTable>
       <Pagination page={page} totalPages={totalPages} totalItems={total} limit={limit} />
     </div>
   );

@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
 import { PromotionForm } from "@/components/admin/promotion-form";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -62,7 +63,13 @@ export default async function EditPromotionPage({
 
   return (
     <div className="max-w-7xl space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Edit Promotion</h1>
+      <AdminPageHeader
+        title="Edit Promotion"
+        breadcrumbs={[
+          { label: "Promotions", href: "/admin/promotions" },
+          { label: "Edit" },
+        ]}
+      />
       <PromotionForm events={events} vendors={vendors} initialData={initialData} />
     </div>
   );

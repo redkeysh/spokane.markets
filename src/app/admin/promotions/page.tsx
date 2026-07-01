@@ -2,6 +2,8 @@ import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { AdminTable } from "@/components/admin/admin-table";
 import { DeleteButton } from "@/components/admin/action-buttons";
 import { deletePromotion } from "../actions";
 import Link from "next/link";
@@ -35,19 +37,19 @@ export default async function AdminPromotionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Promotions</h1>
-        <Button asChild>
-          <Link href="/admin/promotions/new">New Promotion</Link>
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Promotions"
+        description="Manage featured, sponsored, and partner promotions shown across event and vendor surfaces."
+        actions={
+          <>
+            <Button asChild>
+              <Link href="/admin/promotions/new">New Promotion</Link>
+            </Button>
+          </>
+        }
+      />
 
-      <p className="text-muted-foreground">
-        Manage featured, sponsored, and partner promotions shown across event and vendor surfaces.
-      </p>
-
-      <div className="overflow-hidden rounded-lg border border-border">
-        <table className="w-full text-sm">
+      <AdminTable>
           <thead className="bg-muted/50">
             <tr>
               <th className="p-3 text-left font-medium">Target</th>
@@ -128,8 +130,7 @@ export default async function AdminPromotionsPage() {
               })
             )}
           </tbody>
-        </table>
-      </div>
+      </AdminTable>
     </div>
   );
 }

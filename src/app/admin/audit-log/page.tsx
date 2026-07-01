@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { Pagination } from "@/components/pagination";
 import { formatDate } from "@/lib/utils";
 import { parseAdminPagination } from "@/lib/admin/table-query";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { AdminTable } from "@/components/admin/admin-table";
 
 export const dynamic = "force-dynamic";
 
@@ -35,15 +37,12 @@ export default async function AdminAuditLogPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Audit Log</h1>
-        <p className="mt-1 text-muted-foreground">
-          Log of critical admin actions for compliance and audit.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Audit Log"
+        description="Log of critical admin actions for compliance and audit."
+      />
 
-      <div className="rounded-lg border border-border overflow-hidden">
-        <table className="w-full text-sm">
+      <AdminTable>
           <thead className="bg-muted/50">
             <tr>
               <th className="px-4 py-3 text-left font-medium">Time</th>
@@ -77,14 +76,13 @@ export default async function AdminAuditLogPage({
                   <td className="px-4 py-3 text-muted-foreground max-w-[200px] truncate">
                     {log.metadata
                       ? JSON.stringify(log.metadata as Record<string, unknown>)
-                      : "—"}
+                      : "-"}
                   </td>
                 </tr>
               ))
             )}
           </tbody>
-        </table>
-      </div>
+      </AdminTable>
       <Pagination page={page} totalPages={totalPages} totalItems={total} limit={limit} />
     </div>
   );

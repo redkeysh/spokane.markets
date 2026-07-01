@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { UserRoleSelect } from "@/components/admin/user-role-select";
 import { UserAccountStatusSelect } from "@/components/admin/user-account-status-select";
 import { UserDeleteButton } from "@/components/admin/user-delete-button";
@@ -8,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Mail, Calendar, Shield, MessageSquare, Store } from "lucide-react";
+import { Mail, Calendar, Shield, MessageSquare, Store } from "lucide-react";
 import type { ModerationStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -62,42 +63,34 @@ export default async function AdminUserDetailPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link
-          href="/admin/users"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to users
-        </Link>
-      </div>
-
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            {user.name ?? user.email}
-          </h1>
-          <p className="mt-1 text-muted-foreground">{user.email}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <UserRoleSelect userId={user.id} currentRole={user.role} />
-          <UserAccountStatusSelect
-            userId={user.id}
-            currentStatus={user.accountStatus}
-          />
-          <UserResetPasswordButton
-            userId={user.id}
-            userName={user.name}
-            userEmail={user.email}
-          />
-          <UserDeleteButton
-            userId={user.id}
-            userName={user.name}
-            userEmail={user.email}
-            isCurrentUser={user.id === session.user.id}
-          />
-        </div>
-      </div>
+      <AdminPageHeader
+        title={user.name ?? user.email ?? "User"}
+        description={user.email ?? undefined}
+        breadcrumbs={[
+          { label: "Users", href: "/admin/users" },
+          { label: "User" },
+        ]}
+        actions={
+          <>
+            <UserRoleSelect userId={user.id} currentRole={user.role} />
+            <UserAccountStatusSelect
+              userId={user.id}
+              currentStatus={user.accountStatus}
+            />
+            <UserResetPasswordButton
+              userId={user.id}
+              userName={user.name}
+              userEmail={user.email}
+            />
+            <UserDeleteButton
+              userId={user.id}
+              userName={user.name}
+              userEmail={user.email}
+              isCurrentUser={user.id === session.user.id}
+            />
+          </>
+        }
+      />
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-lg border border-border p-4 space-y-2">

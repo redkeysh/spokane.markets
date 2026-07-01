@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import type { QueueType } from "@/lib/admin/queues";
 import { parseEnumParam } from "@/lib/admin/table-query";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 const TABS: { label: string; value: QueueType | "all" }[] = [
   { label: "All", value: "all" },
@@ -55,6 +56,10 @@ export default async function AdminQueuesPage({
 
   return (
     <div className="space-y-6">
+      <AdminPageHeader
+        title="Queues"
+        description="Pending items needing review. Click Review to open the workflow page."
+      />
       <TrackEventOnMount
         eventName="admin_review_queue_view"
         params={{
@@ -63,12 +68,6 @@ export default async function AdminQueuesPage({
           surface: "dashboard",
         }}
       />
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Queues</h1>
-        <p className="mt-1 text-muted-foreground">
-          Pending items needing review. Click Review to open the workflow page.
-        </p>
-      </div>
 
       <div className="flex flex-wrap gap-2 border-b border-border pb-2">
         {TABS.map((tab) => (

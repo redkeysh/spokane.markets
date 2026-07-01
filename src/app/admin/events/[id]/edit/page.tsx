@@ -5,6 +5,7 @@ import { EventForm } from "@/components/admin/event-form";
 import { notFound } from "next/navigation";
 import { formatDateOnlyUTC, formatForDateTimeLocal } from "@/lib/utils";
 import { adminListingEvidenceEnabled } from "@/lib/feature-flags";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -102,7 +103,13 @@ export default async function EditEventPage({
 
   return (
     <div className="max-w-7xl space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Edit Event</h1>
+      <AdminPageHeader
+        title="Edit Event"
+        breadcrumbs={[
+          { label: "Events", href: "/admin/events" },
+          { label: "Edit" },
+        ]}
+      />
       <EventForm
         venues={venues}
         markets={markets}

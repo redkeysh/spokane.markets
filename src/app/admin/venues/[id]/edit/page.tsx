@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { VenueForm } from "@/components/admin/venue-form";
 import { StatusButton } from "@/components/admin/action-buttons";
 import { getNeighborhoodOptions } from "@/lib/neighborhoods";
@@ -37,7 +38,13 @@ export default async function EditVenuePage({
 
   return (
     <div className="max-w-7xl space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Edit Venue</h1>
+      <AdminPageHeader
+        title="Edit Venue"
+        breadcrumbs={[
+          { label: "Venues", href: "/admin/venues" },
+          { label: "Edit" },
+        ]}
+      />
       {venue.deletedAt && (
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
           <div>

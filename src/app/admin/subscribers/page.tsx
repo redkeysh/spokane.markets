@@ -4,6 +4,7 @@ import { Pagination } from "@/components/pagination";
 import { SubscribersPageClient } from "@/components/admin/subscribers-page-client";
 import { getNeighborhoodOptions } from "@/lib/neighborhoods";
 import { parseAdminPagination } from "@/lib/admin/table-query";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -30,10 +31,10 @@ export default async function AdminSubscribersPage({
 
   return (
     <div className="space-y-6">
-      <p className="text-muted-foreground">
-        Newsletter subscribers receive the weekly digest. Add manually or they
-        sign up via the site.
-      </p>
+      <AdminPageHeader
+        title="Subscribers"
+        description="Newsletter subscribers receive the weekly digest. Add them manually or they sign up via the site."
+      />
       <SubscribersPageClient
         subscribers={subscribers}
         neighborhoods={neighborhoods}

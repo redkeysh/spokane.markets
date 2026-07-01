@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatDate, cn } from "@/lib/utils";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 type ApplicationStatus =
   | "PENDING"
@@ -163,14 +164,10 @@ export function ApplicationsClient({ applications }: Props) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Applications</h1>
-        <p className="mt-1 text-muted-foreground">
-          {counts.all} total · {counts.PENDING} pending · {counts.APPROVED}{" "}
-          approved · {counts.REJECTED} rejected · {counts.NEEDS_INFO} needs info ·{" "}
-          {counts.DUPLICATE} duplicate
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Applications"
+        description={`${counts.all} total · ${counts.PENDING} pending · ${counts.APPROVED} approved · ${counts.REJECTED} rejected · ${counts.NEEDS_INFO} needs info · ${counts.DUPLICATE} duplicate`}
+      />
 
       <div className="flex gap-2 border-b border-border pb-2">
         {STATUS_TABS.map((tab) => (

@@ -13,9 +13,12 @@ const maintenanceLinkSchema = z.object({
   url: z
     .string()
     .min(1)
-    .refine((v) => v.startsWith("/") || /^https?:\/\//i.test(v), {
-      message: "Link URL must be a relative path or an http(s) URL",
-    }),
+    .refine(
+      // A relative path ("/status") or an http(s) URL only. Reject the
+      // javascript: scheme and protocol-relative ("//evil.com") URLs.
+      (v) => (v.startsWith("/") && !v.startsWith("//")) || /^https?:\/\//i.test(v),
+      { message: "Link URL must be a relative path or an http(s) URL" }
+    ),
 });
 
 const patchMaintenanceSchema = z.object({

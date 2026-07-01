@@ -2,6 +2,7 @@ import { requireApiAdmin } from "@/lib/api-auth";
 import { apiError, apiValidationError } from "@/lib/api-response";
 import { db } from "@/lib/db";
 import { promotionSchema } from "@/lib/validations";
+import { parseAdminPagination } from "@/lib/admin/table-query";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -10,8 +11,10 @@ export async function GET(request: Request) {
     if (error) return error;
 
     const { searchParams } = new URL(request.url);
-    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-    const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10)));
+    const { page, limit } = parseAdminPagination({
+      page: searchParams.get("page") ?? undefined,
+      limit: searchParams.get("limit") ?? undefined,
+    });
     const skip = (page - 1) * limit;
 
     const [promotions, total] = await Promise.all([

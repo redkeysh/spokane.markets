@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { marketingRenderCreateSchema } from "@/lib/validations/marketing";
 import { buildEntityPrefillVariables } from "@/lib/marketing/prefill-map";
 import { getRequiredPlaceholderKeys, validateRequiredPlaceholders } from "@/lib/marketing/template-utils";
+import { parseAdminPagination, parseEnumParam } from "@/lib/admin/table-query";
 
 function toUppercaseVariables(input: Record<string, string>): Record<string, string> {
   return Object.entries(input).reduce<Record<string, string>>((acc, [key, value]) => {
@@ -20,15 +21,23 @@ export async function GET(request: Request) {
     if (error) return error;
 
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status");
+    const statusFilter = parseEnumParam(searchParams.get("status") ?? undefined, [
+      "QUEUED",
+      "PROCESSING",
+      "SUCCEEDED",
+      "FAILED",
+      "CANCELLED",
+    ] as const);
     const templateId = searchParams.get("templateId");
     const q = searchParams.get("q")?.trim();
-    const limit = Math.min(100, Math.max(1, Number.parseInt(searchParams.get("limit") ?? "25", 10)));
+    const { limit } = parseAdminPagination({
+      limit: searchParams.get("limit") ?? undefined,
+    });
 
     const renders = await db.marketingRender.findMany({
       where: {
         deletedAt: null,
-        ...(status ? { status: status as never } : {}),
+        ...(statusFilter ? { status: statusFilter } : {}),
         ...(templateId ? { templateId } : {}),
         ...(q
           ? {

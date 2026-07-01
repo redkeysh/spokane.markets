@@ -43,6 +43,10 @@ export function normalizePermissionMatrix(
       typeof v === "string" && ADMIN_PERMISSION_KEYS.includes(v as AdminPermissionKey)
     );
   }
+  // ADMIN always retains every permission. Enforcing it here means a saved
+  // matrix (even a crafted request) can never strip admins of roles.manage and
+  // lock everyone out of the admin surface.
+  matrix.ADMIN = [...ADMIN_PERMISSION_KEYS];
   return matrix;
 }
 

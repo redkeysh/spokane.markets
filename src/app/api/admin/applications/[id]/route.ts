@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { requireApiAdminPermission } from "@/lib/api-auth";
-import { apiError, apiValidationError } from "@/lib/api-response";
+import { apiValidationError, handleApiError } from "@/lib/api-response";
 import { db } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
 import { createNotification } from "@/lib/notifications";
@@ -54,8 +54,10 @@ export async function PATCH(
               ? "ORGANIZER"
               : null;
         if (newRole) {
-          await tx.user.update({
-            where: { id: app.userId },
+          // Never downgrade a higher-privileged account by approving a
+          // vendor/market application (e.g. don't demote an ADMIN to ORGANIZER).
+          await tx.user.updateMany({
+            where: { id: app.userId, role: { not: "ADMIN" } },
             data: { role: newRole },
           });
         }
@@ -132,8 +134,7 @@ export async function PATCH(
 
     return NextResponse.json(application.app);
   } catch (err) {
-    console.error("[PATCH /api/admin/applications/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }
 
@@ -150,7 +151,6 @@ export async function DELETE(
 
     return new NextResponse(null, { status: 204 });
   } catch (err) {
-    console.error("[DELETE /api/admin/applications/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }

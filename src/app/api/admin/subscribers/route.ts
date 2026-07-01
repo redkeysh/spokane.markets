@@ -3,6 +3,7 @@ import { assertNeighborhoodSlugList } from "@/lib/neighborhoods";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiAdminPermission } from "@/lib/api-auth";
+import { handleApiError } from "@/lib/api-response";
 
 const createSchema = z.object({
   email: z.string().email("Valid email is required"),
@@ -46,8 +47,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const subscriber = await db.subscriber.create({
-    data: { email: normalizedEmail, areas },
-  });
+  let subscriber;
+  try {
+    subscriber = await db.subscriber.create({
+      data: { email: normalizedEmail, areas },
+    });
+  } catch (err) {
+    return handleApiError(err);
+  }
   return NextResponse.json(subscriber, { status: 201 });
 }

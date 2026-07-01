@@ -1,5 +1,5 @@
 import { requireApiAdmin } from "@/lib/api-auth";
-import { apiError, apiValidationError } from "@/lib/api-response";
+import { apiValidationError, handleApiError } from "@/lib/api-response";
 import { db } from "@/lib/db";
 import { promotionPatchSchema } from "@/lib/validations";
 import { NextResponse } from "next/server";
@@ -48,8 +48,7 @@ export async function PATCH(
 
     return NextResponse.json(promotion);
   } catch (err) {
-    console.error("[PATCH /api/admin/promotions/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }
 
@@ -66,7 +65,6 @@ export async function DELETE(
 
     return new NextResponse(null, { status: 204 });
   } catch (err) {
-    console.error("[DELETE /api/admin/promotions/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiAdminPermission } from "@/lib/api-auth";
-import { apiError, apiValidationError } from "@/lib/api-response";
+import { apiError, apiValidationError, handleApiError } from "@/lib/api-response";
 import { db } from "@/lib/db";
 import { slugify } from "@/lib/utils";
 
@@ -61,8 +61,7 @@ export async function PATCH(
     });
     return NextResponse.json(updated);
   } catch (err) {
-    console.error("[PATCH /api/admin/community-badges/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }
 
@@ -86,7 +85,6 @@ export async function DELETE(
     await db.badgeDefinition.delete({ where: { id } });
     return new NextResponse(null, { status: 204 });
   } catch (err) {
-    console.error("[DELETE /api/admin/community-badges/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }

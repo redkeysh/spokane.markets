@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiAdminPermission } from "@/lib/api-auth";
-import { apiError, apiValidationError } from "@/lib/api-response";
+import { apiError, apiValidationError, handleApiError } from "@/lib/api-response";
 import { db } from "@/lib/db";
 import { slugify } from "@/lib/utils";
 
@@ -31,8 +31,7 @@ export async function GET() {
     });
     return NextResponse.json(badges);
   } catch (err) {
-    console.error("[GET /api/admin/community-badges]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }
 
@@ -67,7 +66,6 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(created, { status: 201 });
   } catch (err) {
-    console.error("[POST /api/admin/community-badges]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }

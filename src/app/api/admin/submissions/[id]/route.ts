@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { requireApiAdmin } from "@/lib/api-auth";
-import { apiError, apiValidationError } from "@/lib/api-response";
+import { apiError, apiValidationError, handleApiError } from "@/lib/api-response";
 import { db } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
 import { createNotification } from "@/lib/notifications";
@@ -74,7 +74,6 @@ export async function PATCH(
 
     return NextResponse.json(submission);
   } catch (err) {
-    console.error("[PATCH /api/admin/submissions/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { requireApiAdmin } from "@/lib/api-auth";
-import { apiError, apiValidationError } from "@/lib/api-response";
+import { apiError, apiValidationError, handleApiError } from "@/lib/api-response";
 import { db } from "@/lib/db";
 import { marketingTemplateCreateSchema } from "@/lib/validations/marketing";
 import { buildPlaceholderSchemaFromTokens, detectTokensFromBundle } from "@/lib/marketing/template-utils";
@@ -83,7 +83,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json(created, { status: 201 });
   } catch (err) {
-    console.error("[POST /api/admin/marketing/templates]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }

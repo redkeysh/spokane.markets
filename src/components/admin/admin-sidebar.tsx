@@ -17,7 +17,7 @@ export function AdminSidebar({ moderationCount = 0 }: { moderationCount?: number
       <button
         type="button"
         aria-label="Toggle navigation"
-        className="fixed top-3 left-3 z-50 rounded-md border border-border bg-background p-2 lg:hidden"
+        className="fixed top-3 left-3 z-50 rounded-md border border-border bg-background p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
         onClick={() => setOpen(!open)}
       >
         {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -54,7 +54,7 @@ export function AdminSidebar({ moderationCount = 0 }: { moderationCount?: number
                 onClick={() => setOpen(false)}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                  "flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   active
                     ? "bg-muted font-medium text-foreground"
                     : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"

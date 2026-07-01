@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useState } from "react";
+import { getApiErrorMessage } from "@/lib/api-client";
 
 interface UserDeleteButtonProps {
   userId: string;
@@ -43,7 +44,7 @@ export function UserDeleteButton({
         router.refresh();
       } else {
         const body = await res.json();
-        setError(body.error || "Failed to delete user");
+        setError(getApiErrorMessage(body, "Failed to delete user"));
       }
     } finally {
       setDeleting(false);

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DeleteButton } from "@/components/admin/action-buttons";
 import { slugify } from "@/lib/utils";
+import { getApiErrorMessage } from "@/lib/api-client";
 
 type NeighborhoodWithCount = {
   id: string;
@@ -149,7 +150,7 @@ export function NeighborhoodsManager({
         };
       };
       const promptMessage = [
-        `${conflict.error}`,
+        `${getApiErrorMessage(conflict, "This neighborhood is still in use")}`,
         `Usage: venues=${conflict.usage.venues}, markets=${conflict.usage.markets}, subscribers=${conflict.usage.subscribers}, savedFilters=${conflict.usage.savedFilters}.`,
         "Enter replacement slug to reassign these references before delete:",
       ].join("\n");
@@ -163,11 +164,11 @@ export function NeighborhoodsManager({
       });
       if (!retry.ok) {
         const data = await retry.json();
-        throw new Error(data.error ?? "Failed to delete neighborhood");
+        throw new Error(getApiErrorMessage(data, "Failed to delete neighborhood"));
       }
     } else if (!res.ok) {
       const data = await res.json();
-      throw new Error(data.error ?? "Failed to delete neighborhood");
+      throw new Error(getApiErrorMessage(data, "Failed to delete neighborhood"));
     }
 
     setNeighborhoods((prev) => prev.filter((entry) => entry.id !== row.id));

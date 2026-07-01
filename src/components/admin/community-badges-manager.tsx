@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getApiErrorMessage } from "@/lib/api-client";
 
 type CommunityBadgeRow = Pick<
   BadgeDefinition,
@@ -50,7 +51,7 @@ export function CommunityBadgesManager({
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error ?? "Failed to create badge");
+        throw new Error(getApiErrorMessage(body, "Failed to create badge"));
       }
       setNewBadge({ name: "", slug: "", description: "", icon: "", sortOrder: 100 });
       await refresh();
@@ -78,7 +79,7 @@ export function CommunityBadgesManager({
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error ?? "Failed to update badge");
+        throw new Error(getApiErrorMessage(body, "Failed to update badge"));
       }
       await refresh();
     } catch (e) {
@@ -98,7 +99,7 @@ export function CommunityBadgesManager({
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error ?? "Failed to delete badge");
+        throw new Error(getApiErrorMessage(body, "Failed to delete badge"));
       }
       await refresh();
     } catch (e) {

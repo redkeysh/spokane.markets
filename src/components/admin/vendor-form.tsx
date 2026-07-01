@@ -10,6 +10,7 @@ import {
 } from "@/lib/validations";
 import { parseGalleryUrlsFromMultilineText } from "@/lib/gallery-urls";
 import { slugify } from "@/lib/utils";
+import { getApiErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/phone-input";
@@ -129,7 +130,7 @@ export function AdminVendorForm({
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      setServerError(body.error ?? "Something went wrong");
+      setServerError(getApiErrorMessage(body, "Something went wrong"));
       return;
     }
 

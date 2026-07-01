@@ -23,6 +23,12 @@ const QUEUE_ICONS: Record<string, typeof Users> = {
   vendor_requests: Users,
   events_pending: Clock,
 };
+
+const MARKET_VERIFICATION_LABELS: Record<string, string> = {
+  UNVERIFIED: "Not verified",
+  PENDING: "Pending review",
+  VERIFIED: "Verified",
+};
 const EVENT_STATUS_VARIANTS = {
   DRAFT: "info",
   PENDING: "warning",
@@ -328,7 +334,8 @@ export default async function OrganizerDashboardPage() {
                           : "outline"
                       }
                     >
-                      {market.verificationStatus}
+                      {MARKET_VERIFICATION_LABELS[market.verificationStatus] ??
+                        market.verificationStatus}
                     </Badge>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">

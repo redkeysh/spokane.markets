@@ -2,6 +2,7 @@
 
 import { useForm, useFieldArray, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import { eventSchema, type EventInput } from "@/lib/validations";
 import { formatDateOnlyLocal, formatDateOnlyUTC, slugify, cn } from "@/lib/utils";
 import {
@@ -348,6 +349,7 @@ export function EventForm({
       throw new Error(body.error?.message || "Failed to save event");
     }
 
+    toast.success(initialData ? "Event updated." : "Event created.");
     if (redirect) {
       router.push("/admin/events");
     }

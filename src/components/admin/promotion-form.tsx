@@ -14,6 +14,7 @@ import {
   AdminTwoColumnFormLayout,
 } from "@/components/admin/admin-form-layout";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useEffect, useState } from "react";
 
 interface PromotionFormProps {
@@ -116,6 +117,7 @@ export function PromotionForm({ events, vendors, initialData }: PromotionFormPro
         throw new Error(body.error?.message || "Failed to save promotion");
       }
 
+      toast.success(initialData ? "Promotion updated." : "Promotion created.");
       router.push("/admin/promotions");
       router.refresh();
     } catch (e) {

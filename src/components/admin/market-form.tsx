@@ -19,6 +19,7 @@ import {
 import type { NeighborhoodOption } from "@/lib/neighborhoods-config";
 import type { ListingCommunityBadgeOption } from "@/lib/listing-community-badges";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useState } from "react";
 
 interface MarketFormProps {
@@ -112,6 +113,7 @@ export function MarketForm({
         throw new Error(body.error?.message || "Failed to save market");
       }
 
+      toast.success(initialData ? "Market updated." : "Market created.");
       router.push("/admin/markets");
       router.refresh();
     } catch (e) {

@@ -11,6 +11,7 @@ import {
 import { parseGalleryUrlsFromMultilineText } from "@/lib/gallery-urls";
 import { slugify } from "@/lib/utils";
 import { getApiErrorMessage } from "@/lib/api-client";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/phone-input";
@@ -134,6 +135,7 @@ export function AdminVendorForm({
       return;
     }
 
+    toast.success(isEditing ? "Vendor updated." : "Vendor created.");
     router.push("/admin/vendors");
     router.refresh();
   }

@@ -14,6 +14,7 @@ import {
 } from "@/components/admin/admin-form-layout";
 import type { NeighborhoodOption } from "@/lib/neighborhoods-config";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useState } from "react";
 
 interface VenueFormProps {
@@ -66,6 +67,7 @@ export function VenueForm({ initialData, neighborhoods }: VenueFormProps) {
         throw new Error(body.error?.message || "Failed to save venue");
       }
 
+      toast.success(initialData ? "Venue updated." : "Venue created.");
       router.push("/admin/venues");
       router.refresh();
     } catch (e) {

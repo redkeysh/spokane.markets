@@ -2,130 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SITE_NAME } from "@/lib/constants";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import {
-  LayoutDashboard,
-  Calendar,
-  Store,
-  MapPin,
-  Inbox,
-  MessageSquare,
-  Mail,
-  Users,
-  Menu,
-  X,
-  ImageIcon,
-  LayoutTemplate,
-  Flag,
-  ShoppingBag,
-  FileText,
-  ChevronDown,
-  ChevronRight,
-  ClipboardList,
-  Database,
-  Megaphone,
-  Tag,
-  WandSparkles,
-  BadgeCheck,
-} from "lucide-react";
+import { SITE_NAME } from "@/lib/constants";
+import { Menu, X } from "lucide-react";
+import { ADMIN_NAV, isSectionActive } from "@/lib/admin/nav";
 
-type NavItem = { label: string; href: string; icon: React.ComponentType<{ className?: string }> };
-
-type NavGroup = {
-  label: string;
-  defaultOpen?: boolean;
-  items: NavItem[];
-};
-
-const navGroups: NavGroup[] = [
-  {
-    label: "Operations",
-    defaultOpen: true,
-    items: [
-      { label: "Overview", href: "/admin", icon: LayoutDashboard },
-      { label: "Queues", href: "/admin/queues", icon: ClipboardList },
-      { label: "Promotions", href: "/admin/promotions", icon: Megaphone },
-    ],
-  },
-  {
-    label: "Directory",
-    defaultOpen: true,
-    items: [
-      { label: "Events", href: "/admin/events", icon: Calendar },
-      { label: "Vendors", href: "/admin/vendors", icon: ShoppingBag },
-      { label: "Markets", href: "/admin/markets", icon: Store },
-      { label: "Community Badges", href: "/admin/badges", icon: BadgeCheck },
-      { label: "Venues", href: "/admin/venues", icon: MapPin },
-      { label: "Neighborhoods", href: "/admin/neighborhoods", icon: MapPin },
-      { label: "Tags & Features", href: "/admin/tags", icon: Tag },
-    ],
-  },
-  {
-    label: "Users",
-    defaultOpen: true,
-    items: [
-      { label: "Users", href: "/admin/users", icon: Users },
-      { label: "Subscribers", href: "/admin/subscribers", icon: Mail },
-    ],
-  },
-  {
-    label: "Moderation",
-    defaultOpen: true,
-    items: [
-      { label: "Applications", href: "/admin/applications", icon: FileText },
-      { label: "Submissions", href: "/admin/submissions", icon: Inbox },
-      { label: "Reviews", href: "/admin/reviews", icon: MessageSquare },
-      { label: "Photos", href: "/admin/photos", icon: ImageIcon },
-      { label: "Reports", href: "/admin/reports", icon: Flag },
-    ],
-  },
-  {
-    label: "Marketing",
-    defaultOpen: true,
-    items: [
-      { label: "Asset Studio", href: "/admin/marketing/asset-studio", icon: WandSparkles },
-    ],
-  },
-  {
-    label: "System",
-    defaultOpen: true,
-    items: [
-      { label: "Site Settings", href: "/admin/settings", icon: LayoutTemplate },
-      { label: "Permissions", href: "/admin/permissions", icon: Users },
-      { label: "Data", href: "/admin/data", icon: Database },
-      { label: "System Health", href: "/admin/system-health", icon: ClipboardList },
-      { label: "Audit Log", href: "/admin/audit-log", icon: FileText },
-    ],
-  },
-];
-
-export function AdminSidebar() {
+export function AdminSidebar({ moderationCount = 0 }: { moderationCount?: number }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(
-      navGroups.map((g) => [g.label, g.defaultOpen ?? false])
-    )
-  );
-
-  const isActive = (href: string) => {
-    if (href === "/admin") return pathname === "/admin";
-    if (href === "/admin/settings") {
-      return pathname === "/admin/settings";
-    }
-    return pathname.startsWith(href);
-  };
-
-  const toggleGroup = (label: string) => {
-    setExpanded((prev) => ({ ...prev, [label]: !prev[label] }));
-  };
 
   return (
     <>
       <button
-        className="fixed top-4 left-4 z-50 lg:hidden p-2 rounded-md bg-background border border-border"
+        type="button"
+        aria-label="Toggle navigation"
+        className="fixed top-3 left-3 z-50 rounded-md border border-border bg-background p-2 lg:hidden"
         onClick={() => setOpen(!open)}
       >
         {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -140,72 +32,52 @@ export function AdminSidebar() {
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 bg-card border-r border-border flex flex-col transition-transform lg:translate-x-0 lg:static lg:z-auto",
+          "fixed inset-y-0 left-0 z-40 flex w-56 flex-col border-r border-border bg-card transition-transform lg:static lg:z-auto lg:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="p-6 border-b border-border">
-          <Link href="/admin" className="text-lg font-bold">
+        <div className="border-b border-border px-5 py-5">
+          <Link href="/admin" className="text-base font-semibold tracking-tight">
             {SITE_NAME}
           </Link>
-          <p className="text-xs text-muted-foreground">Admin Dashboard</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Admin</p>
         </div>
 
-        <nav className="flex-1 overflow-y-auto p-4 space-y-2">
-          {navGroups.map((group) => {
-            const isExpanded = expanded[group.label];
-            const hasActive = group.items.some((item) => isActive(item.href));
+        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+          {ADMIN_NAV.map((section) => {
+            const Icon = section.icon;
+            const active = isSectionActive(section, pathname);
             return (
-              <div key={group.label} className="space-y-1">
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(group.label)}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                    hasActive
-                      ? "bg-muted text-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="h-4 w-4 shrink-0" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 shrink-0" />
-                  )}
-                  {group.label}
-                </button>
-                {isExpanded && (
-                  <div className="ml-4 space-y-0.5 border-l border-border pl-2">
-                    {group.items.map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <Link
-                          key={item.href + item.label}
-                          href={item.href}
-                          onClick={() => setOpen(false)}
-                          className={cn(
-                            "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                            isActive(item.href)
-                              ? "bg-primary text-primary-foreground"
-                              : "text-muted-foreground hover:bg-muted hover:text-primary"
-                          )}
-                        >
-                          <Icon className="h-4 w-4 shrink-0" />
-                          {item.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
+              <Link
+                key={section.label}
+                href={section.href}
+                onClick={() => setOpen(false)}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                  active
+                    ? "bg-muted font-medium text-foreground"
+                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 )}
-              </div>
+              >
+                <span className="flex items-center gap-3">
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {section.label}
+                </span>
+                {section.label === "Moderation" && moderationCount > 0 && (
+                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                    {moderationCount}
+                  </span>
+                )}
+              </Link>
             );
           })}
         </nav>
 
-        <div className="p-4 border-t border-border">
+        <div className="border-t border-border p-4">
           <Link
             href="/"
-            className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            className="text-sm text-muted-foreground transition-colors hover:text-primary"
           >
             &larr; Back to site
           </Link>

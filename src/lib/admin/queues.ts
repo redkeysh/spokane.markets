@@ -107,6 +107,18 @@ export async function getQueuesSummary(): Promise<QueueSummary[]> {
   ];
 }
 
+/** Lean total of pending moderation items, for the sidebar badge. */
+export async function getModerationPendingCount(): Promise<number> {
+  const [subs, revs, photos, reports, applications] = await Promise.all([
+    db.submission.count({ where: { status: "PENDING" } }),
+    db.review.count({ where: { status: "PENDING" } }),
+    db.photo.count({ where: { status: "PENDING" } }),
+    db.report.count({ where: { status: "PENDING" } }),
+    db.application.count({ where: { status: "PENDING" } }),
+  ]);
+  return subs + revs + photos + reports + applications;
+}
+
 export async function getQueueItems(opts: {
   type?: QueueType | "all";
   limit?: number;

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { requireApiAdminPermission } from "@/lib/api-auth";
-import { apiError, apiValidationError, apiNotFound } from "@/lib/api-response";
+import { apiError, apiValidationError, apiNotFound, handleApiError } from "@/lib/api-response";
 import { db } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
 import { NextResponse } from "next/server";
@@ -123,8 +123,7 @@ export async function PATCH(
 
     return NextResponse.json(user);
   } catch (err) {
-    console.error("[PATCH /api/admin/users/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }
 
@@ -167,7 +166,6 @@ export async function DELETE(
 
     return new NextResponse(null, { status: 204 });
   } catch (err) {
-    console.error("[DELETE /api/admin/users/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }

@@ -68,8 +68,12 @@ export function handleApiError(error: unknown): NextResponse {
     if (code === "P2025") {
       return apiError("That record no longer exists.", 404, { code: "NOT_FOUND" });
     }
-    if (code === "P2003") {
-      return apiError("A referenced record does not exist.", 400, { code: "FK_CONSTRAINT" });
+    if (code === "P2003" || code === "P2014") {
+      return apiError(
+        "This can't be completed because of a related record (it may not exist, or may still be in use).",
+        400,
+        { code: "FK_CONSTRAINT" }
+      );
     }
   }
   console.error("[api] Unhandled error:", error);

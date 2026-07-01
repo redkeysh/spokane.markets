@@ -5,11 +5,17 @@ import { requireApiAdmin } from "@/lib/api-auth";
 import { apiError, apiValidationError } from "@/lib/api-response";
 import { db } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
+import { parseDateTimeInTimezone } from "@/lib/utils";
 import type { MaintenanceMode } from "@prisma/client";
 
 const maintenanceLinkSchema = z.object({
-  label: z.string().min(1),
-  url: z.string().min(1),
+  label: z.string().min(1).max(100),
+  url: z
+    .string()
+    .min(1)
+    .refine((v) => v.startsWith("/") || /^https?:\/\//i.test(v), {
+      message: "Link URL must be a relative path or an http(s) URL",
+    }),
 });
 
 const patchMaintenanceSchema = z.object({
@@ -74,9 +80,17 @@ export async function PATCH(request: Request) {
 
     const { mode, messageTitle, messageBody, links } = parsed.data;
 
+    // The form sends a naive datetime-local string ("YYYY-MM-DDTHH:mm") with no
+    // timezone. Parse it in the site's canonical timezone so the stored instant
+    // is correct regardless of the server's timezone (UTC in production).
     let eta: Date | null = null;
-    if (parsed.data.eta != null && parsed.data.eta !== "") {
-      const d = new Date(parsed.data.eta);
+    const rawEta = parsed.data.eta;
+    if (rawEta != null && rawEta !== "") {
+      const [datePart, timePart] = rawEta.split("T");
+      const d =
+        datePart && timePart
+          ? parseDateTimeInTimezone(datePart, timePart.slice(0, 5))
+          : new Date(rawEta);
       if (!Number.isNaN(d.getTime())) eta = d;
     }
 

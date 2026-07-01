@@ -37,6 +37,7 @@ export default async function AdminSubscribersPage({
       <SubscribersPageClient
         subscribers={subscribers}
         neighborhoods={neighborhoods}
+        total={total}
       />
       <Pagination page={page} totalPages={totalPages} totalItems={total} limit={limit} />
     </div>

@@ -24,12 +24,14 @@ export default async function MaintenancePage({ searchParams }: PageProps) {
   }
 
   const etaStr = state.eta
-    ? new Date(state.eta).toLocaleString(undefined, {
+    ? new Date(state.eta).toLocaleString("en-US", {
         weekday: "short",
         month: "short",
         day: "numeric",
         hour: "numeric",
         minute: "2-digit",
+        timeZone: "America/Los_Angeles",
+        timeZoneName: "short",
       })
     : null;
 

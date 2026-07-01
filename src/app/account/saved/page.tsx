@@ -22,6 +22,10 @@ export const metadata: Metadata = {
 
 type Tab = "filters" | "rsvps" | "favorites";
 
+// Bound each saved list so a power user's account can't trigger an unbounded
+// fetch on every page load. Generous enough to cover realistic usage.
+const SAVED_LIST_LIMIT = 200;
+
 export default async function AccountSavedPage({
   searchParams,
 }: {
@@ -37,6 +41,7 @@ export default async function AccountSavedPage({
     db.savedFilter.findMany({
       where: { userId: session.user.id },
       orderBy: { createdAt: "desc" },
+      take: SAVED_LIST_LIMIT,
     }),
     db.attendance.findMany({
       where: { userId: session.user.id },
@@ -46,6 +51,7 @@ export default async function AccountSavedPage({
         },
       },
       orderBy: { createdAt: "desc" },
+      take: SAVED_LIST_LIMIT,
     }),
     db.favoriteVendor.findMany({
       where: { userId: session.user.id },
@@ -55,6 +61,7 @@ export default async function AccountSavedPage({
         },
       },
       orderBy: { createdAt: "desc" },
+      take: SAVED_LIST_LIMIT,
     }),
   ]);
 

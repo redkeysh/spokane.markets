@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatForDateTimeLocal } from "@/lib/utils";
 import type { MaintenanceMode } from "@prisma/client";
 
 interface MaintenanceLink {
@@ -44,9 +44,7 @@ export function MaintenanceForm({ initialState }: MaintenanceFormProps) {
     initialState.links?.length ? [...initialState.links] : []
   );
   const [eta, setEta] = React.useState(
-    initialState.eta
-      ? new Date(initialState.eta).toISOString().slice(0, 16)
-      : ""
+    initialState.eta ? formatForDateTimeLocal(new Date(initialState.eta)) : ""
   );
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);

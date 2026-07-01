@@ -664,16 +664,36 @@ export async function bulkUpdateSubmissionStatus(
   if (ids.length === 0) return;
 
   if (status === "APPROVED") {
+    // Each approval is an independent, idempotent unit (it skips submissions
+    // that are already approved), so a single failure must not abort the batch
+    // and strand the remaining valid submissions. Approve every one we can,
+    // then report the failures; retrying the batch is safe.
+    const failures: string[] = [];
     for (const id of ids) {
-      await approveSubmissionWithEvent(id, session.user.id);
+      try {
+        await approveSubmissionWithEvent(id, session.user.id);
+      } catch (e) {
+        failures.push(`${id}: ${e instanceof Error ? e.message : "failed"}`);
+      }
     }
     await logAudit(
       session.user.id,
       "BULK_UPDATE_SUBMISSION_STATUS",
       "SUBMISSION",
       undefined,
-      { ids, newValue: { status: "APPROVED" } }
+      {
+        ids,
+        newValue: { status: "APPROVED" },
+        ...(failures.length ? { failures } : {}),
+      }
     );
+    revalidatePath("/admin/submissions");
+    revalidatePath("/admin/queues");
+    if (failures.length) {
+      throw new Error(
+        `Approved ${ids.length - failures.length} of ${ids.length}. ${failures.length} could not be approved: ${failures.join("; ")}`
+      );
+    }
     return;
   }
 

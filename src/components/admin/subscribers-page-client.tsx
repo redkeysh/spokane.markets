@@ -19,11 +19,13 @@ interface Subscriber {
 interface SubscribersPageClientProps {
   subscribers: Subscriber[];
   neighborhoods: NeighborhoodOption[];
+  total: number;
 }
 
 export function SubscribersPageClient({
   subscribers,
   neighborhoods,
+  total,
 }: SubscribersPageClientProps) {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Subscriber | null>(null);
@@ -49,7 +51,7 @@ export function SubscribersPageClient({
         <h1 className="text-3xl font-bold tracking-tight">Subscribers</h1>
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">
-            {subscribers.length} total
+            {total} total
           </span>
           <Button onClick={openCreate} size="sm">
             <Plus className="mr-2 h-4 w-4" />

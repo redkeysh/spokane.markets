@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { getApiErrorMessage } from "@/lib/api-client";
 import {
   ADMIN_PERMISSION_KEYS,
   type AdminPermissionMatrix,
@@ -52,11 +54,17 @@ export function PermissionsMatrix({
   async function save() {
     setSaving(true);
     try {
-      await fetch("/api/admin/permissions", {
+      const res = await fetch("/api/admin/permissions", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(matrix),
       });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        toast.error(getApiErrorMessage(body, "Failed to save permissions."));
+        return;
+      }
+      toast.success("Permissions updated.");
     } finally {
       setSaving(false);
     }

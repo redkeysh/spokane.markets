@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { Select } from "@/components/ui/select";
+import { toast } from "sonner";
+import { getApiErrorMessage } from "@/lib/api-client";
 
 const ACCOUNT_STATUSES = [
   { value: "ACTIVE", label: "Active" },
@@ -31,6 +33,11 @@ export function UserAccountStatusSelect({
       body: JSON.stringify({ accountStatus }),
     });
     if (res.ok) {
+      router.refresh();
+      toast.success("Account status updated.");
+    } else {
+      const body = await res.json().catch(() => ({}));
+      toast.error(getApiErrorMessage(body, "Failed to update account status."));
       router.refresh();
     }
   }

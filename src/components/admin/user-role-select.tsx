@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { Select } from "@/components/ui/select";
 import type { Role } from "@prisma/client";
+import { toast } from "sonner";
+import { getApiErrorMessage } from "@/lib/api-client";
 
 const ROLES: { value: Role; label: string }[] = [
   { value: "USER", label: "User" },
@@ -27,6 +29,11 @@ export function UserRoleSelect({ userId, currentRole }: UserRoleSelectProps) {
       body: JSON.stringify({ role }),
     });
     if (res.ok) {
+      router.refresh();
+      toast.success("Role updated.");
+    } else {
+      const body = await res.json().catch(() => ({}));
+      toast.error(getApiErrorMessage(body, "Failed to update role."));
       router.refresh();
     }
   }

@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DeleteButton } from "@/components/admin/action-buttons";
 import { slugify } from "@/lib/utils";
+import { toast } from "sonner";
+import { getApiErrorMessage } from "@/lib/api-client";
 
 type TagWithCount = { id: string; name: string; slug: string; _count: { events: number } };
 type FeatureWithCount = { id: string; name: string; slug: string; icon: string | null; _count: { events: number } };
@@ -84,8 +86,14 @@ export function CategoriesManager({
   };
 
   const deleteTag = async (id: string) => {
-    await fetch(`/api/admin/tags/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/admin/tags/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      toast.error(getApiErrorMessage(body, "Failed to delete tag."));
+      return;
+    }
     setTags((prev) => prev.filter((t) => t.id !== id));
+    toast.success("Tag deleted.");
     router.refresh();
   };
 
@@ -161,8 +169,14 @@ export function CategoriesManager({
   };
 
   const deleteFeature = async (id: string) => {
-    await fetch(`/api/admin/features/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/admin/features/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      toast.error(getApiErrorMessage(body, "Failed to delete feature."));
+      return;
+    }
     setFeatures((prev) => prev.filter((f) => f.id !== id));
+    toast.success("Feature deleted.");
     router.refresh();
   };
 

@@ -107,6 +107,14 @@ export const promotionSchema = promotionSchemaBase.superRefine((data, ctx) => {
       message: "Select exactly one promotion target (event or vendor).",
     });
   }
+
+  if (data.startDate && data.endDate && new Date(data.endDate) < new Date(data.startDate)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["endDate"],
+      message: "End date must be on or after the start date.",
+    });
+  }
 });
 export type PromotionInput = z.infer<typeof promotionSchema>;
 
@@ -119,6 +127,14 @@ export const promotionPatchSchema = promotionSchemaBase.partial().superRefine((d
       code: z.ZodIssueCode.custom,
       path: ["eventId"],
       message: "Select exactly one promotion target (event or vendor).",
+    });
+  }
+
+  if (data.startDate && data.endDate && new Date(data.endDate) < new Date(data.startDate)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["endDate"],
+      message: "End date must be on or after the start date.",
     });
   }
 });

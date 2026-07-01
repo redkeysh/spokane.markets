@@ -53,34 +53,38 @@ export async function PUT(request: Request, { params }: Params) {
       placeholders: data.placeholderSchemaJson,
     });
 
-    const updated = await db.marketingTemplate.update({
-      where: { id },
-      data: {
-        slug: data.slug,
-        name: data.name,
-        category: data.category,
-        profile: data.profile,
-        placeholderSchemaJson: mergedSchema as unknown as Prisma.InputJsonValue,
-        safeHtmlPlaceholders: data.safeHtmlPlaceholders,
-        companionTextKeys: data.companionTextKeys,
-        friendlyFilenameStem: data.friendlyFilenameStem || null,
-        defaultScale: data.defaultScale,
-        campaignId: data.campaignId || null,
-        active: data.active,
-        version: data.versionBump ? { increment: 1 } : undefined,
-      },
-    });
-
-    await db.marketingTemplateAsset.deleteMany({ where: { templateId: id } });
-    await db.marketingTemplateAsset.createMany({
-      data: data.assets.map((asset) => ({
-        templateId: id,
-        kind: asset.kind,
-        name: asset.name,
-        storageKey: asset.storageKey || null,
-        inlineContent: asset.inlineContent ?? null,
-        mimeType: asset.mimeType ?? null,
-      })),
+    const updated = await db.$transaction(async (tx) => {
+      const template = await tx.marketingTemplate.update({
+        where: { id },
+        data: {
+          slug: data.slug,
+          name: data.name,
+          category: data.category,
+          profile: data.profile,
+          placeholderSchemaJson: mergedSchema as unknown as Prisma.InputJsonValue,
+          safeHtmlPlaceholders: data.safeHtmlPlaceholders,
+          companionTextKeys: data.companionTextKeys,
+          friendlyFilenameStem: data.friendlyFilenameStem || null,
+          defaultScale: data.defaultScale,
+          campaignId: data.campaignId || null,
+          active: data.active,
+          version: data.versionBump ? { increment: 1 } : undefined,
+        },
+      });
+      // Replace assets atomically so a mid-way failure can't leave the template
+      // with no assets.
+      await tx.marketingTemplateAsset.deleteMany({ where: { templateId: id } });
+      await tx.marketingTemplateAsset.createMany({
+        data: data.assets.map((asset) => ({
+          templateId: id,
+          kind: asset.kind,
+          name: asset.name,
+          storageKey: asset.storageKey || null,
+          inlineContent: asset.inlineContent ?? null,
+          mimeType: asset.mimeType ?? null,
+        })),
+      });
+      return template;
     });
 
     await db.auditLog.create({

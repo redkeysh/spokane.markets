@@ -20,6 +20,19 @@ export function getApiErrorMessage(body: unknown, fallback = "Something went wro
   return fallback;
 }
 
+/**
+ * True for Next.js control-flow "errors" thrown by redirect()/notFound() inside
+ * a server action. These must be re-thrown, not caught and shown as a toast,
+ * or navigation silently breaks.
+ */
+export function isNextControlFlowError(err: unknown): boolean {
+  if (err && typeof err === "object" && "digest" in err) {
+    const digest = String((err as { digest: unknown }).digest);
+    return digest.startsWith("NEXT_REDIRECT") || digest === "NEXT_NOT_FOUND";
+  }
+  return false;
+}
+
 /** Field-level validation errors, when a route returns apiValidationError. */
 export function getApiFieldErrors(body: unknown): Record<string, string[]> | undefined {
   if (body && typeof body === "object" && "error" in body) {

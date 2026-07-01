@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useTransition } from "react";
 import type { AnalyticsParams } from "@/lib/analytics";
 import { trackEvent } from "@/lib/analytics";
+import { toast } from "sonner";
+import { isNextControlFlowError } from "@/lib/api-client";
 import { Recycle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +26,8 @@ export function DeleteButton({
   pendingLabel = "Deleting...",
   iconOnly = false,
   iconName = "trash",
+  successMessage = "Done.",
+  errorMessage = "Something went wrong.",
 }: {
   action: () => Promise<void>;
   label?: string;
@@ -33,14 +37,22 @@ export function DeleteButton({
   pendingLabel?: string;
   iconOnly?: boolean;
   iconName?: "trash" | "recycle";
+  successMessage?: string;
+  errorMessage?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function handleConfirm() {
     startTransition(async () => {
-      await action();
-      setOpen(false);
+      try {
+        await action();
+        setOpen(false);
+        toast.success(successMessage);
+      } catch (err) {
+        if (isNextControlFlowError(err)) throw err;
+        toast.error(err instanceof Error ? err.message : errorMessage);
+      }
     });
   }
 
@@ -90,6 +102,8 @@ export function StatusButton({
   onSuccess,
   analyticsEventName,
   analyticsParams,
+  successMessage = "Done.",
+  errorMessage = "Something went wrong.",
 }: {
   action: () => Promise<unknown>;
   label: string;
@@ -97,6 +111,8 @@ export function StatusButton({
   onSuccess?: () => void;
   analyticsEventName?: string;
   analyticsParams?: AnalyticsParams;
+  successMessage?: string;
+  errorMessage?: string;
 }) {
   const [isPending, startTransition] = useTransition();
 
@@ -108,11 +124,27 @@ export function StatusButton({
       disabled={isPending}
       onClick={() =>
         startTransition(async () => {
-          await action();
-          if (analyticsEventName) {
-            trackEvent(analyticsEventName, analyticsParams);
+          try {
+            const result = await action();
+            if (
+              result &&
+              typeof result === "object" &&
+              "ok" in result &&
+              (result as { ok?: unknown }).ok === false
+            ) {
+              const msg = (result as { error?: unknown }).error;
+              toast.error(typeof msg === "string" ? msg : errorMessage);
+              return;
+            }
+            if (analyticsEventName) {
+              trackEvent(analyticsEventName, analyticsParams);
+            }
+            onSuccess?.();
+            toast.success(successMessage);
+          } catch (err) {
+            if (isNextControlFlowError(err)) throw err;
+            toast.error(err instanceof Error ? err.message : errorMessage);
           }
-          onSuccess?.();
         })
       }
     >

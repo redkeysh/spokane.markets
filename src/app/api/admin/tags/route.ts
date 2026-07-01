@@ -1,5 +1,5 @@
 import { requireApiAdmin } from "@/lib/api-auth";
-import { apiError, apiValidationError } from "@/lib/api-response";
+import { apiValidationError, handleApiError } from "@/lib/api-response";
 import { db } from "@/lib/db";
 import { tagSchema } from "@/lib/validations";
 import { NextResponse } from "next/server";
@@ -15,8 +15,7 @@ export async function GET() {
     });
     return NextResponse.json(tags);
   } catch (err) {
-    console.error("[GET /api/admin/tags]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }
 
@@ -36,7 +35,6 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(tag, { status: 201 });
   } catch (err) {
-    console.error("[POST /api/admin/tags]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }

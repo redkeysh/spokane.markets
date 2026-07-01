@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { requireApiAdmin } from "@/lib/api-auth";
-import { apiError, apiValidationError } from "@/lib/api-response";
+import { requireApiAdmin, requireApiAdminPermission } from "@/lib/api-auth";
+import { apiValidationError, handleApiError } from "@/lib/api-response";
 import { db } from "@/lib/db";
 import { neighborhoodSchema } from "@/lib/validations";
 
@@ -22,14 +22,13 @@ export async function GET() {
     });
     return NextResponse.json(neighborhoods);
   } catch (err) {
-    console.error("[GET /api/admin/neighborhoods]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const { error } = await requireApiAdmin();
+    const { error } = await requireApiAdminPermission("admin.settings.manage");
     if (error) return error;
 
     const body = await request.json();
@@ -48,7 +47,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json(created, { status: 201 });
   } catch (err) {
-    console.error("[POST /api/admin/neighborhoods]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }

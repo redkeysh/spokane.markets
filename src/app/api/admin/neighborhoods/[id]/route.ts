@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiAdminPermission } from "@/lib/api-auth";
-import { apiError, apiValidationError } from "@/lib/api-response";
+import { apiError, apiValidationError, handleApiError } from "@/lib/api-response";
 import { db } from "@/lib/db";
 import { neighborhoodSchema } from "@/lib/validations";
 
@@ -34,8 +34,7 @@ export async function PATCH(
 
     return NextResponse.json(updated);
   } catch (err) {
-    console.error("[PATCH /api/admin/neighborhoods/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }
 

@@ -1,5 +1,5 @@
 import { requireApiAdmin } from "@/lib/api-auth";
-import { apiError, apiValidationError } from "@/lib/api-response";
+import { apiValidationError, handleApiError } from "@/lib/api-response";
 import { db } from "@/lib/db";
 import { featureSchema } from "@/lib/validations";
 import { NextResponse } from "next/server";
@@ -29,8 +29,7 @@ export async function PATCH(
     });
     return NextResponse.json(feature);
   } catch (err) {
-    console.error("[PATCH /api/admin/features/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }
 
@@ -46,7 +45,6 @@ export async function DELETE(
     await db.feature.delete({ where: { id } });
     return new NextResponse(null, { status: 204 });
   } catch (err) {
-    console.error("[DELETE /api/admin/features/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }

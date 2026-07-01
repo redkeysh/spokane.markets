@@ -1,5 +1,5 @@
 import { requireApiAdmin } from "@/lib/api-auth";
-import { apiError, apiValidationError } from "@/lib/api-response";
+import { apiValidationError, handleApiError } from "@/lib/api-response";
 import { db } from "@/lib/db";
 import { featureSchema } from "@/lib/validations";
 import { NextResponse } from "next/server";
@@ -15,8 +15,7 @@ export async function GET() {
     });
     return NextResponse.json(features);
   } catch (err) {
-    console.error("[GET /api/admin/features]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }
 
@@ -40,7 +39,6 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(feature, { status: 201 });
   } catch (err) {
-    console.error("[POST /api/admin/features]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }

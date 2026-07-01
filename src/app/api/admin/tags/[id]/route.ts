@@ -1,5 +1,5 @@
 import { requireApiAdmin } from "@/lib/api-auth";
-import { apiError, apiValidationError } from "@/lib/api-response";
+import { apiValidationError, handleApiError } from "@/lib/api-response";
 import { db } from "@/lib/db";
 import { tagSchema } from "@/lib/validations";
 import { NextResponse } from "next/server";
@@ -25,8 +25,7 @@ export async function PATCH(
     });
     return NextResponse.json(tag);
   } catch (err) {
-    console.error("[PATCH /api/admin/tags/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }
 
@@ -42,7 +41,6 @@ export async function DELETE(
     await db.tag.delete({ where: { id } });
     return new NextResponse(null, { status: 204 });
   } catch (err) {
-    console.error("[DELETE /api/admin/tags/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }

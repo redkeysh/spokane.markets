@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "@/lib/api-client";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import {
   ADMIN_PERMISSION_KEYS,
   type AdminPermissionMatrix,
@@ -33,6 +34,7 @@ export function PermissionsMatrix({
 }) {
   const [matrix, setMatrix] = useState<AdminPermissionMatrix>(initialMatrix);
   const [saving, setSaving] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const roleSets = useMemo(
     () =>
@@ -104,13 +106,25 @@ export function PermissionsMatrix({
         </table>
       </div>
       <div className="flex items-center gap-2">
-        <Button onClick={save} disabled={saving}>
+        <Button onClick={() => setConfirmOpen(true)} disabled={saving}>
           {saving ? "Saving..." : "Save permission matrix"}
         </Button>
         <p className="text-xs text-muted-foreground">
           Admin role always retains full permissions.
         </p>
       </div>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Save permission changes?"
+        description="This rewrites what every non-admin role can access across the entire admin. Make sure the changes are correct."
+        confirmLabel="Save changes"
+        pending={saving}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          void save();
+        }}
+      />
     </div>
   );
 }

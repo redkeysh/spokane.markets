@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DeleteRenderButton } from "@/components/admin/marketing/delete-render-button";
+import { parseEnumParam } from "@/lib/admin/table-query";
 
 export const dynamic = "force-dynamic";
 
@@ -17,10 +18,17 @@ export default async function MarketingAssetStudioHistoryPage({
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
   const status = params.status?.trim() ?? "";
+  const statusFilter = parseEnumParam(status, [
+    "QUEUED",
+    "PROCESSING",
+    "SUCCEEDED",
+    "FAILED",
+    "CANCELLED",
+  ] as const);
   const renders = await db.marketingRender.findMany({
     where: {
       deletedAt: null,
-      ...(status ? { status: status as never } : {}),
+      ...(statusFilter ? { status: statusFilter } : {}),
       ...(q
         ? {
             OR: [

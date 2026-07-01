@@ -5,6 +5,7 @@ import { QueueRow } from "@/components/admin/queue-row";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import type { QueueType } from "@/lib/admin/queues";
+import { parseEnumParam } from "@/lib/admin/table-query";
 
 const TABS: { label: string; value: QueueType | "all" }[] = [
   { label: "All", value: "all" },
@@ -33,7 +34,15 @@ export default async function AdminQueuesPage({
   await requireAdmin();
 
   const params = await searchParams;
-  const type = (params.type as QueueType | "all") ?? "all";
+  const type =
+    parseEnumParam(params.type, [
+      "all",
+      "submission",
+      "review",
+      "photo",
+      "report",
+      "application",
+    ] as const) ?? "all";
   const sort = params.sort === "newest" ? "newest" : "oldest";
 
   const items = await getQueueItems({

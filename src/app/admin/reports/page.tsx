@@ -15,11 +15,9 @@ import { formatDate, cn } from "@/lib/utils";
 import { getReportTargetInfo } from "@/lib/report-target";
 import Link from "next/link";
 import { BulkActionButton } from "@/components/admin/bulk-action-button";
-import { parseEnumParam } from "@/lib/admin/table-query";
+import { parseAdminPagination, parseEnumParam } from "@/lib/admin/table-query";
 
 export const dynamic = "force-dynamic";
-
-const DEFAULT_LIMIT = 25;
 
 const STATUS_TABS = [
   { label: "Pending", value: "PENDING" },
@@ -45,8 +43,7 @@ export default async function AdminReportsPage({
     params.escalation,
     ["NEW", "TRIAGED", "ESCALATED", "CLOSED"] as const
   );
-  const page = Math.max(1, parseInt(params.page ?? "1", 10));
-  const limit = Math.min(100, Math.max(1, parseInt(params.limit ?? String(DEFAULT_LIMIT), 10)));
+  const { page, limit } = parseAdminPagination(params);
 
   const where = {
     status: statusFilter,

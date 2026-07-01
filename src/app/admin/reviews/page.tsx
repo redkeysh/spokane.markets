@@ -7,12 +7,10 @@ import { bulkUpdateReviewStatus, updateReviewStatus } from "../actions";
 import { formatDate, cn } from "@/lib/utils";
 import Link from "next/link";
 import type { ModerationStatus } from "@prisma/client";
-import { parseEnumParam } from "@/lib/admin/table-query";
+import { parseAdminPagination, parseEnumParam } from "@/lib/admin/table-query";
 import { BulkActionButton } from "@/components/admin/bulk-action-button";
 
 export const dynamic = "force-dynamic";
-
-const DEFAULT_LIMIT = 25;
 
 const STATUS_TABS = [
   { label: "Pending", value: "PENDING" },
@@ -37,8 +35,7 @@ export default async function AdminReviewsPage({
   const statusFilter =
     parseEnumParam(params.status, ["PENDING", "APPROVED", "REJECTED"] as const) ?? "PENDING";
   const userId = params.user?.trim() || undefined;
-  const page = Math.max(1, parseInt(params.page ?? "1", 10));
-  const limit = Math.min(100, Math.max(1, parseInt(params.limit ?? String(DEFAULT_LIMIT), 10)));
+  const { page, limit } = parseAdminPagination(params);
 
   const where = { status: statusFilter, ...(userId ? { userId } : {}) };
   const [total, reviews] = await Promise.all([

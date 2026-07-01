@@ -2,10 +2,9 @@ import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
 import { Pagination } from "@/components/pagination";
 import { formatDate } from "@/lib/utils";
+import { parseAdminPagination } from "@/lib/admin/table-query";
 
 export const dynamic = "force-dynamic";
-
-const DEFAULT_LIMIT = 25;
 
 export default async function AdminAuditLogPage({
   searchParams,
@@ -15,8 +14,7 @@ export default async function AdminAuditLogPage({
   await requireAdmin();
 
   const params = await searchParams;
-  const page = Math.max(1, parseInt(params.page ?? "1", 10));
-  const limit = Math.min(100, Math.max(1, parseInt(params.limit ?? String(DEFAULT_LIMIT), 10)));
+  const { page, limit } = parseAdminPagination(params);
   const actionFilter = params.action?.trim();
 
   const where = actionFilter ? { action: actionFilter } : undefined;

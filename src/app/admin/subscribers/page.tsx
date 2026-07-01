@@ -3,10 +3,9 @@ import { db } from "@/lib/db";
 import { Pagination } from "@/components/pagination";
 import { SubscribersPageClient } from "@/components/admin/subscribers-page-client";
 import { getNeighborhoodOptions } from "@/lib/neighborhoods";
+import { parseAdminPagination } from "@/lib/admin/table-query";
 
 export const dynamic = "force-dynamic";
-
-const DEFAULT_LIMIT = 25;
 
 export default async function AdminSubscribersPage({
   searchParams,
@@ -16,8 +15,7 @@ export default async function AdminSubscribersPage({
   await requireAdmin();
 
   const params = await searchParams;
-  const page = Math.max(1, parseInt(params.page ?? "1", 10));
-  const limit = Math.min(100, Math.max(1, parseInt(params.limit ?? String(DEFAULT_LIMIT), 10)));
+  const { page, limit } = parseAdminPagination(params);
 
   const [total, subscribers, neighborhoods] = await Promise.all([
     db.subscriber.count(),

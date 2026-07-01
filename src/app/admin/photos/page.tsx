@@ -9,10 +9,9 @@ import Link from "next/link";
 import Image from "next/image";
 import type { ModerationStatus } from "@prisma/client";
 import { BulkActionButton } from "@/components/admin/bulk-action-button";
+import { parseAdminPagination, parseEnumParam } from "@/lib/admin/table-query";
 
 export const dynamic = "force-dynamic";
-
-const DEFAULT_LIMIT = 25;
 
 const STATUS_TABS = [
   { label: "Pending", value: "PENDING" },
@@ -34,9 +33,9 @@ export default async function AdminPhotosPage({
   await requireAdminPermission("admin.moderation.manage");
 
   const params = await searchParams;
-  const statusFilter = (params.status as ModerationStatus) || "PENDING";
-  const page = Math.max(1, parseInt(params.page ?? "1", 10));
-  const limit = Math.min(100, Math.max(1, parseInt(params.limit ?? String(DEFAULT_LIMIT), 10)));
+  const statusFilter =
+    parseEnumParam(params.status, ["PENDING", "APPROVED", "REJECTED"] as const) ?? "PENDING";
+  const { page, limit } = parseAdminPagination(params);
 
   const where = { status: statusFilter };
   const [total, photos] = await Promise.all([

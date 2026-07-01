@@ -8,10 +8,9 @@ import { Pagination } from "@/components/pagination";
 import { UserFilters } from "@/components/admin/user-filters";
 import Link from "next/link";
 import type { Role } from "@prisma/client";
+import { parseAdminPagination } from "@/lib/admin/table-query";
 
 export const dynamic = "force-dynamic";
-
-const DEFAULT_LIMIT = 25;
 
 const ROLES: { label: string; value: Role | "" }[] = [
   { label: "All roles", value: "" },
@@ -29,8 +28,7 @@ export default async function AdminUsersPage({
   const session = await requireAdmin();
 
   const params = await searchParams;
-  const page = Math.max(1, parseInt(params.page ?? "1", 10));
-  const limit = Math.min(100, Math.max(1, parseInt(params.limit ?? String(DEFAULT_LIMIT), 10)));
+  const { page, limit } = parseAdminPagination(params);
   const q = (params.q ?? "").trim();
   const roleParam = params.role ?? "";
   const roleFilter = ["USER", "VENDOR", "ORGANIZER", "ADMIN"].includes(roleParam)

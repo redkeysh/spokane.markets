@@ -9,13 +9,11 @@ import { formatDate, cn } from "@/lib/utils";
 import { formatSubmissionScheduleSummary } from "@/lib/submission-display";
 import Link from "next/link";
 import type { ModerationStatus } from "@prisma/client";
-import { parseEnumParam } from "@/lib/admin/table-query";
+import { parseAdminPagination, parseEnumParam } from "@/lib/admin/table-query";
 import { BulkActionButton } from "@/components/admin/bulk-action-button";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
-
-const DEFAULT_LIMIT = 25;
 
 const STATUS_TABS = [
   { label: "Pending", value: "PENDING" },
@@ -39,8 +37,7 @@ export default async function AdminSubmissionsPage({
   const params = await searchParams;
   const statusFilter =
     parseEnumParam(params.status, ["PENDING", "APPROVED", "REJECTED"] as const) ?? "PENDING";
-  const page = Math.max(1, parseInt(params.page ?? "1", 10));
-  const limit = Math.min(100, Math.max(1, parseInt(params.limit ?? String(DEFAULT_LIMIT), 10)));
+  const { page, limit } = parseAdminPagination(params);
 
   const where = { status: statusFilter };
   const [total, submissions, markets, tags, features] = await Promise.all([

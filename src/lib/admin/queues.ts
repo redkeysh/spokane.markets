@@ -28,7 +28,6 @@ export type QueueSummary = {
 
 const LIMIT_PER_TYPE = 50;
 const LIMIT_ALL = 50;
-const ALL_QUEUE_TYPE_COUNT = 5;
 
 export async function getQueuesSummary(): Promise<QueueSummary[]> {
   const [
@@ -118,7 +117,10 @@ export async function getQueueItems(opts: {
   const take = type === "all" ? limit : Math.min(limit, LIMIT_PER_TYPE);
 
   if (type === "all") {
-    const perTypeTake = Math.ceil(take / ALL_QUEUE_TYPE_COUNT);
+    // Fetch up to the full page from each type: the oldest `take` items could
+    // all belong to one queue, so a smaller per-type cap would silently hide
+    // pending items and misrepresent the backlog.
+    const perTypeTake = take;
     const [subs, revs, photos, reports, applications] = await Promise.all([
       db.submission.findMany({
         where: { status: "PENDING" },

@@ -8,6 +8,7 @@ import {
 } from "@/lib/validations/organizer-onboarding";
 import { NextResponse } from "next/server";
 import { requireApiAdminPermission } from "@/lib/api-auth";
+import { handleApiError } from "@/lib/api-response";
 
 export async function POST(request: Request) {
   const { error } = await requireApiAdminPermission("admin.listings.manage");
@@ -65,7 +66,9 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
-  const market = await db.market.create({
+  let market;
+  try {
+    market = await db.market.create({
     data: {
       name: data.name,
       slug: data.slug,
@@ -103,7 +106,10 @@ export async function POST(request: Request) {
         },
       }),
     },
-  });
+    });
+  } catch (e) {
+    return handleApiError(e);
+  }
 
   return NextResponse.json(market, { status: 201 });
 }

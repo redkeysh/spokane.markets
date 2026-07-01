@@ -3,6 +3,7 @@ import { assertNeighborhoodSlug } from "@/lib/neighborhoods";
 import { venueSchema } from "@/lib/validations";
 import { NextResponse } from "next/server";
 import { requireApiAdminPermission } from "@/lib/api-auth";
+import { handleApiError } from "@/lib/api-response";
 
 export async function POST(request: Request) {
   const { error } = await requireApiAdminPermission("admin.listings.manage");
@@ -35,13 +36,18 @@ export async function POST(request: Request) {
     );
   }
 
-  const venue = await db.venue.create({
+  let venue;
+  try {
+    venue = await db.venue.create({
     data: {
       ...parsed.data,
       neighborhood,
       parkingNotes: parsed.data.parkingNotes || null,
     },
-  });
+    });
+  } catch (e) {
+    return handleApiError(e);
+  }
 
   return NextResponse.json(venue, { status: 201 });
 }

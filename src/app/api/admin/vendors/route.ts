@@ -5,6 +5,7 @@ import { assertListingCommunityBadgeIds } from "@/lib/listing-community-badges";
 import { extractSocialHandle, normalizeUrlToHttps, slugify } from "@/lib/utils";
 import { NextResponse } from "next/server";
 import { requireApiAdminPermission } from "@/lib/api-auth";
+import { handleApiError } from "@/lib/api-response";
 
 function toOptional(value: string | undefined): string | undefined {
   if (value === undefined || value === "") return undefined;
@@ -97,7 +98,9 @@ export async function POST(request: Request) {
     }
   }
 
-  const vendor = await db.vendorProfile.create({
+  let vendor;
+  try {
+    vendor = await db.vendorProfile.create({
     data: {
       businessName: data.businessName,
       slug,
@@ -129,7 +132,10 @@ export async function POST(request: Request) {
         },
       }),
     },
-  });
+    });
+  } catch (e) {
+    return handleApiError(e);
+  }
 
   return NextResponse.json(vendor, { status: 201 });
 }

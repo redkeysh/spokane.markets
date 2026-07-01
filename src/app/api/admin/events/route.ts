@@ -9,6 +9,7 @@ import { logAudit } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { requireApiAdminPermission } from "@/lib/api-auth";
+import { handleApiError } from "@/lib/api-response";
 
 export async function POST(request: Request) {
   const { session, error } = await requireApiAdminPermission("admin.listings.manage");
@@ -99,7 +100,9 @@ export async function POST(request: Request) {
     }
   }
 
-  const event = await db.event.create({
+  let event;
+  try {
+    event = await db.event.create({
     data: {
       title: data.title,
       slug: data.slug,
@@ -137,7 +140,10 @@ export async function POST(request: Request) {
         complianceNotes: data.complianceNotes === "" ? null : data.complianceNotes,
       }),
     },
-  });
+    });
+  } catch (e) {
+    return handleApiError(e);
+  }
 
   if (scheduleDays?.length) {
     await db.eventScheduleDay.createMany({

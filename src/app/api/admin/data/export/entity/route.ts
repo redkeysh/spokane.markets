@@ -5,13 +5,26 @@ import {
   buildAdminEventsExportWhere,
   resolveAdminEventsTimeScope,
 } from "@/lib/admin/events-query";
-import type { EventStatus } from "@prisma/client";
+import { parseEnumParam } from "@/lib/admin/table-query";
 
 type Entity = "events" | "markets" | "vendors" | "venues";
 
+const EXPORT_LIMIT = 5000;
+
 function csvEscape(value: unknown) {
-  const text = String(value ?? "");
-  if (text.includes(",") || text.includes("\"") || text.includes("\n")) {
+  let text = String(value ?? "");
+  // Neutralize spreadsheet formula injection: a leading =, +, -, @ (or a
+  // control char such as tab/CR) makes Excel/Sheets evaluate the cell as a
+  // formula. Prefixing with an apostrophe forces it to render as literal text.
+  if (/^[=+\-@\t\r]/.test(text)) {
+    text = `'${text}`;
+  }
+  if (
+    text.includes(",") ||
+    text.includes("\"") ||
+    text.includes("\n") ||
+    text.includes("\r")
+  ) {
     return `"${text.replaceAll("\"", "\"\"")}"`;
   }
   return text;
@@ -44,7 +57,13 @@ export async function GET(request: Request) {
   let rows: Record<string, unknown>[] = [];
 
   if (entity === "events") {
-    const status = searchParams.get("status") as EventStatus | null;
+    const status = parseEnumParam(searchParams.get("status") ?? undefined, [
+      "DRAFT",
+      "PENDING",
+      "PUBLISHED",
+      "CANCELLED",
+      "REJECTED",
+    ] as const);
     const timeScope = resolveAdminEventsTimeScope({ archived, past });
     const data = await db.event.findMany({
       where: buildAdminEventsExportWhere({
@@ -55,7 +74,7 @@ export async function GET(request: Request) {
       }),
       include: { venue: { select: { name: true } } },
       orderBy: { startDate: "desc" },
-      take: 5000,
+      take: EXPORT_LIMIT + 1,
     });
     rows = data.map((item) => ({
       id: item.id,
@@ -82,7 +101,7 @@ export async function GET(request: Request) {
       },
       include: { owner: { select: { email: true } } },
       orderBy: { name: "asc" },
-      take: 5000,
+      take: EXPORT_LIMIT + 1,
     });
     rows = data.map((item) => ({
       id: item.id,
@@ -108,7 +127,7 @@ export async function GET(request: Request) {
           : {}),
       },
       orderBy: { businessName: "asc" },
-      take: 5000,
+      take: EXPORT_LIMIT + 1,
     });
     rows = data.map((item) => ({
       id: item.id,
@@ -132,7 +151,7 @@ export async function GET(request: Request) {
           : {}),
       },
       orderBy: { name: "asc" },
-      take: 5000,
+      take: EXPORT_LIMIT + 1,
     });
     rows = data.map((item) => ({
       id: item.id,
@@ -144,6 +163,16 @@ export async function GET(request: Request) {
     }));
   }
 
+  // Fetched one row past the cap to detect truncation: surface it via a header
+  // and a server log instead of silently dropping rows.
+  const truncated = rows.length > EXPORT_LIMIT;
+  if (truncated) {
+    rows = rows.slice(0, EXPORT_LIMIT);
+    console.warn(
+      `[data-export] ${entity} export truncated to ${EXPORT_LIMIT} rows; narrow the filter to export the remainder.`
+    );
+  }
+
   const csv = toCsv(rows);
   const fileName = `${entity}-export-${new Date().toISOString().slice(0, 10)}.csv`;
 
@@ -152,6 +181,7 @@ export async function GET(request: Request) {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="${fileName}"`,
+      "X-Export-Truncated": truncated ? "true" : "false",
     },
   });
 }

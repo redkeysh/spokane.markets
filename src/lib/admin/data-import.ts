@@ -4,6 +4,14 @@ import { getNeighborhoodSlugSet } from "@/lib/neighborhoods";
 import { slugify } from "@/lib/utils";
 import { venueSchema } from "@/lib/validations";
 
+const EVENT_IMPORT_STATUSES = [
+  "DRAFT",
+  "PENDING",
+  "PUBLISHED",
+  "CANCELLED",
+  "REJECTED",
+] as const;
+
 type VenueRow = {
   name: string;
   address: string;
@@ -109,8 +117,48 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
 
   const venueIdBySlug = new Map<string, string>();
   const venueIdByName = new Map<string, string>();
+  const ambiguousVenueSlugs = new Set<string>();
+  const ambiguousVenueNames = new Set<string>();
   const marketIdBySlug = new Map<string, string>();
   const allowedNeighborhoods = await getNeighborhoodSlugSet();
+
+  // Register a venue into the name/slug lookup maps, tracking any name or slug
+  // that maps to more than one venue. Distinct venues can share a name (e.g. the
+  // same plaza name in two cities), so an ambiguous key must not resolve to an
+  // arbitrary match; the row is asked to disambiguate with an explicit venueId.
+  const registerVenue = (name: string, id: string) => {
+    const slug = slugify(name);
+    if (slug) {
+      const existing = venueIdBySlug.get(slug);
+      if (existing && existing !== id) ambiguousVenueSlugs.add(slug);
+      else venueIdBySlug.set(slug, id);
+    }
+    const existingName = venueIdByName.get(name);
+    if (existingName && existingName !== id) ambiguousVenueNames.add(name);
+    else venueIdByName.set(name, id);
+  };
+
+  const resolveVenue = (opts: {
+    venueSlug?: string;
+    venueName?: string;
+  }): { id: string } | { error: "not_found" | "ambiguous" } => {
+    const { venueSlug, venueName } = opts;
+    if (venueSlug) {
+      if (ambiguousVenueSlugs.has(venueSlug)) return { error: "ambiguous" };
+      const id = venueIdBySlug.get(venueSlug);
+      if (id) return { id };
+    }
+    if (venueName) {
+      if (ambiguousVenueNames.has(venueName)) return { error: "ambiguous" };
+      const byName = venueIdByName.get(venueName);
+      if (byName) return { id: byName };
+      const slug = slugify(venueName);
+      if (ambiguousVenueSlugs.has(slug)) return { error: "ambiguous" };
+      const bySlug = venueIdBySlug.get(slug);
+      if (bySlug) return { id: bySlug };
+    }
+    return { error: "not_found" };
+  };
 
   const normalizeNeighborhood = (
     value: string | undefined,
@@ -129,12 +177,17 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
 
   // Pre-load existing venues and markets for resolution
   const [existingVenues, existingMarkets] = await Promise.all([
-    db.venue.findMany({ select: { id: true, name: true } }),
-    db.market.findMany({ select: { id: true, slug: true } }),
+    db.venue.findMany({
+      where: { deletedAt: null },
+      select: { id: true, name: true },
+    }),
+    db.market.findMany({
+      where: { deletedAt: null },
+      select: { id: true, slug: true },
+    }),
   ]);
   for (const v of existingVenues) {
-    venueIdBySlug.set(slugify(v.name), v.id);
-    venueIdByName.set(v.name, v.id);
+    registerVenue(v.name, v.id);
   }
   for (const m of existingMarkets) {
     marketIdBySlug.set(m.slug, m.id);
@@ -162,9 +215,7 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
             parkingNotes: parsed.data.parkingNotes || null,
           },
         });
-        const vSlug = slugify(venue.name);
-        if (vSlug) venueIdBySlug.set(vSlug, venue.id);
-        venueIdByName.set(venue.name, venue.id);
+        registerVenue(venue.name, venue.id);
         result.venuesCreated++;
       } catch (e) {
         result.errors.push(`Venue ${i + 1}: ${e instanceof Error ? e.message : String(e)}`);
@@ -179,11 +230,19 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
         const row = payload.markets[i];
         let venueId = row.venueId;
         if (!venueId && (row.venueSlug || row.venueName)) {
-          venueId =
-            (row.venueSlug && venueIdBySlug.get(row.venueSlug)) ??
-            (row.venueName && venueIdByName.get(row.venueName)) ??
-            (row.venueName && venueIdBySlug.get(slugify(row.venueName))) ??
-            undefined;
+          const resolved = resolveVenue({
+            venueSlug: row.venueSlug,
+            venueName: row.venueName,
+          });
+          if ("error" in resolved) {
+            result.errors.push(
+              resolved.error === "ambiguous"
+                ? `Market ${i + 1} (${row.name}): venue name/slug matches multiple venues, set venueId to disambiguate`
+                : `Market ${i + 1} (${row.name}): venue not found`
+            );
+            continue;
+          }
+          venueId = resolved.id;
         }
         if (!venueId) {
           result.errors.push(`Market ${i + 1} (${row.name}): venue not found`);
@@ -235,7 +294,16 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
         const row = payload.events[i];
         let venueId = row.venueId;
         if (!venueId && row.venueSlug) {
-          venueId = venueIdBySlug.get(row.venueSlug) ?? undefined;
+          const resolved = resolveVenue({ venueSlug: row.venueSlug });
+          if ("error" in resolved) {
+            result.errors.push(
+              resolved.error === "ambiguous"
+                ? `Event ${i + 1} (${row.title}): venue slug matches multiple venues, set venueId to disambiguate`
+                : `Event ${i + 1} (${row.title}): venue not found`
+            );
+            continue;
+          }
+          venueId = resolved.id;
         }
         if (!venueId) {
           result.errors.push(`Event ${i + 1} (${row.title}): venue not found`);
@@ -250,6 +318,21 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
         const endDate = new Date(row.endDate);
         if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
           result.errors.push(`Event ${i + 1} (${row.title}): invalid dates`);
+          continue;
+        }
+        if (endDate.getTime() < startDate.getTime()) {
+          result.errors.push(
+            `Event ${i + 1} (${row.title}): end date is before start date`
+          );
+          continue;
+        }
+        if (
+          row.status &&
+          !(EVENT_IMPORT_STATUSES as readonly string[]).includes(row.status)
+        ) {
+          result.errors.push(
+            `Event ${i + 1} (${row.title}): invalid status "${row.status}"`
+          );
           continue;
         }
         // Create tags/features and the event in one transaction so a failed

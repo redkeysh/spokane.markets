@@ -1,5 +1,5 @@
 import { requireApiAdminPermission } from "@/lib/api-auth";
-import { apiError, apiValidationError } from "@/lib/api-response";
+import { apiError, apiValidationError, handleApiError } from "@/lib/api-response";
 import { db } from "@/lib/db";
 import { assertNeighborhoodSlug } from "@/lib/neighborhoods";
 import { venueSchema } from "@/lib/validations";
@@ -53,8 +53,7 @@ export async function PUT(
 
     return NextResponse.json(venue);
   } catch (err) {
-    console.error("[PUT /api/admin/venues/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }
 
@@ -70,7 +69,6 @@ export async function DELETE(
     await db.venue.update({ where: { id }, data: { deletedAt: new Date() } });
     return new NextResponse(null, { status: 204 });
   } catch (err) {
-    console.error("[DELETE /api/admin/venues/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }

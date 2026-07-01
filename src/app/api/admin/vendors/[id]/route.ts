@@ -1,5 +1,5 @@
 import { requireApiAdminPermission } from "@/lib/api-auth";
-import { apiError, apiValidationError } from "@/lib/api-response";
+import { apiError, apiValidationError, handleApiError } from "@/lib/api-response";
 import { db } from "@/lib/db";
 import { adminVendorProfileSchema } from "@/lib/validations";
 import { parseGalleryUrlsFromMultilineText } from "@/lib/gallery-urls";
@@ -147,8 +147,7 @@ export async function PUT(
 
     return NextResponse.json(vendor);
   } catch (err) {
-    console.error("[PUT /api/admin/vendors/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }
 
@@ -165,7 +164,6 @@ export async function DELETE(
 
     return new NextResponse(null, { status: 204 });
   } catch (err) {
-    console.error("[DELETE /api/admin/vendors/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }

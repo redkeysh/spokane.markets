@@ -1,5 +1,5 @@
 import { requireApiAdminPermission } from "@/lib/api-auth";
-import { apiError, apiValidationError } from "@/lib/api-response";
+import { apiError, apiValidationError, handleApiError } from "@/lib/api-response";
 import { db } from "@/lib/db";
 import { eventSchema } from "@/lib/validations";
 import {
@@ -196,8 +196,7 @@ export async function PUT(
 
     return NextResponse.json(event);
   } catch (err) {
-    console.error("[PUT /api/admin/events/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }
 
@@ -214,7 +213,6 @@ export async function DELETE(
 
     return new NextResponse(null, { status: 204 });
   } catch (err) {
-    console.error("[DELETE /api/admin/events/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }

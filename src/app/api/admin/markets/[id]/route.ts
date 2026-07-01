@@ -1,5 +1,5 @@
 import { requireApiAdminPermission } from "@/lib/api-auth";
-import { apiError, apiValidationError } from "@/lib/api-response";
+import { apiError, apiValidationError, handleApiError } from "@/lib/api-response";
 import { db } from "@/lib/db";
 import { assertListingCommunityBadgeIds } from "@/lib/listing-community-badges";
 import { assertNeighborhoodSlug } from "@/lib/neighborhoods";
@@ -116,8 +116,7 @@ export async function PUT(
 
     return NextResponse.json(market);
   } catch (err) {
-    console.error("[PUT /api/admin/markets/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }
 
@@ -134,7 +133,6 @@ export async function DELETE(
 
     return new NextResponse(null, { status: 204 });
   } catch (err) {
-    console.error("[DELETE /api/admin/markets/:id]", err);
-    return apiError("Internal server error", 500);
+    return handleApiError(err);
   }
 }

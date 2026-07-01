@@ -9,6 +9,7 @@ import { formatDate, cn } from "@/lib/utils";
 import { formatSubmissionScheduleSummary } from "@/lib/submission-display";
 import Link from "next/link";
 import type { ModerationStatus } from "@prisma/client";
+import { parseEnumParam } from "@/lib/admin/table-query";
 import { BulkActionButton } from "@/components/admin/bulk-action-button";
 import { Button } from "@/components/ui/button";
 
@@ -36,7 +37,8 @@ export default async function AdminSubmissionsPage({
   await requireAdminPermission("admin.moderation.manage");
 
   const params = await searchParams;
-  const statusFilter = (params.status as ModerationStatus) || "PENDING";
+  const statusFilter =
+    parseEnumParam(params.status, ["PENDING", "APPROVED", "REJECTED"] as const) ?? "PENDING";
   const page = Math.max(1, parseInt(params.page ?? "1", 10));
   const limit = Math.min(100, Math.max(1, parseInt(params.limit ?? String(DEFAULT_LIMIT), 10)));
 

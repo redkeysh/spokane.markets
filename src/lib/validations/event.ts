@@ -29,8 +29,8 @@ export const eventSchema = z
     venueCity: z.string().optional().or(z.literal("")),
     venueState: z.string().optional().or(z.literal("")),
     venueZip: z.string().optional().or(z.literal("")),
-    venueLat: z.number().optional(),
-    venueLng: z.number().optional(),
+    venueLat: z.number().min(-90).max(90).optional(),
+    venueLng: z.number().min(-180).max(180).optional(),
     marketId: z.string().optional(),
     imageUrl: imageUrlSchema,
     showImageInList: z.boolean().optional(),
@@ -69,6 +69,15 @@ export const eventSchema = z
       return hasVenue || hasInline;
     },
     { message: "Select a venue or enter an address", path: ["venueId"] }
+  )
+  .refine(
+    (data) => {
+      const start = new Date(data.startDate);
+      const end = new Date(data.endDate);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return true;
+      return end.getTime() >= start.getTime();
+    },
+    { message: "End date must be on or after the start date", path: ["endDate"] }
   );
 
 export type EventInput = z.infer<typeof eventSchema>;
@@ -93,8 +102,8 @@ export const organizerEventSchema = z
     venueCity: z.string().optional().or(z.literal("")),
     venueState: z.string().optional().or(z.literal("")),
     venueZip: z.string().optional().or(z.literal("")),
-    venueLat: z.number().optional(),
-    venueLng: z.number().optional(),
+    venueLat: z.number().min(-90).max(90).optional(),
+    venueLng: z.number().min(-180).max(180).optional(),
     marketId: z.string().optional(),
     imageUrl: imageUrlSchema,
     showImageInList: z.boolean().optional(),
@@ -121,5 +130,14 @@ export const organizerEventSchema = z
       return hasVenue || hasInline;
     },
     { message: "Select a venue or enter an address", path: ["venueId"] }
+  )
+  .refine(
+    (data) => {
+      const start = new Date(data.startDate);
+      const end = new Date(data.endDate);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return true;
+      return end.getTime() >= start.getTime();
+    },
+    { message: "End date must be on or after the start date", path: ["endDate"] }
   );
 export type OrganizerEventInput = z.infer<typeof organizerEventSchema>;

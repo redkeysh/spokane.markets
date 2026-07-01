@@ -36,7 +36,10 @@ export const venueSchema = z.object({
   lat: z.coerce.number().min(-90).max(90),
   lng: z.coerce.number().min(-180).max(180),
   neighborhood: neighborhoodSlugSchema.optional().or(z.literal("")),
-  parkingNotes: z.string().optional(),
+  parkingNotes: z
+    .string()
+    .max(1000, "Parking notes must be 1000 characters or fewer")
+    .optional(),
 });
 
 export type VenueInput = z.infer<typeof venueSchema>;

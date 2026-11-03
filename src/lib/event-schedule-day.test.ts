@@ -4,10 +4,10 @@ import {
   isFullDayTimeRange,
   mapScheduleDaysForSubmit,
 } from "./event-schedule-day";
-import type { EventInput } from "@/lib/validations";
+import { eventSchema, type EventInput } from "@/lib/validations";
 
 const baseEvent = (): EventInput =>
-  ({
+  eventSchema.parse({
     title: "T",
     slug: "t",
     description: "",

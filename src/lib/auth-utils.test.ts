@@ -65,20 +65,20 @@ describe("requireAuth", () => {
   });
 
   it("returns session when account is ACTIVE", async () => {
-    vi.mocked(auth.api.getSession).mockResolvedValue(mockSession("ACTIVE"));
+    vi.mocked(auth.api.getSession, { partial: true, deep: true }).mockResolvedValue(mockSession("ACTIVE"));
     const session = await requireAuth();
     expect(session.user.email).toBe("test@test.com");
     expect(redirectMock).not.toHaveBeenCalled();
   });
 
   it("redirects to unauthorized when accountStatus is missing", async () => {
-    vi.mocked(auth.api.getSession).mockResolvedValue(mockSessionWithoutStatus());
+    vi.mocked(auth.api.getSession, { partial: true, deep: true }).mockResolvedValue(mockSessionWithoutStatus());
     await expect(requireAuth()).rejects.toThrow("REDIRECT:/unauthorized");
     expect(redirectMock).toHaveBeenCalledWith("/unauthorized");
   });
 
   it("redirects to unauthorized when account is SUSPENDED", async () => {
-    vi.mocked(auth.api.getSession).mockResolvedValue(mockSession("SUSPENDED"));
+    vi.mocked(auth.api.getSession, { partial: true, deep: true }).mockResolvedValue(mockSession("SUSPENDED"));
     await expect(requireAuth()).rejects.toThrow("REDIRECT:/unauthorized");
     expect(redirectMock).toHaveBeenCalledWith("/unauthorized");
   });

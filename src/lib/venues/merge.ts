@@ -13,7 +13,8 @@ export type MergeVenuesResult =
 export async function mergeVenues(
   keepId: string,
   mergeIds: string[],
-  actorId: string
+  actorId: string,
+  options: { auditMeta?: Record<string, unknown> } = {}
 ): Promise<MergeVenuesResult> {
   const ids = [...new Set(mergeIds)].filter((id) => id !== keepId);
   if (ids.length === 0) {
@@ -65,6 +66,7 @@ export async function mergeVenues(
     mergedNames: outcome.mergedNames,
     eventsMoved: outcome.eventsMoved,
     marketsMoved: outcome.marketsMoved,
+    ...options.auditMeta,
   });
 
   return { ok: true, eventsMoved: outcome.eventsMoved, marketsMoved: outcome.marketsMoved };

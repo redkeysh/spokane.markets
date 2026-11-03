@@ -200,7 +200,8 @@ function revalidateAfterSubmissionEvent(eventSlug: string) {
  */
 export async function approveSubmissionWithEvent(
   submissionId: string,
-  reviewerId: string
+  reviewerId: string,
+  options: { auditMeta?: Record<string, unknown> } = {}
 ): Promise<void> {
   const submission = await db.submission.findUnique({
     where: { id: submissionId },
@@ -254,7 +255,54 @@ export async function approveSubmissionWithEvent(
   await logAudit(reviewerId, "UPDATE_SUBMISSION_STATUS", "SUBMISSION", submissionId, {
     previousValue: { status: submission.status },
     newValue: { status: "APPROVED", createdEventId: result.event.id },
+    ...options.auditMeta,
   });
 
   revalidateAfterSubmissionEvent(result.event.slug);
+}
+
+/** Rejects a submission, notifies a submitter who has an account, and audits it. */
+export async function rejectSubmission(
+  submissionId: string,
+  reviewerId: string,
+  reviewNotes: string | null | undefined,
+  options: { auditMeta?: Record<string, unknown> } = {}
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const submission = await db.submission.findUnique({
+    where: { id: submissionId },
+    select: { submitterEmail: true, status: true },
+  });
+  if (!submission) return { ok: false, error: "Submission not found." };
+
+  await db.submission.update({
+    where: { id: submissionId },
+    data: {
+      status: "REJECTED",
+      reviewerId,
+      ...(reviewNotes !== undefined ? { reviewNotes } : {}),
+    },
+  });
+
+  const submitter = await db.user.findUnique({
+    where: { email: submission.submitterEmail },
+    select: { id: true },
+  });
+  if (submitter) {
+    await createNotification({
+      userId: submitter.id,
+      type: "SUBMISSION_REJECTED",
+      title: "Your event submission was rejected",
+      link: "/submit",
+      objectType: "submission",
+      objectId: submissionId,
+    });
+  }
+
+  await logAudit(reviewerId, "UPDATE_SUBMISSION_STATUS", "SUBMISSION", submissionId, {
+    previousValue: { status: submission.status },
+    newValue: { status: "REJECTED", ...(reviewNotes !== undefined ? { reviewNotes } : {}) },
+    ...options.auditMeta,
+  });
+
+  return { ok: true };
 }

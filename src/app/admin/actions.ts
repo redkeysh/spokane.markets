@@ -12,8 +12,9 @@ import {
   normalizePermissionMatrix,
   type AdminPermissionKey,
 } from "@/lib/admin/permissions";
-import { approveSubmissionWithEvent } from "@/lib/submission-approval";
+import { approveSubmissionWithEvent, rejectSubmission } from "@/lib/submission-approval";
 import { mergeVenues, type MergeVenuesResult } from "@/lib/venues/merge";
+import { createApiToken } from "@/lib/api-tokens";
 
 const editSubmissionSchema = z.object({
   eventTitle: z.string().trim().min(1, "Event title is required"),
@@ -187,6 +188,43 @@ export async function mergeDuplicateVenues(
     revalidatePath("/markets");
   }
   return result;
+}
+
+const createApiTokenSchema = z.object({
+  name: z.string().trim().min(1, "Give the token a name.").max(80),
+  access: z.enum(["READ", "WRITE"]),
+  expiresInDays: z.union([z.literal(30), z.literal(90), z.literal(365)]).nullable(),
+});
+
+/** Returns the plaintext token once; only its hash is stored. */
+export async function createApiTokenAction(
+  input: z.input<typeof createApiTokenSchema>
+): Promise<{ ok: true; token: string } | { ok: false; error: string }> {
+  const session = await requireAdminAction("admin.settings.manage");
+  const parsed = createApiTokenSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid token settings." };
+  }
+  const { token, record } = await createApiToken({ userId: session.user.id, ...parsed.data });
+  await logAudit(session.user.id, "CREATE_API_TOKEN", "API_TOKEN", record.id, {
+    name: record.name,
+    access: record.access,
+    expiresAt: record.expiresAt,
+  });
+  revalidatePath("/admin/api-tokens");
+  return { ok: true, token };
+}
+
+export async function revokeApiTokenAction(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await requireAdminAction("admin.settings.manage");
+  const existing = await db.apiToken.findUnique({ where: { id }, select: { name: true, revokedAt: true } });
+  if (!existing) return { ok: false, error: "Token not found." };
+  if (!existing.revokedAt) {
+    await db.apiToken.update({ where: { id }, data: { revokedAt: new Date() } });
+    await logAudit(session.user.id, "REVOKE_API_TOKEN", "API_TOKEN", id, { name: existing.name });
+  }
+  revalidatePath("/admin/api-tokens");
+  return { ok: true };
 }
 
 export async function restoreMarket(id: string) {
@@ -385,44 +423,14 @@ export async function updateSubmissionStatus(
       return { ok: true as const };
     }
 
-    const submission = await db.submission.findUnique({
-      where: { id },
-      select: { submitterEmail: true, status: true },
-    });
-    if (!submission) {
-      return { ok: false as const, error: "Submission not found." };
-    }
-
     const trimmedNotes = options?.reviewNotes?.trim() ?? "";
     const reviewNotes =
       options && "reviewNotes" in options ? (trimmedNotes === "" ? null : trimmedNotes) : undefined;
 
-    await db.submission.update({
-      where: { id },
-      data: {
-        status,
-        reviewerId: session.user.id,
-        ...(reviewNotes !== undefined ? { reviewNotes } : {}),
-      },
-    });
-    const user = await db.user.findUnique({
-      where: { email: submission.submitterEmail },
-      select: { id: true },
-    });
-    if (user) {
-      await createNotification({
-        userId: user.id,
-        type: "SUBMISSION_REJECTED",
-        title: "Your event submission was rejected",
-        link: "/submit",
-        objectType: "submission",
-        objectId: id,
-      });
+    const rejected = await rejectSubmission(id, session.user.id, reviewNotes);
+    if (!rejected.ok) {
+      return { ok: false as const, error: rejected.error };
     }
-    await logAudit(session.user.id, "UPDATE_SUBMISSION_STATUS", "SUBMISSION", id, {
-      previousValue: { status: submission.status },
-      newValue: { status, ...(reviewNotes !== undefined ? { reviewNotes } : {}) },
-    });
     revalidatePath("/admin/submissions");
     revalidatePath(`/admin/submissions/${id}`);
     revalidatePath("/admin/queues");

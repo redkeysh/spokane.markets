@@ -8,7 +8,7 @@ import {
   toEventOnboardingPrismaData,
 } from "@/lib/validations/organizer-onboarding";
 import { parseDateOnlyToUTCNoon, parseDateTimeInTimezone } from "@/lib/utils";
-import { createNotification } from "@/lib/notifications";
+import { notifySubmitterOfStatusChange } from "@/lib/events/status-notifications";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
@@ -157,35 +157,13 @@ export async function PUT(
     revalidatePath("/");
     revalidatePath(`/events/${event.slug}`);
 
-    if (existing?.submittedById && data.status !== existing.status) {
-      const prefs = await db.notificationPreference.findUnique({
-        where: { userId: existing.submittedById },
+    if (existing) {
+      await notifySubmitterOfStatusChange({
+        submittedById: existing.submittedById,
+        previousStatus: existing.status,
+        newStatus: data.status,
+        event,
       });
-      if (prefs?.organizerAlertsEnabled !== false) {
-        if (data.status === "PUBLISHED") {
-          await createNotification({
-            userId: existing.submittedById,
-            type: "EVENT_PUBLISHED",
-            title: "Your event is now published",
-            body: `"${event.title}" is now live and visible to visitors.`,
-            link: `/events/${event.slug}`,
-            objectType: "event",
-            objectId: event.id,
-            metadata: { eventTitle: event.title, eventSlug: event.slug },
-          });
-        } else if (data.status === "REJECTED") {
-          await createNotification({
-            userId: existing.submittedById,
-            type: "EVENT_REJECTED",
-            title: "Your event was not approved",
-            body: `"${event.title}" was not approved for publication.`,
-            link: `/organizer/events/${event.id}/edit`,
-            objectType: "event",
-            objectId: event.id,
-            metadata: { eventTitle: event.title },
-          });
-        }
-      }
     }
 
     return NextResponse.json(event);

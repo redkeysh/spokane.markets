@@ -12,6 +12,7 @@ const ACTION_CONFIG: Record<string, { windowMs: number; maxRequests: number }> =
   vendorIntents: { windowMs: 60 * 60 * 1000, maxRequests: 30 },
   changePassword: { windowMs: 60 * 60 * 1000, maxRequests: 5 },
   application: { windowMs: 60 * 1000, maxRequests: 5 },
+  mcp: { windowMs: 60 * 1000, maxRequests: 120 },
 };
 
 function getConfig(action: string) {

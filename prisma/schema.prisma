@@ -242,6 +242,7 @@ model User {
   reports                Report[]
   assignedReports        Report[]                @relation("ReportAssignee")
   auditLogs              AuditLog[]
+  apiTokens              ApiToken[]
   rosterApprovals        EventVendorRoster[]     @relation("RosterApprover")
   siteStateUpdates       SiteState[]
   userBadges             UserBadge[]
@@ -1331,4 +1332,30 @@ model SiteState {
   updatedBy User? @relation(fields: [updatedByUserId], references: [id], onDelete: SetNull)
 
   @@map("site_state")
+}
+
+enum ApiTokenAccess {
+  READ
+  WRITE
+}
+
+/// Personal access token for the admin MCP endpoint. Acts as its owner.
+model ApiToken {
+  id         String         @id @default(cuid())
+  name       String
+  /// SHA-256 of the token; the plaintext is shown once at creation.
+  tokenHash  String         @unique
+  /// Leading characters of the token, for recognizing it in the list.
+  prefix     String
+  access     ApiTokenAccess @default(READ)
+  userId     String
+  expiresAt  DateTime?
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime       @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("api_tokens")
 }

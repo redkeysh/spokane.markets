@@ -26,6 +26,10 @@ const ACTION_MESSAGES: Record<string, (entry: AuditEntry) => string> = {
   DELETE_VENUE: () => "deleted a venue",
   SOFT_DELETE_VENUE: () => "archived a venue",
   MERGE_VENUES: () => "merged duplicate venues",
+  UPDATE_VENUE: () => "updated a venue",
+  UPDATE_EVENT: () => "updated an event",
+  CREATE_API_TOKEN: () => "created an API token",
+  REVOKE_API_TOKEN: () => "revoked an API token",
   RESTORE_VENUE: () => "restored a venue",
   DELETE_MARKET: () => "deleted a market",
   SOFT_DELETE_MARKET: () => "archived a market",
@@ -75,6 +79,7 @@ const TARGET_HREFS: Record<string, string> = {
   VENDOR_CLAIM: "/admin/queues",
   REPORT: "/admin/reports",
   SITE_STATE: "/admin/settings",
+  API_TOKEN: "/admin/api-tokens",
 };
 
 export function formatAuditEntry(

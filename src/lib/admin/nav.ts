@@ -25,6 +25,7 @@ import {
   Database,
   Activity,
   ScrollText,
+  Bot,
 } from "lucide-react";
 
 export type AdminNavItem = { label: string; href: string; icon: LucideIcon };
@@ -93,6 +94,7 @@ export const ADMIN_NAV: AdminNavSection[] = [
     items: [
       { label: "Settings", href: "/admin/settings", icon: Settings },
       { label: "Data", href: "/admin/data", icon: Database },
+      { label: "API Tokens", href: "/admin/api-tokens", icon: Bot },
       { label: "System Health", href: "/admin/system-health", icon: Activity },
       { label: "Audit Log", href: "/admin/audit-log", icon: ScrollText },
     ],

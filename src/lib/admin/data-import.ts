@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getNeighborhoodSlugSet } from "@/lib/neighborhoods";
 import { slugify } from "@/lib/utils";
 import { venueSchema } from "@/lib/validations";
+import { findMatchingVenue } from "@/lib/venues/resolve";
 
 const EVENT_IMPORT_STATUSES = [
   "DRAFT",
@@ -208,6 +209,20 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
           "neighborhood",
           `Venue ${i + 1}`
         );
+        const existing = await findMatchingVenue(parsed.data);
+        if (existing) {
+          if (existing.deletedAt) {
+            result.errors.push(
+              `Venue ${i + 1} (${parsed.data.name}): matches archived venue "${existing.name}", restore it instead of importing a copy`
+            );
+          } else {
+            registerVenue(parsed.data.name, existing.id);
+            result.errors.push(
+              `Venue ${i + 1} (${parsed.data.name}): matches existing venue "${existing.name}", skipped`
+            );
+          }
+          continue;
+        }
         const venue = await db.venue.create({
           data: {
             ...parsed.data,

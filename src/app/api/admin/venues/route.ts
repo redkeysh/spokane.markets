@@ -4,6 +4,7 @@ import { venueSchema } from "@/lib/validations";
 import { NextResponse } from "next/server";
 import { requireApiAdminPermission } from "@/lib/api-auth";
 import { handleApiError } from "@/lib/api-response";
+import { findMatchingVenue } from "@/lib/venues/resolve";
 
 export async function POST(request: Request) {
   const { error } = await requireApiAdminPermission("admin.listings.manage");
@@ -33,6 +34,22 @@ export async function POST(request: Request) {
         },
       },
       { status: 400 }
+    );
+  }
+
+  const existing = await findMatchingVenue(parsed.data);
+  if (existing) {
+    return NextResponse.json(
+      {
+        error: {
+          message: existing.deletedAt
+            ? `"${existing.name}" already exists but is archived. Restore it under Catalog > Venues instead of creating a copy.`
+            : `"${existing.name}" at ${existing.address} already exists. Edit that venue instead of creating a copy.`,
+          code: "DUPLICATE_VENUE",
+          details: { venueId: existing.id },
+        },
+      },
+      { status: 409 }
     );
   }
 

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { parseDateOnlyToUTCNoon, parseDateTimeInTimezone } from "@/lib/utils";
-import { geocodeAddress } from "@/lib/geocode";
+import { findOrCreateVenue } from "@/lib/venues/resolve";
 import type { EventStatus, ParticipationMode } from "@prisma/client";
 
 const EVENT_TIMEZONE = "America/Los_Angeles";
@@ -92,11 +92,10 @@ export type ResolveVenueResult =
   | { venueId: null; error?: string };
 
 /**
- * Resolves a venue — either uses an existing ID, creates a new venue from
- * provided address fields (geocoding server-side when the caller didn't supply
- * coordinates), or returns a null venueId when no usable venue info is
- * available. `error` distinguishes "address given but could not be geocoded"
- * from "no address at all".
+ * Resolves a venue: an explicit active venue ID, else the existing venue that
+ * matches the address fields, else a newly created (geocoded) venue. Returns a
+ * null venueId when no usable venue info is available; `error` explains an
+ * address that was given but could not be used.
  */
 export async function resolveVenueId(
   input: VenueInput
@@ -117,65 +116,18 @@ export async function resolveVenueId(
     input.venueState?.trim() &&
     input.venueZip?.trim()
   ) {
-    const name = input.venueName.trim();
-    const address = input.venueAddress.trim();
-    const matches = await db.venue.findMany({
-      where: {
-        name: { equals: name, mode: "insensitive" },
-        address: { equals: address, mode: "insensitive" },
-      },
-      select: { id: true, deletedAt: true },
+    const resolved = await findOrCreateVenue({
+      name: input.venueName,
+      address: input.venueAddress,
+      city: input.venueCity,
+      state: input.venueState,
+      zip: input.venueZip,
+      lat: input.venueLat,
+      lng: input.venueLng,
     });
-    const activeMatch = matches.find((v) => v.deletedAt === null);
-    if (activeMatch) return { venueId: activeMatch.id };
-    if (matches.length > 0) {
-      return {
-        venueId: null,
-        error: `The venue "${name}" exists but is archived. Restore it under Catalog > Venues, then approve again.`,
-      };
-    }
-
-    const providedLat =
-      typeof input.venueLat === "number" && !Number.isNaN(input.venueLat)
-        ? input.venueLat
-        : null;
-    const providedLng =
-      typeof input.venueLng === "number" && !Number.isNaN(input.venueLng)
-        ? input.venueLng
-        : null;
-    let coords: { lat: number; lng: number };
-    if (providedLat !== null && providedLng !== null) {
-      coords = { lat: providedLat, lng: providedLng };
-    } else {
-      // No coordinates supplied (e.g. an approved submission carries only an
-      // address). Geocode server-side instead of fabricating a location.
-      const geocoded = await geocodeAddress({
-        address: input.venueAddress.trim(),
-        city: input.venueCity.trim(),
-        state: input.venueState.trim(),
-        zip: input.venueZip.trim(),
-      });
-      if (!geocoded) {
-        const fullAddress = [address, input.venueCity.trim(), input.venueState.trim(), input.venueZip.trim()].join(", ");
-        return {
-          venueId: null,
-          error: `Couldn't find "${fullAddress}" on the map. Check the street, city, state, and ZIP under Edit details, or pick an existing venue there.`,
-        };
-      }
-      coords = geocoded;
-    }
-    const venue = await db.venue.create({
-      data: {
-        name,
-        address,
-        city: input.venueCity.trim(),
-        state: input.venueState.trim(),
-        zip: input.venueZip.trim(),
-        lat: coords.lat,
-        lng: coords.lng,
-      },
-    });
-    return { venueId: venue.id };
+    return "error" in resolved
+      ? { venueId: null, error: resolved.error }
+      : { venueId: resolved.venueId };
   }
 
   return { venueId: null };

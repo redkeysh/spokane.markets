@@ -70,7 +70,10 @@ export type ImportPayload = {
 };
 
 export type ImportResult = {
+  /** Venues created by this import that still exist when it finishes. */
   venuesCreated: number;
+  /** Venues this import created and then deleted because no imported market or event uses them. */
+  venuesRemoved: number;
   marketsCreated: number;
   eventsCreated: number;
   errors: string[];
@@ -111,6 +114,7 @@ async function findOrCreateFeature(
 export async function importData(payload: ImportPayload): Promise<ImportResult> {
   const result: ImportResult = {
     venuesCreated: 0,
+    venuesRemoved: 0,
     marketsCreated: 0,
     eventsCreated: 0,
     errors: [],
@@ -121,6 +125,7 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
   const ambiguousVenueSlugs = new Set<string>();
   const ambiguousVenueNames = new Set<string>();
   const marketIdBySlug = new Map<string, string>();
+  const createdVenueNames = new Map<string, string>();
   const allowedNeighborhoods = await getNeighborhoodSlugSet();
 
   // Register a venue into the name/slug lookup maps, tracking any name or slug
@@ -231,6 +236,7 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
           },
         });
         registerVenue(venue.name, venue.id);
+        createdVenueNames.set(venue.id, venue.name);
         result.venuesCreated++;
       } catch (e) {
         result.errors.push(`Venue ${i + 1}: ${e instanceof Error ? e.message : String(e)}`);
@@ -384,6 +390,31 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
         result.eventsCreated++;
       } catch (e) {
         result.errors.push(`Event ${i + 1}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+  }
+
+  // 4. Remove venues created above that no imported market or event uses, which
+  // happens when their rows were skipped or failed. Only when the payload has
+  // market or event rows: a venues-only import keeps every venue it created.
+  if (createdVenueNames.size > 0 && (payload.markets?.length || payload.events?.length)) {
+    for (const [id, name] of createdVenueNames) {
+      try {
+        // The relation filters turn the delete into a no-op once anything references the venue.
+        const { count } = await db.venue.deleteMany({
+          where: { id, events: { none: {} }, markets: { none: {} } },
+        });
+        if (count > 0) {
+          result.venuesCreated--;
+          result.venuesRemoved++;
+          result.errors.push(
+            `Venue "${name}": removed because none of its markets or events were imported`
+          );
+        }
+      } catch (e) {
+        result.errors.push(
+          `Venue "${name}": could not remove the unused venue: ${e instanceof Error ? e.message : String(e)}`
+        );
       }
     }
   }

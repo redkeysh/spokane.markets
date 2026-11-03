@@ -13,6 +13,8 @@ import {
 } from "@/lib/utils";
 import { eventScheduleDaySchema, venueSchema } from "@/lib/validations";
 import { findMatchingVenue } from "@/lib/venues/resolve";
+import { RESERVED_EVENT_SLUGS } from "@/lib/events/slug-rules";
+import { slugRedirectTarget } from "@/lib/events/slug";
 
 const EVENT_IMPORT_STATUSES = [
   "DRAFT",
@@ -464,6 +466,17 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
           marketId = marketIdBySlug.get(row.marketSlug) ?? null;
         }
         const slug = row.slug || slugify(row.title) || `event-${Date.now()}-${i}`;
+        if (RESERVED_EVENT_SLUGS.has(slug)) {
+          result.errors.push(`Event ${i + 1} (${row.title}): slug "${slug}" is reserved for a site page, skipped`);
+          continue;
+        }
+        const renamedTo = await slugRedirectTarget(slug);
+        if (renamedTo) {
+          result.errors.push(
+            `Event ${i + 1} (${row.title}): slug "${slug}" belongs to an event since renamed to "${renamedTo}", skipped as already listed`
+          );
+          continue;
+        }
         let scheduleDays: ScheduleDayInput[] | null;
         let dates: { startDate: Date; endDate: Date };
         if (row.scheduleDays !== undefined) {

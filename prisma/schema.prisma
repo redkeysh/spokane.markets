@@ -588,6 +588,7 @@ model Event {
   vendorRoster  EventVendorRoster[]
   promotions    Promotion[]
   scheduleDays  EventScheduleDay[]
+  slugRedirects EventSlugRedirect[]
   submissionFrom Submission? @relation("SubmissionCreatedEvent")
   evidences     ListingEvidence[]       @relation("EventEvidence")
   moderationNotes ListingModerationNote[] @relation("EventModerationNotes")
@@ -604,6 +605,18 @@ model Event {
   @@index([submittedById])
   @@index([deletedAt])
   @@map("events")
+}
+
+/// Old addresses of an event; /events/<slug> redirects to the event's current slug.
+model EventSlugRedirect {
+  slug      String   @id
+  eventId   String
+  createdAt DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@map("event_slug_redirects")
 }
 
 model EventScheduleDay {

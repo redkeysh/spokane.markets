@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { db } from "@/lib/db";
 import {
   findEventBySlug,
@@ -33,12 +33,14 @@ import { MediaFrame } from "@/components/media";
 import { getParticipationConfig } from "@/lib/participation-config";
 import { SITE_NAME } from "@/lib/constants";
 import { organizerOnboardingDisplayEnabled } from "@/lib/feature-flags";
+import { resolveEventSlugRedirect } from "@/lib/events/slug";
 import { Globe, Facebook, Instagram, MapPin } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 interface EventDetailPageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 async function getEvent(slug: string): Promise<EventForDisplay | null> {
@@ -49,7 +51,7 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
   const { slug } = await params;
   const event = await getEvent(slug);
 
-  if (!event) return { title: "Event Not Found" };
+  if (!event || event.status !== "PUBLISHED") return { title: "Event Not Found" };
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const eventImage =
@@ -78,11 +80,23 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
   };
 }
 
-export default async function EventDetailPage({ params }: EventDetailPageProps) {
+export default async function EventDetailPage({ params, searchParams }: EventDetailPageProps) {
   const { slug } = await params;
   const [event, banners] = await Promise.all([getEvent(slug), getBannerImages()]);
 
-  if (!event || event.status !== "PUBLISHED") {
+  if (!event) {
+    const currentSlug = await resolveEventSlugRedirect(slug, { publishedOnly: true });
+    if (currentSlug) {
+      const query = new URLSearchParams();
+      for (const [key, value] of Object.entries(await searchParams)) {
+        for (const v of Array.isArray(value) ? value : value === undefined ? [] : [value]) query.append(key, v);
+      }
+      const search = query.toString();
+      permanentRedirect(`/events/${encodeURIComponent(currentSlug)}${search ? `?${search}` : ""}`);
+    }
+    notFound();
+  }
+  if (event.status !== "PUBLISHED") {
     notFound();
   }
 

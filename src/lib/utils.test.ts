@@ -10,6 +10,7 @@ import {
   getDateOnlyInTimezone,
   getInstagramDisplayUrl,
   normalizeUrlToHttps,
+  slugify,
 } from "./utils";
 
 describe("formatPhoneNumber", () => {
@@ -146,5 +147,12 @@ describe("upcoming schedule helpers", () => {
       timeZone: "America/Los_Angeles",
     });
     expect(upcoming.map((r) => r.id)).toEqual(["today", "future"]);
+  });
+});
+
+describe("slugify", () => {
+  it("collapses runs of hyphens so the result is URL-safe", () => {
+    expect(slugify("Night Market - Week 3")).toBe("night-market-week-3");
+    expect(slugify("  Craft & Bake Sale -- Saturday ")).toBe("craft-bake-sale-saturday");
   });
 });

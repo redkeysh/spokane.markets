@@ -10,6 +10,7 @@ import { parseDateOnlyToUTCNoon, parseDateTimeInTimezone } from "@/lib/utils";
 import { logAudit } from "@/lib/audit";
 import { organizerManageMarketWhere } from "@/lib/market-membership";
 import { findOrCreateVenue } from "@/lib/venues/resolve";
+import { eventSlugProblem } from "@/lib/events/slug";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -102,6 +103,11 @@ export async function POST(request: Request) {
   }
 
   const status = isVerifiedMarket ? "PUBLISHED" : "PENDING";
+
+  const slugProblem = await eventSlugProblem(null, data.slug, { audience: "public" });
+  if (slugProblem) {
+    return NextResponse.json({ error: { message: slugProblem } }, { status: 400 });
+  }
 
   const event = await db.event.create({
     data: {

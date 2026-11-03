@@ -8,6 +8,7 @@ const {
   submissionUpdateManyMock,
   tagFindManyMock,
   featureFindManyMock,
+  redirectFindUniqueMock,
   userFindUniqueMock,
   createEventMock,
   createNotificationMock,
@@ -20,6 +21,7 @@ const {
   submissionUpdateManyMock: vi.fn(),
   tagFindManyMock: vi.fn(),
   featureFindManyMock: vi.fn(),
+  redirectFindUniqueMock: vi.fn(),
   userFindUniqueMock: vi.fn(),
   createEventMock: vi.fn(),
   createNotificationMock: vi.fn(),
@@ -37,6 +39,7 @@ vi.mock("@/lib/db", () => ({
     },
     user: { findUnique: userFindUniqueMock },
     tag: { findMany: tagFindManyMock },
+    eventSlugRedirect: { findUnique: redirectFindUniqueMock },
     feature: { findMany: featureFindManyMock },
   },
 }));
@@ -158,6 +161,12 @@ describe("ensureUniqueEventSlug", () => {
     findFirstMock.mockResolvedValue(null);
     await ensureUniqueEventSlug("Hello");
     expect(findFirstMock).toHaveBeenCalledWith(expect.objectContaining({ where: { slug: "hello" } }));
+  });
+
+  it("treats an address that still redirects to another event as taken", async () => {
+    findFirstMock.mockResolvedValue(null);
+    redirectFindUniqueMock.mockResolvedValueOnce({ eventId: "other" }).mockResolvedValueOnce(null);
+    expect(await ensureUniqueEventSlug("Hello")).toBe("hello-1");
   });
 
   it("appends suffix when slug exists", async () => {

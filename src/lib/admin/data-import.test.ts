@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  slugRedirectTarget: vi.fn(async (): Promise<string | null> => null),
   venueFindMany: vi.fn(),
   venueCreate: vi.fn(),
   venueDeleteMany: vi.fn(),
@@ -26,6 +27,7 @@ vi.mock("@/lib/db", () => ({
 }));
 vi.mock("@/lib/neighborhoods", () => ({ getNeighborhoodSlugSet: async () => new Set<string>() }));
 vi.mock("@/lib/venues/resolve", () => ({ findMatchingVenue: mocks.findMatchingVenue }));
+vi.mock("@/lib/events/slug", () => ({ slugRedirectTarget: mocks.slugRedirectTarget }));
 
 import { deriveScheduleDays, importData, type ImportPayload } from "./data-import";
 
@@ -179,6 +181,22 @@ describe("importData schedule days", () => {
     (mocks.scheduleDayCreateMany.mock.calls[0][0].data as { eventId: string; date: Date; startTime: string; endTime: string; allDay: boolean }[]).map(
       (d) => ({ ...d, date: d.date.toISOString().slice(0, 10) })
     );
+
+  it("skips a row whose slug belongs to an event that was renamed since", async () => {
+    mocks.slugRedirectTarget.mockResolvedValueOnce("craft-fair-2026");
+    const result = await importEvent({ startDate: "2026-12-05T18:00:00Z", endDate: "2026-12-06T00:00:00Z" });
+
+    expect(result.eventsCreated).toBe(0);
+    expect(mocks.eventCreate).not.toHaveBeenCalled();
+    expect(result.errors.join(" ")).toContain('renamed to "craft-fair-2026"');
+  });
+
+  it("skips a row whose slug is reserved for a site page", async () => {
+    const result = await importEvent({ slug: "calendar", startDate: "2026-12-05T18:00:00Z", endDate: "2026-12-06T00:00:00Z" });
+
+    expect(result.eventsCreated).toBe(0);
+    expect(result.errors.join(" ")).toContain('slug "calendar" is reserved');
+  });
 
   it("derives days from the start and end when the row has none", async () => {
     const result = await importEvent({ startDate: "2026-12-05T18:00:00Z", endDate: "2026-12-06T00:00:00Z" });

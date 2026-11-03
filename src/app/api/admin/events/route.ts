@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { requireApiAdminPermission } from "@/lib/api-auth";
 import { handleApiError } from "@/lib/api-response";
 import { findOrCreateVenue } from "@/lib/venues/resolve";
+import { eventSlugProblem } from "@/lib/events/slug";
 
 export async function POST(request: Request) {
   const { session, error } = await requireApiAdminPermission("admin.listings.manage");
@@ -68,6 +69,11 @@ export async function POST(request: Request) {
       { error: { message: "Select a venue or enter an address" } },
       { status: 400 }
     );
+  }
+
+  const slugProblem = await eventSlugProblem(null, data.slug);
+  if (slugProblem) {
+    return NextResponse.json({ error: { message: slugProblem } }, { status: 400 });
   }
 
   const venueExists = await db.venue.findFirst({

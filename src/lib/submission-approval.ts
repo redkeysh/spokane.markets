@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { slugify, parseDateTimeInTimezone } from "@/lib/utils";
 import { mapScheduleDaysForSubmit } from "@/lib/event-schedule-day";
 import { createEvent, type EventData } from "@/lib/shared/event-service";
+import { RESERVED_EVENT_SLUGS } from "@/lib/events/slug-rules";
 import type { Submission } from "@prisma/client";
 
 const TZ = "America/Los_Angeles";
@@ -20,16 +21,19 @@ export function submissionHasCompleteVenueForEvent(s: Submission): boolean {
   );
 }
 
-/** Archived events keep their slug, and the slug index is unique across all events, so they count as taken. */
+/**
+ * Archived events keep their slug, and the slug index is unique across all events, so they count
+ * as taken. An old address that still redirects to another event is taken too.
+ */
 export async function ensureUniqueEventSlug(title: string): Promise<string> {
   const base = slugify(title) || "event";
   let candidate = base;
   for (let n = 0; n < 100_000; n += 1) {
-    const exists = await db.event.findFirst({
-      where: { slug: candidate },
-      select: { id: true },
-    });
-    if (!exists) return candidate;
+    const [exists, redirect] = await Promise.all([
+      db.event.findFirst({ where: { slug: candidate }, select: { id: true } }),
+      db.eventSlugRedirect.findUnique({ where: { slug: candidate }, select: { eventId: true } }),
+    ]);
+    if (!exists && !redirect && !RESERVED_EVENT_SLUGS.has(candidate)) return candidate;
     candidate = `${base}-${n + 1}`;
   }
   throw new Error("Could not generate unique event slug");

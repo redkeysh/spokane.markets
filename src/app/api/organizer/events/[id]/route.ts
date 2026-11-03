@@ -10,6 +10,7 @@ import { parseDateOnlyToUTCNoon, parseDateTimeInTimezone } from "@/lib/utils";
 import { logAudit } from "@/lib/audit";
 import { organizerManageMarketWhere } from "@/lib/market-membership";
 import { findOrCreateVenue } from "@/lib/venues/resolve";
+import { eventSlugProblem, lockEventForSlugChange, recordEventSlugChange } from "@/lib/events/slug";
 import { NextResponse } from "next/server";
 
 async function requireOrganizerAuth() {
@@ -36,6 +37,7 @@ export async function PUT(
   const event = await db.event.findUnique({
     where: { id },
     select: {
+      slug: true,
       submittedById: true,
       status: true,
       marketId: true,
@@ -133,27 +135,40 @@ export async function PUT(
     );
   }
 
-  const updated = await db.event.update({
-    where: { id },
-    data: {
-      title: data.title,
-      slug: data.slug,
-      description: data.description || null,
-      startDate,
-      endDate,
-      venueId,
-      marketId: data.marketId || null,
-      imageUrl: data.imageUrl || null,
-      showImageInList: data.showImageInList ?? true,
-      imageFocalX: data.imageFocalX ?? 50,
-      imageFocalY: data.imageFocalY ?? 50,
-      websiteUrl: data.websiteUrl || null,
-      facebookUrl: data.facebookUrl || null,
-      instagramUrl: data.instagramUrl || null,
-      tags: { set: tagIds?.map((id) => ({ id })) ?? [] },
-      features: { set: featureIds?.map((id) => ({ id })) ?? [] },
-      ...onboarding,
-    },
+  const slugChanged = data.slug !== event.slug;
+  if (slugChanged) {
+    const slugProblem = await eventSlugProblem(id, data.slug, { audience: "public" });
+    if (slugProblem) {
+      return NextResponse.json({ error: { message: slugProblem } }, { status: 400 });
+    }
+  }
+
+  const updated = await db.$transaction(async (tx) => {
+    const before = await lockEventForSlugChange(tx, id);
+    const row = await tx.event.update({
+      where: { id },
+      data: {
+        title: data.title,
+        slug: data.slug,
+        description: data.description || null,
+        startDate,
+        endDate,
+        venueId,
+        marketId: data.marketId || null,
+        imageUrl: data.imageUrl || null,
+        showImageInList: data.showImageInList ?? true,
+        imageFocalX: data.imageFocalX ?? 50,
+        imageFocalY: data.imageFocalY ?? 50,
+        websiteUrl: data.websiteUrl || null,
+        facebookUrl: data.facebookUrl || null,
+        instagramUrl: data.instagramUrl || null,
+        tags: { set: tagIds?.map((id) => ({ id })) ?? [] },
+        features: { set: featureIds?.map((id) => ({ id })) ?? [] },
+        ...onboarding,
+      },
+    });
+    await recordEventSlugChange(tx, id, before.slug, row.slug, { previousStatus: before.status });
+    return row;
   });
 
   await db.eventScheduleDay.deleteMany({ where: { eventId: id } });

@@ -9,6 +9,7 @@ import {
 } from "@/lib/validations/organizer-onboarding";
 import { parseDateOnlyToUTCNoon, parseDateTimeInTimezone } from "@/lib/utils";
 import { notifySubmitterOfStatusChange } from "@/lib/events/status-notifications";
+import { eventSlugProblem, lockEventForSlugChange, recordEventSlugChange } from "@/lib/events/slug";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
@@ -94,48 +95,58 @@ export async function PUT(
     if (!existing) {
       return apiError("Event not found or archived", 404);
     }
+    const slugChanged = data.slug !== existing.slug;
+    if (slugChanged) {
+      const problem = await eventSlugProblem(id, data.slug);
+      if (problem) return apiError(problem, 400);
+    }
 
-    const event = await db.event.update({
-      where: { id },
-      data: {
-        title: data.title,
-        slug: data.slug,
-        description: data.description || null,
-        startDate,
-        endDate,
-        venueId,
-        marketId: data.marketId || null,
-        imageUrl: data.imageUrl || null,
-        showImageInList: data.showImageInList ?? true,
-        imageFocalX: data.imageFocalX ?? 50,
-        imageFocalY: data.imageFocalY ?? 50,
-        status: data.status,
-        websiteUrl: data.websiteUrl || null,
-        facebookUrl: data.facebookUrl || null,
-        instagramUrl: data.instagramUrl || null,
-        tags: { set: tagIds?.map((id) => ({ id })) ?? [] },
-        features: { set: featureIds?.map((id) => ({ id })) ?? [] },
-        ...(data.participationMode !== undefined && {
-          participationMode: data.participationMode || null,
-        }),
-        ...(data.vendorCapacity !== undefined && {
-          vendorCapacity: data.vendorCapacity,
-        }),
-        ...(data.publicIntentListEnabled !== undefined && {
-          publicIntentListEnabled: data.publicIntentListEnabled,
-        }),
-        ...(data.publicIntentNamesEnabled !== undefined && {
-          publicIntentNamesEnabled: data.publicIntentNamesEnabled,
-        }),
-        ...(data.publicRosterEnabled !== undefined && {
-          publicRosterEnabled: data.publicRosterEnabled,
-        }),
-        ...onboarding,
-        ...(data.complianceFlagged !== undefined && { complianceFlagged: data.complianceFlagged }),
-        ...(data.complianceNotes !== undefined && {
-          complianceNotes: data.complianceNotes === "" ? null : data.complianceNotes,
-        }),
-      },
+    const event = await db.$transaction(async (tx) => {
+      const before = await lockEventForSlugChange(tx, id);
+      const row = await tx.event.update({
+        where: { id },
+        data: {
+          title: data.title,
+          slug: data.slug,
+          description: data.description || null,
+          startDate,
+          endDate,
+          venueId,
+          marketId: data.marketId || null,
+          imageUrl: data.imageUrl || null,
+          showImageInList: data.showImageInList ?? true,
+          imageFocalX: data.imageFocalX ?? 50,
+          imageFocalY: data.imageFocalY ?? 50,
+          status: data.status,
+          websiteUrl: data.websiteUrl || null,
+          facebookUrl: data.facebookUrl || null,
+          instagramUrl: data.instagramUrl || null,
+          tags: { set: tagIds?.map((id) => ({ id })) ?? [] },
+          features: { set: featureIds?.map((id) => ({ id })) ?? [] },
+          ...(data.participationMode !== undefined && {
+            participationMode: data.participationMode || null,
+          }),
+          ...(data.vendorCapacity !== undefined && {
+            vendorCapacity: data.vendorCapacity,
+          }),
+          ...(data.publicIntentListEnabled !== undefined && {
+            publicIntentListEnabled: data.publicIntentListEnabled,
+          }),
+          ...(data.publicIntentNamesEnabled !== undefined && {
+            publicIntentNamesEnabled: data.publicIntentNamesEnabled,
+          }),
+          ...(data.publicRosterEnabled !== undefined && {
+            publicRosterEnabled: data.publicRosterEnabled,
+          }),
+          ...onboarding,
+          ...(data.complianceFlagged !== undefined && { complianceFlagged: data.complianceFlagged }),
+          ...(data.complianceNotes !== undefined && {
+            complianceNotes: data.complianceNotes === "" ? null : data.complianceNotes,
+          }),
+        },
+      });
+      await recordEventSlugChange(tx, id, before.slug, row.slug, { previousStatus: before.status });
+      return row;
     });
 
     await db.eventScheduleDay.deleteMany({ where: { eventId: id } });
@@ -156,6 +167,7 @@ export async function PUT(
     revalidatePath("/events/map");
     revalidatePath("/");
     revalidatePath(`/events/${event.slug}`);
+    if (slugChanged) revalidatePath(`/events/${existing.slug}`);
 
     if (existing) {
       await notifySubmitterOfStatusChange({

@@ -20,6 +20,11 @@ const mocks = vi.hoisted(() => ({
   tagFindMany: vi.fn(),
   featureFindMany: vi.fn(),
   getNeighborhoodOptions: vi.fn(),
+  txEventUpdate: vi.fn(),
+  txQueryRaw: vi.fn(),
+  eventSlugProblem: vi.fn(),
+  recordEventSlugChange: vi.fn(),
+  resolveEventSlugRedirect: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -44,7 +49,15 @@ vi.mock("@/lib/db", () => ({
     },
     tag: { findMany: mocks.tagFindMany },
     feature: { findMany: mocks.featureFindMany },
+    $transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
+      fn({ event: { update: mocks.txEventUpdate }, $queryRaw: mocks.txQueryRaw }),
   },
+}));
+vi.mock("@/lib/events/slug", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/events/slug")>()),
+  eventSlugProblem: mocks.eventSlugProblem,
+  recordEventSlugChange: mocks.recordEventSlugChange,
+  resolveEventSlugRedirect: mocks.resolveEventSlugRedirect,
 }));
 vi.mock("@/lib/admin/queues", () => ({ getQueuesSummary: vi.fn() }));
 vi.mock("@/lib/submission-approval", () => ({
@@ -383,5 +396,88 @@ describe("venueOutcome", () => {
       venue: { id: "v2", name: "Hall", address: "1 Main St", deletedAt: new Date() },
     });
     await expect(outcome()).resolves.toMatchObject({ outcome: "archived", venueId: "v2" });
+  });
+});
+
+describe("update_event slug", () => {
+  const existing = {
+    id: "e1",
+    title: "Kendall Yards Christmas Market",
+    slug: "kendall-yards-night-market-2026-11-27",
+    status: "PENDING",
+    submittedById: null,
+  };
+
+  beforeEach(() => {
+    mocks.eventFindFirst.mockResolvedValue(existing);
+    mocks.eventSlugProblem.mockResolvedValue(null);
+    mocks.txQueryRaw.mockResolvedValue([{ slug: existing.slug, status: "PUBLISHED" }]);
+    mocks.recordEventSlugChange.mockResolvedValue(true);
+    mocks.txEventUpdate.mockImplementation(async ({ data }: { data: { slug?: string } }) => ({
+      id: "e1",
+      title: existing.title,
+      slug: data.slug ?? existing.slug,
+      status: "PENDING",
+    }));
+  });
+
+  it("rejects a slug that is not URL-safe", async () => {
+    const result = await callTool("update_event", { id: "e1", slug: "Kendall Yards!" });
+    expect(result).toMatchObject({ isError: true });
+    expect(JSON.stringify(result)).toContain("lowercase letters");
+    expect(mocks.txEventUpdate).not.toHaveBeenCalled();
+  });
+
+  it("refuses a slug another event uses and changes nothing", async () => {
+    mocks.eventSlugProblem.mockResolvedValue('"Other" already uses /events/taken.');
+    const result = await callTool("update_event", { id: "e1", slug: "taken" });
+    expect(result).toEqual({ isError: true, text: '"Other" already uses /events/taken.' });
+    expect(mocks.txEventUpdate).not.toHaveBeenCalled();
+  });
+
+  it("changes the slug and keeps the old address as a redirect in the same transaction", async () => {
+    const result = await callTool("update_event", { id: "e1", slug: "kendall-yards-christmas-market-2026-11-27" });
+    expect(mocks.recordEventSlugChange).toHaveBeenCalledWith(
+      expect.anything(),
+      "e1",
+      "kendall-yards-night-market-2026-11-27",
+      "kendall-yards-christmas-market-2026-11-27",
+      { previousStatus: "PUBLISHED" }
+    );
+    expect(result).toMatchObject({
+      isError: false,
+      data: {
+        slug: "kendall-yards-christmas-market-2026-11-27",
+        redirectFrom: expect.stringContaining("/events/kendall-yards-night-market-2026-11-27"),
+      },
+    });
+  });
+
+  it("does not check the slug when it is unchanged", async () => {
+    mocks.recordEventSlugChange.mockResolvedValue(false);
+    const result = await callTool("update_event", { id: "e1", slug: existing.slug, title: "New title" });
+    expect(mocks.eventSlugProblem).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ isError: false });
+    expect(JSON.stringify(result)).not.toContain("redirectFrom");
+  });
+
+  it("records the slug the row really had when another rename committed first", async () => {
+    mocks.txQueryRaw.mockResolvedValue([{ slug: "renamed-meanwhile", status: "PUBLISHED" }]);
+    const result = await callTool("update_event", { id: "e1", slug: "final-name" });
+    expect(mocks.recordEventSlugChange).toHaveBeenCalledWith(expect.anything(), "e1", "renamed-meanwhile", "final-name", {
+      previousStatus: "PUBLISHED",
+    });
+    expect(result).toMatchObject({ data: { redirectFrom: expect.stringContaining("/events/renamed-meanwhile") } });
+  });
+});
+
+describe("get_event by an old slug", () => {
+  it("follows the redirect to the event's current slug", async () => {
+    mocks.eventFindUnique.mockResolvedValueOnce(null);
+    mocks.resolveEventSlugRedirect.mockResolvedValue("new-name");
+    mocks.eventFindFirst.mockResolvedValue({ id: "e1", slug: "new-name", tags: [], features: [] });
+    const result = await callTool("get_event", { slug: "old-name" });
+    expect(mocks.eventFindFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { slug: "new-name" } }));
+    expect(result).toMatchObject({ isError: false, data: { slug: "new-name", redirectedFrom: "old-name" } });
   });
 });

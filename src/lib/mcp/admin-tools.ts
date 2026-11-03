@@ -17,6 +17,14 @@ import { assertNeighborhoodSlug, getNeighborhoodOptions } from "@/lib/neighborho
 import { findDuplicateGroups } from "@/lib/venues/match";
 import { lookupVenue } from "@/lib/venues/resolve";
 import { mergeVenues } from "@/lib/venues/merge";
+import {
+  EVENT_SLUG_MAX_LENGTH,
+  EVENT_SLUG_PATTERN,
+  eventSlugProblem,
+  lockEventForSlugChange,
+  recordEventSlugChange,
+  resolveEventSlugRedirect,
+} from "@/lib/events/slug";
 import { defineTool, ToolError, type McpTool, type ServerInfo } from "./protocol";
 
 const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://spokane.markets").replace(/\/$/, "");
@@ -376,15 +384,19 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
   defineTool({
     name: "get_event",
     title: "Get event",
-    description: "One event in full, by id or slug: venue, market, schedule days, tags, features, and links.",
+    description:
+      "One event in full, by id or slug: venue, market, schedule days, tags, features, and links. An old slug that now redirects finds the event under its current slug.",
     readOnly: true,
     input: z
       .object({ id: z.string().min(1).optional(), slug: z.string().min(1).optional() })
       .refine((v) => v.id || v.slug, { message: "Pass id or slug." }),
     unavailableReason: needs("admin.listings.manage"),
     run: async ({ id, slug }) => {
+      const redirectedTo = !id && slug && !(await db.event.findUnique({ where: { slug }, select: { id: true } }))
+        ? await resolveEventSlugRedirect(slug)
+        : null;
       const event = await db.event.findFirst({
-        where: id ? { id } : { slug },
+        where: id ? { id } : { slug: redirectedTo ?? slug },
         include: {
           venue: { select: { id: true, name: true, address: true, city: true, state: true, zip: true } },
           market: { select: { id: true, name: true, slug: true } },
@@ -396,6 +408,7 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
       if (!event) throw new ToolError("Event not found.");
       return {
         ...event,
+        ...(redirectedTo ? { redirectedFrom: slug } : {}),
         tags: event.tags.map((t) => t.name),
         features: event.features.map((f) => f.name),
         url: `${APP_URL}/events/${event.slug}`,
@@ -408,12 +421,19 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
     name: "update_event",
     title: "Update event",
     description:
-      "Changes an event's title, description, status, venue, market, links, or image. Pass only the fields to change; null clears an optional field. Dates and schedules are edited in the dashboard.",
+      "Changes an event's title, web address (slug), description, status, venue, market, links, or image. Pass only the fields to change; null clears an optional field. A changed slug must be unused; the old address keeps working as a permanent redirect. Dates and schedules are edited in the dashboard.",
     readOnly: false,
     input: z
       .object({
         id: z.string().min(1),
         title: z.string().trim().min(1).max(200).optional(),
+        slug: z
+          .string()
+          .trim()
+          .max(EVENT_SLUG_MAX_LENGTH)
+          .regex(EVENT_SLUG_PATTERN, "Use lowercase letters, numbers and single hyphens, e.g. kendall-yards-christmas-market-2026-11-27.")
+          .optional()
+          .describe("New web address: /events/<slug>. The old one redirects here."),
         description: z.string().max(20000).nullable().optional(),
         status: z.enum(EVENT_STATUSES).optional(),
         venueId: z.string().min(1).optional(),
@@ -453,12 +473,34 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
         if (!market) throw new ToolError("That market does not exist or is archived.");
       }
 
+      const slugChanged = changes.slug !== undefined && changes.slug !== existing.slug;
+      if (slugChanged) {
+        const problem = await eventSlugProblem(id, changes.slug!);
+        if (problem) throw new ToolError(problem);
+      }
+
       const data = Object.fromEntries(Object.entries(changes).filter(([, value]) => value !== undefined));
-      const event = await db.event.update({
-        where: { id },
-        data,
-        select: { id: true, title: true, slug: true, status: true },
-      });
+      let event;
+      let previousSlug = existing.slug;
+      let redirected = false;
+      try {
+        event = await db.$transaction(async (tx) => {
+          const before = await lockEventForSlugChange(tx, id);
+          const updated = await tx.event.update({
+            where: { id },
+            data,
+            select: { id: true, title: true, slug: true, status: true },
+          });
+          previousSlug = before.slug;
+          redirected = await recordEventSlugChange(tx, id, before.slug, updated.slug, { previousStatus: before.status });
+          return updated;
+        });
+      } catch (err) {
+        if (err && typeof err === "object" && "code" in err && (err as { code: unknown }).code === "P2002") {
+          throw new ToolError(`Another event took /events/${changes.slug} at the same moment. Pick another slug.`);
+        }
+        throw err;
+      }
 
       await notifySubmitterOfStatusChange({
         submittedById: existing.submittedById,
@@ -475,7 +517,12 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
         ...auditMeta(ctx),
       });
       revalidateListings(event.slug);
-      return { ...event, url: `${APP_URL}/events/${event.slug}` };
+      if (previousSlug !== event.slug) revalidatePath(`/events/${previousSlug}`);
+      return {
+        ...event,
+        url: `${APP_URL}/events/${event.slug}`,
+        ...(redirected ? { redirectFrom: `${APP_URL}/events/${previousSlug}` } : {}),
+      };
     },
   }),
 

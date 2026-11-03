@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import type { MaintenanceMode } from "@prisma/client";
+import { RESERVED_EVENT_SLUGS } from "@/lib/events/slug-rules";
 
 /** Paths that always bypass maintenance gate */
 const BYPASS_PATHS = [
@@ -44,6 +45,33 @@ function getApiBase(request: NextRequest): string {
   return request.nextUrl.origin;
 }
 
+/** One path segment under /events; the redirect table decides whether it is an old address. */
+const EVENT_DETAIL_PATH = /^\/events\/([^/]+)\/?$/;
+
+/**
+ * An old event address answers with a real 308 here, before rendering: the root loading
+ * boundary streams every page, so a redirect thrown during render would be sent as a 200.
+ */
+async function redirectOldEventAddress(request: NextRequest): Promise<NextResponse | null> {
+  const match = EVENT_DETAIL_PATH.exec(request.nextUrl.pathname);
+  if (!match) return null;
+  try {
+    const slug = decodeURIComponent(match[1]);
+    if (RESERVED_EVENT_SLUGS.has(slug)) return null;
+    const { resolveEventSlugRedirect } = await import("@/lib/events/slug");
+    const currentSlug = await resolveEventSlugRedirect(slug, { publishedOnly: true });
+    if (!currentSlug) return null;
+    const url = request.nextUrl.clone();
+    url.pathname = `/events/${encodeURIComponent(currentSlug)}`;
+    const response = NextResponse.redirect(url, 308);
+    // Browsers keep an uncached 308 forever; no-store lets a later rename back take effect.
+    response.headers.set("Cache-Control", "no-store");
+    return response;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Maintenance gate: when mode is ON, rewrite to /maintenance.
  * Privileged users (admin, vendor, organizer) bypass via the maintenance page
@@ -59,6 +87,9 @@ export async function proxy(request: NextRequest) {
   if (shouldBypass(pathname)) {
     return NextResponse.next();
   }
+
+  const oldEventAddress = await redirectOldEventAddress(request);
+  if (oldEventAddress) return oldEventAddress;
 
   try {
     const base = getApiBase(request);

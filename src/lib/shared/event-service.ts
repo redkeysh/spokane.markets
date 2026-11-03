@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { parseDateOnlyToUTCNoon, parseDateTimeInTimezone } from "@/lib/utils";
 import { findOrCreateVenue } from "@/lib/venues/resolve";
-import type { EventStatus, ParticipationMode } from "@prisma/client";
+import type { EventStatus, ParticipationMode, Prisma } from "@prisma/client";
 
 const EVENT_TIMEZONE = "America/Los_Angeles";
 
@@ -60,6 +60,36 @@ export interface CreateEventOptions {
   submittedById?: string | null;
   status?: string;
   isAdminAction?: boolean;
+  /** Runs inside the transaction that creates the event; throwing rolls the event back. */
+  inTransaction?: (tx: Prisma.TransactionClient, event: { id: string; slug: string }) => Promise<void>;
+}
+
+/**
+ * Sorts schedule days by date and merges days that share a date into one
+ * spanning the earliest start and latest end (all day if any of them is).
+ * Schedule day rows are unique per (eventId, date).
+ */
+export function mergeScheduleDays(scheduleDays: ScheduleDayInput[]): ScheduleDayInput[] {
+  const byDate = new Map<string, ScheduleDayInput>();
+  for (const d of scheduleDays) {
+    const day: ScheduleDayInput = d.allDay
+      ? { date: d.date, allDay: true }
+      : { date: d.date, allDay: false, startTime: d.startTime ?? "00:00", endTime: d.endTime ?? "23:59" };
+    const seen = byDate.get(d.date);
+    if (!seen) {
+      byDate.set(d.date, day);
+    } else if (seen.allDay || day.allDay) {
+      byDate.set(d.date, { date: d.date, allDay: true });
+    } else {
+      byDate.set(d.date, {
+        date: d.date,
+        allDay: false,
+        startTime: day.startTime! < seen.startTime! ? day.startTime : seen.startTime,
+        endTime: day.endTime! > seen.endTime! ? day.endTime : seen.endTime,
+      });
+    }
+  }
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 /**
@@ -75,7 +105,7 @@ export function computeEventDatesFromSchedule(
   let endDate = new Date(endDateStr);
 
   if (scheduleDays?.length) {
-    const sortedDays = [...scheduleDays].sort((a, b) => a.date.localeCompare(b.date));
+    const sortedDays = mergeScheduleDays(scheduleDays);
     const first = sortedDays[0];
     const last = sortedDays[sortedDays.length - 1];
     const firstStart = first.allDay ? "00:00" : (first.startTime ?? "00:00");
@@ -134,13 +164,14 @@ export async function resolveVenueId(
 }
 
 /**
- * Builds the data array for eventScheduleDay.createMany from schedule day inputs.
+ * Builds the data array for eventScheduleDay.createMany from schedule day
+ * inputs, merged per date by mergeScheduleDays.
  */
 export function buildScheduleDayRecords(
   eventId: string,
   scheduleDays: ScheduleDayInput[]
 ) {
-  return scheduleDays.map((d) => ({
+  return mergeScheduleDays(scheduleDays).map((d) => ({
     eventId,
     date: parseDateOnlyToUTCNoon(d.date),
     startTime: d.allDay ? "00:00" : (d.startTime ?? "00:00"),
@@ -151,7 +182,9 @@ export function buildScheduleDayRecords(
 
 /**
  * Creates a new event with associated schedule days, tags, and features.
- * Handles venue resolution and timezone-aware date computation.
+ * Handles venue resolution and timezone-aware date computation. The venue is
+ * resolved first; the event, its schedule days, and `options.inTransaction`
+ * then commit or roll back together.
  */
 export async function createEvent(
   data: EventData,
@@ -176,50 +209,54 @@ export async function createEvent(
 
   const status = options.status ?? rest.status ?? "DRAFT";
 
-  const event = await db.event.create({
-    data: {
-      title: rest.title,
-      slug: rest.slug,
-      description: rest.description || null,
-      startDate,
-      endDate,
-      venueId,
-      marketId: rest.marketId || null,
-      imageUrl: rest.imageUrl || null,
-      status: status as EventStatus,
-      websiteUrl: rest.websiteUrl || null,
-      facebookUrl: rest.facebookUrl || null,
-      instagramUrl: rest.instagramUrl || null,
-      submittedById: options.submittedById ?? null,
-      ...(rest.participationMode !== undefined && {
-        participationMode: (rest.participationMode || null) as ParticipationMode | null,
-      }),
-      ...(rest.vendorCapacity != null && {
-        vendorCapacity: rest.vendorCapacity,
-      }),
-      ...(rest.publicIntentListEnabled !== undefined && {
-        publicIntentListEnabled: rest.publicIntentListEnabled,
-      }),
-      ...(rest.publicIntentNamesEnabled !== undefined && {
-        publicIntentNamesEnabled: rest.publicIntentNamesEnabled,
-      }),
-      ...(rest.publicRosterEnabled !== undefined && {
-        publicRosterEnabled: rest.publicRosterEnabled,
-      }),
-      tags: tagIds?.length
-        ? { connect: tagIds.map((id) => ({ id })) }
-        : undefined,
-      features: featureIds?.length
-        ? { connect: featureIds.map((id) => ({ id })) }
-        : undefined,
-    },
-  });
-
-  if (scheduleDays?.length) {
-    await db.eventScheduleDay.createMany({
-      data: buildScheduleDayRecords(event.id, scheduleDays),
+  const event = await db.$transaction(async (tx) => {
+    const created = await tx.event.create({
+      data: {
+        title: rest.title,
+        slug: rest.slug,
+        description: rest.description || null,
+        startDate,
+        endDate,
+        venueId,
+        marketId: rest.marketId || null,
+        imageUrl: rest.imageUrl || null,
+        status: status as EventStatus,
+        websiteUrl: rest.websiteUrl || null,
+        facebookUrl: rest.facebookUrl || null,
+        instagramUrl: rest.instagramUrl || null,
+        submittedById: options.submittedById ?? null,
+        ...(rest.participationMode !== undefined && {
+          participationMode: (rest.participationMode || null) as ParticipationMode | null,
+        }),
+        ...(rest.vendorCapacity != null && {
+          vendorCapacity: rest.vendorCapacity,
+        }),
+        ...(rest.publicIntentListEnabled !== undefined && {
+          publicIntentListEnabled: rest.publicIntentListEnabled,
+        }),
+        ...(rest.publicIntentNamesEnabled !== undefined && {
+          publicIntentNamesEnabled: rest.publicIntentNamesEnabled,
+        }),
+        ...(rest.publicRosterEnabled !== undefined && {
+          publicRosterEnabled: rest.publicRosterEnabled,
+        }),
+        tags: tagIds?.length
+          ? { connect: tagIds.map((id) => ({ id })) }
+          : undefined,
+        features: featureIds?.length
+          ? { connect: featureIds.map((id) => ({ id })) }
+          : undefined,
+      },
     });
-  }
+
+    if (scheduleDays?.length) {
+      await tx.eventScheduleDay.createMany({
+        data: buildScheduleDayRecords(created.id, scheduleDays),
+      });
+    }
+    await options.inTransaction?.(tx, created);
+    return created;
+  });
 
   return { event, error: null };
 }

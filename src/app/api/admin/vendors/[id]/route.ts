@@ -4,7 +4,8 @@ import { db } from "@/lib/db";
 import { adminVendorProfileSchema } from "@/lib/validations";
 import { parseGalleryUrlsFromMultilineText } from "@/lib/gallery-urls";
 import { assertListingCommunityBadgeIds } from "@/lib/listing-community-badges";
-import { extractSocialHandle, normalizeUrlToHttps, slugify } from "@/lib/utils";
+import { extractSocialHandle, normalizeUrlToHttps } from "@/lib/utils";
+import { generateUniqueVendorSlug } from "@/lib/shared/slug";
 import { NextResponse } from "next/server";
 
 function toOptional(value: string | undefined): string | undefined {
@@ -24,23 +25,6 @@ function toOptionalHandle(
   if (value === undefined || value === "") return undefined;
   const handle = extractSocialHandle(value, platform);
   return handle ? handle : undefined;
-}
-
-async function generateUniqueSlug(base: string, excludeId?: string): Promise<string> {
-  const slug = slugify(base) || "vendor";
-  const candidate_base = slug;
-  let candidate = slug;
-  let n = 0;
-  while (true) {
-    const existing = await db.vendorProfile.findFirst({
-      where: { slug: candidate, deletedAt: null },
-      select: { id: true },
-    });
-    if (!existing || (excludeId && existing.id === excludeId)) break;
-    n += 1;
-    candidate = `${candidate_base}-${n}`;
-  }
-  return candidate;
 }
 
 export async function PUT(
@@ -76,8 +60,8 @@ export async function PUT(
     let slug = data.slug;
 
     if (slug) {
-      const existing = await db.vendorProfile.findFirst({
-        where: { slug, deletedAt: null },
+      const existing = await db.vendorProfile.findUnique({
+        where: { slug },
         select: { id: true },
       });
       if (existing && existing.id !== id) {
@@ -89,8 +73,8 @@ export async function PUT(
         select: { businessName: true },
       });
       slug = current
-        ? await generateUniqueSlug(current.businessName, id)
-        : await generateUniqueSlug(data.businessName, id);
+        ? await generateUniqueVendorSlug(current.businessName, id)
+        : await generateUniqueVendorSlug(data.businessName, id);
     }
 
     const galleryUrls =

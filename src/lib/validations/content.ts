@@ -6,9 +6,12 @@ const submissionSchemaBase = z.object({
   submitterName: z.string().min(1, "Name is required"),
   submitterEmail: z.string().email("Valid email is required"),
   eventTitle: z.string().min(1, "Event title is required"),
-  eventDescription: z.string().optional(),
+  eventDescription: z.string().max(20000, "Description must be 20,000 characters or fewer").optional(),
   /** One or more days (same model as admin event form). */
-  scheduleDays: z.array(eventScheduleDaySchema).min(1, "Add at least one day"),
+  scheduleDays: z
+    .array(eventScheduleDaySchema)
+    .min(1, "Add at least one day")
+    .max(366, "An event can have at most 366 days"),
   timezone: z.string().optional().or(z.literal("")),
   imageUrl: imageUrlSchema.optional().or(z.literal("")),
   venueName: z.string().min(1, "Venue name is required"),
@@ -25,7 +28,7 @@ const submissionSchemaBase = z.object({
   facebookUrl: z.string().url().optional().or(z.literal("")),
   instagramUrl: z.string().url().optional().or(z.literal("")),
   websiteUrl: z.string().url().optional().or(z.literal("")),
-  notes: z.string().optional(),
+  notes: z.string().max(20000, "Notes must be 20,000 characters or fewer").optional(),
   /** Honeypot */
   company: z.string().max(0).optional(),
 });

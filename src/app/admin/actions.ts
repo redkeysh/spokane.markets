@@ -12,7 +12,11 @@ import {
   normalizePermissionMatrix,
   type AdminPermissionKey,
 } from "@/lib/admin/permissions";
-import { approveSubmissionWithEvent, rejectSubmission } from "@/lib/submission-approval";
+import {
+  ALREADY_REVIEWED_MESSAGE,
+  approveSubmissionWithEvent,
+  rejectSubmission,
+} from "@/lib/submission-approval";
 import { mergeVenues, type MergeVenuesResult } from "@/lib/venues/merge";
 import { createApiToken } from "@/lib/api-tokens";
 
@@ -407,7 +411,8 @@ export async function updateSubmissionStatus(
     const session = await requireAdminAction("admin.moderation.manage");
     if (status === "APPROVED") {
       try {
-        await approveSubmissionWithEvent(id, session.user.id);
+        const event = await approveSubmissionWithEvent(id, session.user.id);
+        if (!event) return { ok: false as const, error: ALREADY_REVIEWED_MESSAGE };
       } catch (error) {
         return {
           ok: false as const,
@@ -490,10 +495,13 @@ export async function updateSubmissionDraft(
       notes: data.notes?.trim() ? data.notes.trim() : null,
     };
 
-    await db.submission.update({
-      where: { id },
+    const updated = await db.submission.updateMany({
+      where: { id, status: "PENDING" },
       data: next,
     });
+    if (updated.count === 0) {
+      return { ok: false as const, error: "Only pending submissions can be edited." };
+    }
 
     await logAudit(session.user.id, "UPDATE_SUBMISSION", "SUBMISSION", id, {
       newValue: next,
@@ -684,61 +692,55 @@ function getSelectedIds(formData: FormData): string[] {
 export async function bulkUpdateSubmissionStatus(
   status: "APPROVED" | "REJECTED",
   formData: FormData
-) {
+): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
   const session = await requireAdminAction("admin.moderation.manage");
   const ids = getSelectedIds(formData);
-  if (ids.length === 0) return;
+  if (ids.length === 0) return { ok: false, error: "Select at least one submission." };
 
-  if (status === "APPROVED") {
-    // Each approval is an independent, idempotent unit (it skips submissions
-    // that are already approved), so a single failure must not abort the batch
-    // and strand the remaining valid submissions. Approve every one we can,
-    // then report the failures; retrying the batch is safe.
-    const failures: string[] = [];
-    for (const id of ids) {
+  // Each submission is reviewed independently so one failure does not strand
+  // the rest of the batch; already-reviewed submissions are skipped.
+  const done: string[] = [];
+  const skipped: string[] = [];
+  const failures: string[] = [];
+  for (const id of ids) {
+    if (status === "APPROVED") {
       try {
-        await approveSubmissionWithEvent(id, session.user.id);
+        const event = await approveSubmissionWithEvent(id, session.user.id, { auditMeta: { bulk: true } });
+        (event ? done : skipped).push(id);
+      } catch (e) {
+        failures.push(`${id}: ${e instanceof Error ? e.message : "failed"}`);
+      }
+    } else {
+      try {
+        const result = await rejectSubmission(id, session.user.id, undefined, { auditMeta: { bulk: true } });
+        (result.ok ? done : skipped).push(id);
       } catch (e) {
         failures.push(`${id}: ${e instanceof Error ? e.message : "failed"}`);
       }
     }
-    await logAudit(
-      session.user.id,
-      "BULK_UPDATE_SUBMISSION_STATUS",
-      "SUBMISSION",
-      undefined,
-      {
-        ids,
-        newValue: { status: "APPROVED" },
-        ...(failures.length ? { failures } : {}),
-      }
-    );
-    revalidatePath("/admin/submissions");
-    revalidatePath("/admin/queues");
-    if (failures.length) {
-      throw new Error(
-        `Approved ${ids.length - failures.length} of ${ids.length}. ${failures.length} could not be approved: ${failures.join("; ")}`
-      );
-    }
-    return;
   }
 
-  await db.submission.updateMany({
-    where: { id: { in: ids }, status: "PENDING" },
-    data: { status, reviewerId: session.user.id },
+  await logAudit(session.user.id, "BULK_UPDATE_SUBMISSION_STATUS", "SUBMISSION", undefined, {
+    ids: done,
+    newValue: { status },
+    ...(skipped.length ? { skipped } : {}),
+    ...(failures.length ? { failures } : {}),
   });
-  await logAudit(
-    session.user.id,
-    "BULK_UPDATE_SUBMISSION_STATUS",
-    "SUBMISSION",
-    undefined,
-    {
-      ids,
-      newValue: { status },
-    }
-  );
   revalidatePath("/admin/submissions");
   revalidatePath("/admin/queues");
+
+  const verb = status === "APPROVED" ? "Approved" : "Rejected";
+  const summary = [
+    `${verb} ${done.length} of ${ids.length}.`,
+    skipped.length ? `${skipped.length} already reviewed.` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  if (failures.length) {
+    const failedVerb = status === "APPROVED" ? "approved" : "rejected";
+    return { ok: false, error: `${summary} ${failures.length} could not be ${failedVerb}: ${failures.join("; ")}` };
+  }
+  return { ok: true, message: summary };
 }
 
 export async function bulkUpdateReviewStatus(

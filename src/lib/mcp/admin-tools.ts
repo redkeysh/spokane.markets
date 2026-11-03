@@ -5,7 +5,11 @@ import { db } from "@/lib/db";
 import type { AdminPermissionKey } from "@/lib/admin/permissions";
 import type { TokenPrincipal } from "@/lib/api-tokens";
 import { getQueuesSummary } from "@/lib/admin/queues";
-import { approveSubmissionWithEvent, rejectSubmission } from "@/lib/submission-approval";
+import {
+  ALREADY_REVIEWED_MESSAGE,
+  approveSubmissionWithEvent,
+  rejectSubmission,
+} from "@/lib/submission-approval";
 import { notifySubmitterOfStatusChange } from "@/lib/events/status-notifications";
 import { logAudit } from "@/lib/audit";
 import { geocodeAddress } from "@/lib/geocode";
@@ -38,7 +42,39 @@ function auditMeta(ctx: TokenPrincipal) {
 const limitField = (max: number, fallback: number) =>
   z.number().int().min(1).max(max).default(fallback).describe(`Maximum results, 1 to ${max}.`);
 
-const optionalUrl = z.url().nullable().optional();
+const offsetField = z.number().int().min(0).max(100_000).default(0).describe("Results to skip, for paging.");
+
+/** Wraps one page of results so the caller can tell whether more exist. */
+function page<T>(items: T[], total: number, offset: number) {
+  return { total, offset, returned: items.length, hasMore: offset + items.length < total, items };
+}
+
+const optionalUrl = z.httpUrl().nullable().optional();
+
+const imageUrlField = z
+  .string()
+  .trim()
+  .refine((v) => v.startsWith("/uploads/") || /^https?:\/\//i.test(v), "Must be an http(s) URL or an /uploads/ path.")
+  .nullable()
+  .optional();
+
+const LIST_TEXT_CHARS = 300;
+const FULL_TEXT_CHARS = 20_000;
+const FULL_SCHEDULE_DAYS = 100;
+
+function clip(text: string | null, max: number) {
+  if (text == null || text.length <= max) return text;
+  return `${text.slice(0, max)}… [${text.length - max} more characters not shown]`;
+}
+
+function scheduleSummary(value: Prisma.JsonValue) {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const dates = value
+    .map((d) => (d && typeof d === "object" && !Array.isArray(d) && typeof d.date === "string" ? d.date : null))
+    .filter((d): d is string => d !== null)
+    .sort();
+  return { days: value.length, firstDate: dates[0] ?? null, lastDate: dates[dates.length - 1] ?? null };
+}
 
 function hasChange(fields: Record<string, unknown>) {
   return Object.entries(fields).some(([key, value]) => key !== "id" && value !== undefined);
@@ -154,27 +190,37 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
     name: "list_submissions",
     title: "List submissions",
     description:
-      "Public event submissions. Pending ones are oldest first and include venueOutcome: whether approving reuses an existing venue, creates a new one, or will fail.",
+      "Public event submissions, one page at a time. Pending ones are oldest first and include venueOutcome: whether approving reuses an existing venue, creates a new one, or will fail. Long text is shortened and the schedule is summarized; use get_submission for the full record. Approving or rejecting removes items from the pending list, so after acting on a page, list again from offset 0 instead of advancing the offset.",
     readOnly: true,
     input: z.object({
       status: z.enum(SUBMISSION_STATUSES).default("PENDING"),
       limit: limitField(50, 20),
+      offset: offsetField,
     }),
     unavailableReason: needs("admin.moderation.manage"),
-    run: async ({ status, limit }) => {
-      const rows = await db.submission.findMany({
-        where: { status },
-        orderBy: { createdAt: status === "PENDING" ? "asc" : "desc" },
-        take: limit,
-        select: SUBMISSION_SELECT,
-      });
-      return Promise.all(
+    run: async ({ status, limit, offset }) => {
+      const [rows, total] = await Promise.all([
+        db.submission.findMany({
+          where: { status },
+          orderBy: [{ createdAt: status === "PENDING" ? "asc" : "desc" }, { id: "asc" }],
+          skip: offset,
+          take: limit,
+          select: SUBMISSION_SELECT,
+        }),
+        db.submission.count({ where: { status } }),
+      ]);
+      const items = await Promise.all(
         rows.map(async (s) => ({
           ...s,
+          eventDescription: clip(s.eventDescription, LIST_TEXT_CHARS),
+          notes: clip(s.notes, LIST_TEXT_CHARS),
+          reviewNotes: clip(s.reviewNotes, LIST_TEXT_CHARS),
+          scheduleDays: scheduleSummary(s.scheduleDays),
           adminUrl: `${APP_URL}/admin/submissions/${s.id}`,
           ...(status === "PENDING" ? { venueOutcome: await venueOutcome(s) } : {}),
         }))
       );
+      return page(items, total, offset);
     },
   }),
 
@@ -188,8 +234,15 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
     run: async ({ id }) => {
       const s = await db.submission.findUnique({ where: { id }, select: SUBMISSION_SELECT });
       if (!s) throw new ToolError("Submission not found.");
+      const days = Array.isArray(s.scheduleDays) ? s.scheduleDays : null;
+      const daysCut = days !== null && days.length > FULL_SCHEDULE_DAYS;
       return {
         ...s,
+        eventDescription: clip(s.eventDescription, FULL_TEXT_CHARS),
+        notes: clip(s.notes, FULL_TEXT_CHARS),
+        reviewNotes: clip(s.reviewNotes, FULL_TEXT_CHARS),
+        scheduleDays: daysCut ? days.slice(0, FULL_SCHEDULE_DAYS) : s.scheduleDays,
+        ...(daysCut ? { scheduleDaysNote: `Showing the first ${FULL_SCHEDULE_DAYS} of ${days.length} days.` } : {}),
         adminUrl: `${APP_URL}/admin/submissions/${s.id}`,
         ...(s.status === "PENDING" ? { venueOutcome: await venueOutcome(s) } : {}),
       };
@@ -208,19 +261,20 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
       const s = await db.submission.findUnique({ where: { id }, select: { status: true } });
       if (!s) throw new ToolError("Submission not found.");
       if (s.status !== "PENDING") throw new ToolError(`Submission is already ${s.status.toLowerCase()}.`);
+      let created;
       try {
-        await approveSubmissionWithEvent(id, ctx.user.id, { auditMeta: auditMeta(ctx) });
+        created = await approveSubmissionWithEvent(id, ctx.user.id, { auditMeta: auditMeta(ctx) });
       } catch (err) {
         throw new ToolError(err instanceof Error ? err.message : "Approval failed.");
       }
-      const after = await db.submission.findUnique({
-        where: { id },
-        select: { createdEvent: { select: { id: true, title: true, slug: true, status: true } } },
+      if (!created) throw new ToolError(ALREADY_REVIEWED_MESSAGE);
+      const event = await db.event.findUnique({
+        where: { id: created.id },
+        select: { id: true, title: true, slug: true, status: true },
       });
       revalidatePath("/admin/submissions");
       revalidatePath("/admin/queues");
-      const event = after?.createdEvent;
-      return { approved: true, event: event ? { ...event, url: `${APP_URL}/events/${event.slug}` } : null };
+      return { approved: true, event: { ...(event ?? created), url: `${APP_URL}/events/${created.slug}` } };
     },
   }),
 
@@ -249,46 +303,57 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
   defineTool({
     name: "search_events",
     title: "Search events",
-    description: "Events matching a title, slug, or venue name. Excludes archived events.",
+    description:
+      "Events matching a title, slug, or venue name, one page at a time. Excludes archived events. Upcoming events are soonest first; past and all are most recent first.",
     readOnly: true,
     input: z.object({
       query: z.string().trim().max(200).optional(),
       status: z.enum(EVENT_STATUSES).optional(),
       when: z.enum(["upcoming", "past", "all"]).default("upcoming"),
       limit: limitField(100, 25),
+      offset: offsetField,
     }),
     unavailableReason: needs("admin.listings.manage"),
-    run: async ({ query, status, when, limit }) => {
+    run: async ({ query, status, when, limit, offset }) => {
       const now = new Date();
-      const events = await db.event.findMany({
-        where: {
-          deletedAt: null,
-          ...(status ? { status } : {}),
-          ...(when === "upcoming" ? { endDate: { gte: now } } : when === "past" ? { endDate: { lt: now } } : {}),
-          ...(query
-            ? {
-                OR: [
-                  { title: { contains: query, mode: "insensitive" } },
-                  { slug: { contains: query, mode: "insensitive" } },
-                  { venue: { name: { contains: query, mode: "insensitive" } } },
-                ],
-              }
-            : {}),
-        },
-        orderBy: { startDate: when === "past" ? "desc" : "asc" },
-        take: limit,
-        select: {
-          id: true,
-          title: true,
-          slug: true,
-          status: true,
-          startDate: true,
-          endDate: true,
-          venue: { select: { id: true, name: true, city: true } },
-          market: { select: { id: true, name: true } },
-        },
-      });
-      return events.map((e) => ({ ...e, url: `${APP_URL}/events/${e.slug}` }));
+      const where: Prisma.EventWhereInput = {
+        deletedAt: null,
+        ...(status ? { status } : {}),
+        ...(when === "upcoming" ? { endDate: { gte: now } } : when === "past" ? { endDate: { lt: now } } : {}),
+        ...(query
+          ? {
+              OR: [
+                { title: { contains: query, mode: "insensitive" } },
+                { slug: { contains: query, mode: "insensitive" } },
+                { venue: { name: { contains: query, mode: "insensitive" } } },
+              ],
+            }
+          : {}),
+      };
+      const [events, total] = await Promise.all([
+        db.event.findMany({
+          where,
+          orderBy: [{ startDate: when === "upcoming" ? "asc" : "desc" }, { id: "asc" }],
+          skip: offset,
+          take: limit,
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            status: true,
+            startDate: true,
+            endDate: true,
+            venue: { select: { id: true, name: true, city: true } },
+            market: { select: { id: true, name: true } },
+          },
+        }),
+        db.event.count({ where }),
+      ]);
+      return page(
+        events.map((e) => ({ ...e, url: `${APP_URL}/events/${e.slug}` })),
+        total,
+        offset
+      );
     },
   }),
 
@@ -340,7 +405,7 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
         websiteUrl: optionalUrl,
         facebookUrl: optionalUrl,
         instagramUrl: optionalUrl,
-        imageUrl: optionalUrl,
+        imageUrl: imageUrlField,
       })
       .refine(hasChange, { message: "Pass at least one field to change." }),
     unavailableReason: needsWrite("admin.listings.manage"),
@@ -401,44 +466,53 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
   defineTool({
     name: "search_venues",
     title: "Search venues",
-    description: "Venues matching a name or street address, with how many events and markets use each.",
+    description:
+      "Venues matching a name or street address, one page at a time, alphabetical, with how many events and markets use each.",
     readOnly: true,
     input: z.object({
       query: z.string().trim().max(200).optional(),
       city: z.string().trim().max(100).optional(),
       includeArchived: z.boolean().default(false),
       limit: limitField(100, 25),
+      offset: offsetField,
     }),
     unavailableReason: needs("admin.listings.manage"),
-    run: async ({ query, city, includeArchived, limit }) =>
-      db.venue.findMany({
-        where: {
-          ...(includeArchived ? {} : { deletedAt: null }),
-          ...(city ? { city: { equals: city, mode: "insensitive" } } : {}),
-          ...(query
-            ? {
-                OR: [
-                  { name: { contains: query, mode: "insensitive" } },
-                  { address: { contains: query, mode: "insensitive" } },
-                ],
-              }
-            : {}),
-        },
-        orderBy: { name: "asc" },
-        take: limit,
-        select: {
-          id: true,
-          name: true,
-          address: true,
-          city: true,
-          state: true,
-          zip: true,
-          neighborhood: true,
-          parkingNotes: true,
-          deletedAt: true,
-          _count: { select: { events: true, markets: true } },
-        },
-      }),
+    run: async ({ query, city, includeArchived, limit, offset }) => {
+      const where: Prisma.VenueWhereInput = {
+        ...(includeArchived ? {} : { deletedAt: null }),
+        ...(city ? { city: { equals: city, mode: "insensitive" } } : {}),
+        ...(query
+          ? {
+              OR: [
+                { name: { contains: query, mode: "insensitive" } },
+                { address: { contains: query, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      };
+      const [venues, total] = await Promise.all([
+        db.venue.findMany({
+          where,
+          orderBy: [{ name: "asc" }, { id: "asc" }],
+          skip: offset,
+          take: limit,
+          select: {
+            id: true,
+            name: true,
+            address: true,
+            city: true,
+            state: true,
+            zip: true,
+            neighborhood: true,
+            parkingNotes: true,
+            deletedAt: true,
+            _count: { select: { events: true, markets: true } },
+          },
+        }),
+        db.venue.count({ where }),
+      ]);
+      return page(venues, total, offset);
+    },
   }),
 
   defineTool({
@@ -577,37 +651,48 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
   defineTool({
     name: "search_markets",
     title: "Search markets",
-    description: "Markets matching a name or slug, with their home venue. Excludes archived markets.",
+    description:
+      "Markets matching a name or slug, one page at a time, alphabetical, with their home venue. Excludes archived markets.",
     readOnly: true,
     input: z.object({
       query: z.string().trim().max(200).optional(),
       limit: limitField(100, 25),
+      offset: offsetField,
     }),
     unavailableReason: needs("admin.listings.manage"),
-    run: async ({ query, limit }) => {
-      const markets = await db.market.findMany({
-        where: {
-          deletedAt: null,
-          ...(query
-            ? {
-                OR: [
-                  { name: { contains: query, mode: "insensitive" } },
-                  { slug: { contains: query, mode: "insensitive" } },
-                ],
-              }
-            : {}),
-        },
-        orderBy: { name: "asc" },
-        take: limit,
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          verificationStatus: true,
-          venue: { select: { id: true, name: true } },
-        },
-      });
-      return markets.map((m) => ({ ...m, url: `${APP_URL}/markets/${m.slug}` }));
+    run: async ({ query, limit, offset }) => {
+      const where: Prisma.MarketWhereInput = {
+        deletedAt: null,
+        ...(query
+          ? {
+              OR: [
+                { name: { contains: query, mode: "insensitive" } },
+                { slug: { contains: query, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      };
+      const [markets, total] = await Promise.all([
+        db.market.findMany({
+          where,
+          orderBy: [{ name: "asc" }, { id: "asc" }],
+          skip: offset,
+          take: limit,
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            verificationStatus: true,
+            venue: { select: { id: true, name: true } },
+          },
+        }),
+        db.market.count({ where }),
+      ]);
+      return page(
+        markets.map((m) => ({ ...m, url: `${APP_URL}/markets/${m.slug}` })),
+        total,
+        offset
+      );
     },
   }),
 ];
@@ -618,6 +703,7 @@ export const ADMIN_MCP_SERVER: ServerInfo = {
   instructions: [
     "Admin tools for Spokane Markets (spokane.markets), a directory of markets, events, vendors, and venues in the Spokane and Coeur d'Alene area.",
     "Start with get_overview to see what needs attention.",
+    "List and search tools return one page with total and hasMore; pass offset to read the next page of an unchanged list. After approving, rejecting, or changing status, list again from offset 0, because the items that were acted on have left the list.",
     "Approving a submission publishes its event immediately; check its venueOutcome first.",
     "Before creating or fixing venues, use find_duplicate_venues and merge duplicates rather than editing them apart.",
     "Write tools change the live site and every change is audit-logged under the token's owner.",

@@ -20,12 +20,13 @@ export function submissionHasCompleteVenueForEvent(s: Submission): boolean {
   );
 }
 
+/** Archived events keep their slug, and the slug index is unique across all events, so they count as taken. */
 export async function ensureUniqueEventSlug(title: string): Promise<string> {
   const base = slugify(title) || "event";
   let candidate = base;
   for (let n = 0; n < 100_000; n += 1) {
     const exists = await db.event.findFirst({
-      where: { slug: candidate, deletedAt: null },
+      where: { slug: candidate },
       select: { id: true },
     });
     if (!exists) return candidate;
@@ -194,20 +195,48 @@ function revalidateAfterSubmissionEvent(eventSlug: string) {
   revalidatePath("/admin/queues");
 }
 
+export const ALREADY_REVIEWED_MESSAGE = "This submission was already reviewed.";
+
+/** The guarded claim matched no row: the submission was reviewed or edited after it was read. */
+class SubmissionChanged extends Error {}
+
 /**
- * Approves a pending submission and creates its event as PUBLISHED. Idempotent
- * if `createdEventId` is already set.
+ * Notifications and audit entries written after a review has committed. A
+ * failure here is logged rather than thrown, so a committed review is never
+ * reported to the caller as failed.
+ */
+async function afterReviewCommitted(submissionId: string, steps: (() => Promise<unknown>)[]) {
+  for (const step of steps) {
+    try {
+      await step();
+    } catch (err) {
+      console.error(`[submission-approval] follow-up for ${submissionId} failed:`, err);
+    }
+  }
+}
+
+function isUniqueViolation(err: unknown): boolean {
+  return !!err && typeof err === "object" && "code" in err && (err as { code: unknown }).code === "P2002";
+}
+
+/**
+ * Approves a pending submission and creates its event as PUBLISHED. Returns
+ * null without changes when the submission is missing, no longer pending, or
+ * already has an event, including when another review finishes first. The
+ * PENDING -> APPROVED change runs in the same transaction as the event insert
+ * and only matches the row as it was read, so a concurrent review or edit
+ * rolls the event back instead of being overwritten.
  */
 export async function approveSubmissionWithEvent(
   submissionId: string,
   reviewerId: string,
   options: { auditMeta?: Record<string, unknown> } = {}
-): Promise<void> {
+): Promise<{ id: string; slug: string } | null> {
   const submission = await db.submission.findUnique({
     where: { id: submissionId },
   });
-  if (!submission || submission.status !== "PENDING") return;
-  if (submission.createdEventId) return;
+  if (!submission || submission.status !== "PENDING") return null;
+  if (submission.createdEventId) return null;
 
   if (!submissionHasCompleteVenueForEvent(submission)) {
     throw new Error(
@@ -216,93 +245,132 @@ export async function approveSubmissionWithEvent(
   }
 
   const slug = await ensureUniqueEventSlug(submission.eventTitle);
-  const eventData = buildEventDataFromSubmission(submission, slug);
+  const [tags, features] = await Promise.all([
+    db.tag.findMany({ where: { id: { in: submission.tagIds } }, select: { id: true } }),
+    db.feature.findMany({ where: { id: { in: submission.featureIds } }, select: { id: true } }),
+  ]);
+  const eventData = {
+    ...buildEventDataFromSubmission(submission, slug),
+    tagIds: tags.map((t) => t.id),
+    featureIds: features.map((f) => f.id),
+  };
 
   const submitterUser = await db.user.findUnique({
     where: { email: submission.submitterEmail },
     select: { id: true },
   });
 
-  const result = await createEvent(eventData, {
-    status: "PUBLISHED",
-    submittedById: submitterUser?.id ?? null,
-  });
-
+  let result: Awaited<ReturnType<typeof createEvent>>;
+  try {
+    result = await createEvent(eventData, {
+      status: "PUBLISHED",
+      submittedById: submitterUser?.id ?? null,
+      inTransaction: async (tx, created) => {
+        const claimed = await tx.submission.updateMany({
+          where: {
+            id: submissionId,
+            status: "PENDING",
+            createdEventId: null,
+            updatedAt: submission.updatedAt,
+          },
+          data: { status: "APPROVED", reviewerId, createdEventId: created.id },
+        });
+        if (claimed.count === 0) throw new SubmissionChanged();
+      },
+    });
+  } catch (err) {
+    if (!(err instanceof SubmissionChanged) && !isUniqueViolation(err)) throw err;
+    const current = await db.submission.findUnique({
+      where: { id: submissionId },
+      select: { status: true, createdEventId: true },
+    });
+    if (!current || current.status !== "PENDING" || current.createdEventId) return null;
+    if (err instanceof SubmissionChanged) {
+      throw new Error("This submission was edited while it was being approved. Check the changes and approve again.");
+    }
+    if (await db.event.findFirst({ where: { slug }, select: { id: true } })) {
+      throw new Error("Another event took this event's URL at the same moment. Try approving again.");
+    }
+    throw err;
+  }
   if (result.error || !result.event) {
     throw new Error(result.error ?? "Failed to create event from submission");
   }
+  const event = result.event;
 
-  await db.submission.update({
-    where: { id: submissionId },
-    data: {
-      status: "APPROVED",
-      reviewerId,
-      createdEventId: result.event.id,
+  await afterReviewCommitted(submissionId, [
+    async () => {
+      if (!submitterUser) return;
+      await createNotification({
+        userId: submitterUser.id,
+        type: "SUBMISSION_APPROVED",
+        title: "Your event submission was approved",
+        link: `/events/${event.slug}`,
+        objectType: "submission",
+        objectId: submissionId,
+      });
     },
-  });
+    () =>
+      logAudit(reviewerId, "UPDATE_SUBMISSION_STATUS", "SUBMISSION", submissionId, {
+        previousValue: { status: submission.status },
+        newValue: { status: "APPROVED", createdEventId: event.id },
+        ...options.auditMeta,
+      }),
+  ]);
 
-  if (submitterUser) {
-    await createNotification({
-      userId: submitterUser.id,
-      type: "SUBMISSION_APPROVED",
-      title: "Your event submission was approved",
-      link: `/events/${result.event.slug}`,
-      objectType: "submission",
-      objectId: submissionId,
-    });
-  }
-
-  await logAudit(reviewerId, "UPDATE_SUBMISSION_STATUS", "SUBMISSION", submissionId, {
-    previousValue: { status: submission.status },
-    newValue: { status: "APPROVED", createdEventId: result.event.id },
-    ...options.auditMeta,
-  });
-
-  revalidateAfterSubmissionEvent(result.event.slug);
+  revalidateAfterSubmissionEvent(event.slug);
+  return { id: event.id, slug: event.slug };
 }
 
-/** Rejects a submission, notifies a submitter who has an account, and audits it. */
+/**
+ * Rejects a pending submission, notifies a submitter who has an account, and
+ * audits it. The status change only applies while the submission is PENDING.
+ */
 export async function rejectSubmission(
   submissionId: string,
   reviewerId: string,
   reviewNotes: string | null | undefined,
   options: { auditMeta?: Record<string, unknown> } = {}
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<{ ok: true } | { ok: false; reason: "not_found" | "already_reviewed"; error: string }> {
   const submission = await db.submission.findUnique({
     where: { id: submissionId },
     select: { submitterEmail: true, status: true },
   });
-  if (!submission) return { ok: false, error: "Submission not found." };
+  if (!submission) return { ok: false, reason: "not_found", error: "Submission not found." };
 
-  await db.submission.update({
-    where: { id: submissionId },
+  const updated = await db.submission.updateMany({
+    where: { id: submissionId, status: "PENDING" },
     data: {
       status: "REJECTED",
       reviewerId,
       ...(reviewNotes !== undefined ? { reviewNotes } : {}),
     },
   });
+  if (updated.count === 0) return { ok: false, reason: "already_reviewed", error: ALREADY_REVIEWED_MESSAGE };
 
-  const submitter = await db.user.findUnique({
-    where: { email: submission.submitterEmail },
-    select: { id: true },
-  });
-  if (submitter) {
-    await createNotification({
-      userId: submitter.id,
-      type: "SUBMISSION_REJECTED",
-      title: "Your event submission was rejected",
-      link: "/submit",
-      objectType: "submission",
-      objectId: submissionId,
-    });
-  }
-
-  await logAudit(reviewerId, "UPDATE_SUBMISSION_STATUS", "SUBMISSION", submissionId, {
-    previousValue: { status: submission.status },
-    newValue: { status: "REJECTED", ...(reviewNotes !== undefined ? { reviewNotes } : {}) },
-    ...options.auditMeta,
-  });
+  await afterReviewCommitted(submissionId, [
+    async () => {
+      const submitter = await db.user.findUnique({
+        where: { email: submission.submitterEmail },
+        select: { id: true },
+      });
+      if (!submitter) return;
+      await createNotification({
+        userId: submitter.id,
+        type: "SUBMISSION_REJECTED",
+        title: "Your event submission was rejected",
+        link: "/submit",
+        objectType: "submission",
+        objectId: submissionId,
+      });
+    },
+    () =>
+      logAudit(reviewerId, "UPDATE_SUBMISSION_STATUS", "SUBMISSION", submissionId, {
+        previousValue: { status: "PENDING" },
+        newValue: { status: "REJECTED", ...(reviewNotes !== undefined ? { reviewNotes } : {}) },
+        ...options.auditMeta,
+      }),
+  ]);
 
   return { ok: true };
 }

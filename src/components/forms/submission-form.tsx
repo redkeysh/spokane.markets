@@ -389,8 +389,10 @@ export function SubmissionForm({
               <Plus className="mr-2 h-4 w-4" />
               Add another day
             </Button>
-            {errors.scheduleDays && typeof errors.scheduleDays.message === "string" && (
-              <p className="text-sm text-destructive">{errors.scheduleDays.message}</p>
+            {(errors.scheduleDays?.root?.message ?? errors.scheduleDays?.message) && (
+              <p className="text-sm text-destructive">
+                {errors.scheduleDays?.root?.message ?? errors.scheduleDays?.message}
+              </p>
             )}
           </div>
 

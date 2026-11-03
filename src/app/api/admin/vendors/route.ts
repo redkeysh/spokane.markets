@@ -2,7 +2,8 @@ import { db } from "@/lib/db";
 import { adminVendorProfileSchema } from "@/lib/validations";
 import { parseGalleryUrlsFromMultilineText } from "@/lib/gallery-urls";
 import { assertListingCommunityBadgeIds } from "@/lib/listing-community-badges";
-import { extractSocialHandle, normalizeUrlToHttps, slugify } from "@/lib/utils";
+import { extractSocialHandle, normalizeUrlToHttps } from "@/lib/utils";
+import { generateUniqueVendorSlug } from "@/lib/shared/slug";
 import { NextResponse } from "next/server";
 import { requireApiAdminPermission } from "@/lib/api-auth";
 import { handleApiError } from "@/lib/api-response";
@@ -24,22 +25,6 @@ function toOptionalHandle(
   if (value === undefined || value === "") return undefined;
   const handle = extractSocialHandle(value, platform);
   return handle ? handle : undefined;
-}
-
-async function generateUniqueSlug(base: string, excludeId?: string): Promise<string> {
-  const slug = slugify(base) || "vendor";
-  let candidate = slug;
-  let n = 0;
-  while (true) {
-    const existing = await db.vendorProfile.findFirst({
-      where: { slug: candidate, deletedAt: null },
-      select: { id: true },
-    });
-    if (!existing || (excludeId && existing.id === excludeId)) break;
-    n += 1;
-    candidate = `${slug}-${n}`;
-  }
-  return candidate;
 }
 
 export async function POST(request: Request) {
@@ -65,10 +50,11 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
-  const slug = data.slug || (await generateUniqueSlug(data.businessName));
+  const slug = data.slug || (await generateUniqueVendorSlug(data.businessName));
 
-  const existing = await db.vendorProfile.findFirst({
-    where: { slug, deletedAt: null },
+  const existing = await db.vendorProfile.findUnique({
+    where: { slug },
+    select: { id: true },
   });
   if (existing) {
     return NextResponse.json(

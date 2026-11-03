@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   marketFindMany: vi.fn(),
   marketCreate: vi.fn(),
   eventCreate: vi.fn(),
+  scheduleDayCreateMany: vi.fn(),
   findMatchingVenue: vi.fn(),
 }));
 
@@ -15,13 +16,18 @@ vi.mock("@/lib/db", () => ({
     venue: { findMany: mocks.venueFindMany, create: mocks.venueCreate, deleteMany: mocks.venueDeleteMany },
     market: { findMany: mocks.marketFindMany, create: mocks.marketCreate },
     $transaction: (fn: (tx: unknown) => unknown) =>
-      fn({ event: { create: mocks.eventCreate }, tag: {}, feature: {} }),
+      fn({
+        event: { create: mocks.eventCreate },
+        eventScheduleDay: { createMany: mocks.scheduleDayCreateMany },
+        tag: {},
+        feature: {},
+      }),
   },
 }));
 vi.mock("@/lib/neighborhoods", () => ({ getNeighborhoodSlugSet: async () => new Set<string>() }));
 vi.mock("@/lib/venues/resolve", () => ({ findMatchingVenue: mocks.findMatchingVenue }));
 
-import { importData, type ImportPayload } from "./data-import";
+import { deriveScheduleDays, importData, type ImportPayload } from "./data-import";
 
 const venueRow = (name: string) => ({
   name,
@@ -117,5 +123,122 @@ describe("importData unused venue cleanup", () => {
     });
     expect(result).toMatchObject({ venuesCreated: 0, venuesRemoved: 0 });
     expect(mocks.venueDeleteMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("deriveScheduleDays", () => {
+  const derive = (start: string, end: string) => deriveScheduleDays(new Date(start), new Date(end));
+
+  it("gives a same-day event its Pacific hours", () => {
+    expect(derive("2026-12-05T18:00:00Z", "2026-12-06T00:00:00Z")).toEqual([
+      { date: "2026-12-05", startTime: "10:00", endTime: "16:00", allDay: false },
+    ]);
+  });
+
+  it("repeats the hours on each day when the start time is earlier than the end time", () => {
+    expect(derive("2026-07-10T16:00:00Z", "2026-07-12T23:00:00Z")).toEqual([
+      { date: "2026-07-10", startTime: "09:00", endTime: "16:00", allDay: false },
+      { date: "2026-07-11", startTime: "09:00", endTime: "16:00", allDay: false },
+      { date: "2026-07-12", startTime: "09:00", endTime: "16:00", allDay: false },
+    ]);
+  });
+
+  it("splits a continuous span into a partial first day, all-day middle days, and a partial last day", () => {
+    expect(derive("2026-07-10T17:00:00Z", "2026-07-12T16:00:00Z")).toEqual([
+      { date: "2026-07-10", startTime: "10:00", endTime: "23:59", allDay: false },
+      { date: "2026-07-11", startTime: "00:00", endTime: "23:59", allDay: true },
+      { date: "2026-07-12", startTime: "00:00", endTime: "09:00", allDay: false },
+    ]);
+  });
+
+  it("uses Pacific dates and times across the end of daylight saving time", () => {
+    expect(derive("2026-10-31T16:00:00Z", "2026-11-02T00:00:00Z")).toEqual([
+      { date: "2026-10-31", startTime: "09:00", endTime: "16:00", allDay: false },
+      { date: "2026-11-01", startTime: "09:00", endTime: "16:00", allDay: false },
+    ]);
+  });
+
+  it("derives up to seven days and gives up on longer spans", () => {
+    expect(derive("2026-07-01T16:00:00Z", "2026-07-07T23:00:00Z")).toHaveLength(7);
+    expect(derive("2026-07-01T16:00:00Z", "2026-07-08T23:00:00Z")).toBeNull();
+  });
+});
+
+describe("importData schedule days", () => {
+  const importEvent = (row: Record<string, unknown>) =>
+    importData({ events: [{ title: "Craft Fair", slug: "craft-fair", venueId: "venue-1", ...row } as never] });
+  const eventData = () => mocks.eventCreate.mock.calls[0][0].data as { startDate: Date; endDate: Date };
+  const dayRecords = () =>
+    (mocks.scheduleDayCreateMany.mock.calls[0][0].data as { eventId: string; date: Date; startTime: string; endTime: string; allDay: boolean }[]).map(
+      (d) => ({ ...d, date: d.date.toISOString().slice(0, 10) })
+    );
+
+  it("derives days from the start and end when the row has none", async () => {
+    const result = await importEvent({ startDate: "2026-12-05T18:00:00Z", endDate: "2026-12-06T00:00:00Z" });
+
+    expect(result).toMatchObject({ eventsCreated: 1, eventsNeedingSchedule: [] });
+    expect(dayRecords()).toEqual([
+      { eventId: "event-craft-fair", date: "2026-12-05", startTime: "10:00", endTime: "16:00", allDay: false },
+    ]);
+    expect(eventData().startDate.toISOString()).toBe("2026-12-05T18:00:00.000Z");
+    expect(eventData().endDate.toISOString()).toBe("2026-12-06T00:00:00.000Z");
+  });
+
+  it("writes the row's schedule days, merges duplicate dates, and dates the event from them", async () => {
+    const result = await importEvent({
+      scheduleDays: [
+        { date: "2026-12-12", startTime: "10:00", endTime: "15:00" },
+        { date: "2026-12-05", startTime: "12:00", endTime: "16:00" },
+        { date: "2026-12-05", startTime: "09:00", endTime: "14:00" },
+      ],
+    });
+
+    expect(result).toMatchObject({ eventsCreated: 1, errors: [] });
+    expect(dayRecords()).toEqual([
+      { eventId: "event-craft-fair", date: "2026-12-05", startTime: "09:00", endTime: "16:00", allDay: false },
+      { eventId: "event-craft-fair", date: "2026-12-12", startTime: "10:00", endTime: "15:00", allDay: false },
+    ]);
+    expect(eventData().startDate.toISOString()).toBe("2026-12-05T17:00:00.000Z");
+    expect(eventData().endDate.toISOString()).toBe("2026-12-12T23:00:00.000Z");
+  });
+
+  it("treats a 00:00 to 23:59 day as all day, as the event forms do", async () => {
+    await importEvent({ scheduleDays: [{ date: "2026-12-05", startTime: "00:00", endTime: "23:59" }] });
+    expect(dayRecords()[0]).toMatchObject({ allDay: true });
+  });
+
+  it.each([
+    [[{ date: "2026-12-05" }], "scheduleDays.0.startTime"],
+    [[{ date: "12/05/2026", allDay: true }], "scheduleDays.0.date"],
+    [[{ date: "2026-02-30", allDay: true }], '"2026-02-30"'],
+    [[], "scheduleDays"],
+  ])("rejects invalid schedule days %j", async (scheduleDays, mention) => {
+    const result = await importEvent({ scheduleDays });
+    expect(result.eventsCreated).toBe(0);
+    expect(result.errors[0]).toContain(mention);
+    expect(mocks.eventCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects a day that ends before it starts", async () => {
+    const result = await importEvent({ scheduleDays: [{ date: "2026-12-05", startTime: "16:00", endTime: "10:00" }] });
+    expect(result.errors).toEqual(["Event 1 (Craft Fair): schedule ends before it starts"]);
+    expect(mocks.eventCreate).not.toHaveBeenCalled();
+  });
+
+  it("requires start and end dates when the row has no schedule days", async () => {
+    const result = await importEvent({ startDate: "2026-12-05T18:00:00Z" });
+    expect(result.errors[0]).toContain("startDate and endDate are required");
+  });
+
+  it("imports a span over seven days without schedule days and reports it", async () => {
+    const result = await importEvent({ startDate: "2026-12-01T18:00:00Z", endDate: "2026-12-24T01:00:00Z" });
+
+    expect(result).toMatchObject({
+      eventsCreated: 1,
+      eventsNeedingSchedule: [{ row: 1, title: "Craft Fair", slug: "craft-fair" }],
+    });
+    expect(result.errors[0]).toContain("spans more than 7 days");
+    expect(mocks.scheduleDayCreateMany).not.toHaveBeenCalled();
+    expect(eventData().startDate.toISOString()).toBe("2026-12-01T18:00:00.000Z");
   });
 });

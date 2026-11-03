@@ -1,8 +1,11 @@
+import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { mapScheduleDaysForSubmit, type ScheduleDayInput } from "@/lib/event-schedule-day";
 import { getNeighborhoodSlugSet } from "@/lib/neighborhoods";
-import { slugify } from "@/lib/utils";
-import { venueSchema } from "@/lib/validations";
+import { buildScheduleDayRecords, computeEventDatesFromSchedule } from "@/lib/shared/event-service";
+import { formatDateOnlyUTC, formatForDateTimeLocal, parseDateOnlyToUTCNoon, slugify } from "@/lib/utils";
+import { eventScheduleDaySchema, venueSchema } from "@/lib/validations";
 import { findMatchingVenue } from "@/lib/venues/resolve";
 
 const EVENT_IMPORT_STATUSES = [
@@ -46,8 +49,11 @@ type EventRow = {
   title: string;
   slug?: string;
   description?: string;
-  startDate: string;
-  endDate: string;
+  /** Required without scheduleDays; with them, the event's dates come from the days. */
+  startDate?: string;
+  endDate?: string;
+  /** Pacific dates and HH:mm times. Without it, days are derived from startDate and endDate. */
+  scheduleDays?: { date: string; startTime?: string; endTime?: string; allDay?: boolean }[];
   venueId?: string;
   venueSlug?: string;
   marketId?: string;
@@ -76,8 +82,66 @@ export type ImportResult = {
   venuesRemoved: number;
   marketsCreated: number;
   eventsCreated: number;
+  /**
+   * Events imported without schedule days because their rows had none and
+   * spanned more than MAX_DERIVED_SCHEDULE_DAYS. They stay off the public
+   * lists until someone sets their days.
+   */
+  eventsNeedingSchedule: { row: number; title: string; slug: string }[];
   errors: string[];
 };
+
+/** Longest span, in Pacific calendar days, that schedule days are derived for. */
+export const MAX_DERIVED_SCHEDULE_DAYS = 7;
+const MAX_IMPORT_SCHEDULE_DAYS = 366;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * One schedule day per Pacific calendar date from start to end, by the same
+ * rule as the 20261103190000_backfill_event_schedule_days migration: when the
+ * Pacific start time is earlier than the end time, every day gets those hours;
+ * otherwise the first day runs from the start time, the last day ends at the
+ * end time, and the days between are all day. Returns null for spans longer
+ * than MAX_DERIVED_SCHEDULE_DAYS, whose recurrence cannot be inferred.
+ */
+export function deriveScheduleDays(startDate: Date, endDate: Date): ScheduleDayInput[] | null {
+  const [firstDate, startTime] = formatForDateTimeLocal(startDate).split("T");
+  const [lastDate, endTime] = formatForDateTimeLocal(endDate).split("T");
+  const dates: string[] = [];
+  for (let d = parseDateOnlyToUTCNoon(firstDate); formatDateOnlyUTC(d) <= lastDate; d = new Date(d.getTime() + DAY_MS)) {
+    if (dates.length === MAX_DERIVED_SCHEDULE_DAYS) return null;
+    dates.push(formatDateOnlyUTC(d));
+  }
+  const sameHoursDaily = startTime < endTime;
+  return dates.map((date) => {
+    const isFirst = date === firstDate;
+    const isLast = date === lastDate;
+    return {
+      date,
+      startTime: sameHoursDaily || isFirst ? startTime : "00:00",
+      endTime: sameHoursDaily || isLast ? endTime : "23:59",
+      allDay: !sameHoursDaily && !isFirst && !isLast,
+    };
+  });
+}
+
+const importScheduleDaysSchema = z.array(eventScheduleDaySchema).min(1).max(MAX_IMPORT_SCHEDULE_DAYS);
+
+/** Validates an import row's scheduleDays; allDay defaults to false. */
+function parseImportScheduleDays(value: unknown): { days: ScheduleDayInput[] } | { error: string } {
+  const withDefaults = Array.isArray(value)
+    ? value.map((d) => (d && typeof d === "object" && !("allDay" in d) ? { ...d, allDay: false } : d))
+    : value;
+  const parsed = importScheduleDaysSchema.safeParse(withDefaults);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    const path = issue?.path.length ? `scheduleDays.${issue.path.join(".")}` : "scheduleDays";
+    return { error: `invalid ${path}: ${issue?.message ?? "invalid value"}` };
+  }
+  const badDate = parsed.data.find((d) => formatDateOnlyUTC(parseDateOnlyToUTCNoon(d.date)) !== d.date);
+  if (badDate) return { error: `invalid scheduleDays date "${badDate.date}"` };
+  return { days: mapScheduleDaysForSubmit(parsed.data) };
+}
 
 async function findOrCreateTag(
   client: Prisma.TransactionClient,
@@ -117,6 +181,7 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
     venuesRemoved: 0,
     marketsCreated: 0,
     eventsCreated: 0,
+    eventsNeedingSchedule: [],
     errors: [],
   };
 
@@ -335,16 +400,42 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
           marketId = marketIdBySlug.get(row.marketSlug) ?? null;
         }
         const slug = row.slug || slugify(row.title) || `event-${Date.now()}-${i}`;
-        const startDate = new Date(row.startDate);
-        const endDate = new Date(row.endDate);
-        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-          result.errors.push(`Event ${i + 1} (${row.title}): invalid dates`);
-          continue;
+        let scheduleDays: ScheduleDayInput[] | null;
+        if (row.scheduleDays !== undefined) {
+          const parsedDays = parseImportScheduleDays(row.scheduleDays);
+          if ("error" in parsedDays) {
+            result.errors.push(`Event ${i + 1} (${row.title}): ${parsedDays.error}`);
+            continue;
+          }
+          scheduleDays = parsedDays.days;
+        } else {
+          if (!row.startDate || !row.endDate) {
+            result.errors.push(
+              `Event ${i + 1} (${row.title}): startDate and endDate are required without scheduleDays`
+            );
+            continue;
+          }
+          const rowStart = new Date(row.startDate);
+          const rowEnd = new Date(row.endDate);
+          if (isNaN(rowStart.getTime()) || isNaN(rowEnd.getTime())) {
+            result.errors.push(`Event ${i + 1} (${row.title}): invalid dates`);
+            continue;
+          }
+          if (rowEnd.getTime() < rowStart.getTime()) {
+            result.errors.push(
+              `Event ${i + 1} (${row.title}): end date is before start date`
+            );
+            continue;
+          }
+          scheduleDays = deriveScheduleDays(rowStart, rowEnd);
         }
+        const { startDate, endDate } = computeEventDatesFromSchedule(
+          row.startDate ?? "",
+          row.endDate ?? "",
+          scheduleDays ?? undefined
+        );
         if (endDate.getTime() < startDate.getTime()) {
-          result.errors.push(
-            `Event ${i + 1} (${row.title}): end date is before start date`
-          );
+          result.errors.push(`Event ${i + 1} (${row.title}): schedule ends before it starts`);
           continue;
         }
         if (
@@ -356,9 +447,9 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
           );
           continue;
         }
-        // Create tags/features and the event in one transaction so a failed
-        // event insert (e.g. a duplicate slug) rolls back any tags/features
-        // created for it instead of leaving them orphaned.
+        // Create tags/features, the event, and its schedule days in one
+        // transaction so a failed event insert (e.g. a duplicate slug) rolls
+        // back any tags/features created for it instead of leaving them orphaned.
         await db.$transaction(async (tx) => {
           const tagIds: string[] = [...(row.tagIds ?? [])];
           for (const name of row.tagNames ?? []) {
@@ -368,7 +459,7 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
           for (const name of row.featureNames ?? []) {
             featureIds.push(await findOrCreateFeature(tx, name));
           }
-          await tx.event.create({
+          const created = await tx.event.create({
             data: {
               title: row.title,
               slug,
@@ -386,8 +477,19 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
               features: featureIds.length ? { connect: featureIds.map((id) => ({ id })) } : undefined,
             },
           });
+          if (scheduleDays?.length) {
+            await tx.eventScheduleDay.createMany({
+              data: buildScheduleDayRecords(created.id, scheduleDays),
+            });
+          }
         });
         result.eventsCreated++;
+        if (!scheduleDays) {
+          result.eventsNeedingSchedule.push({ row: i + 1, title: row.title, slug });
+          result.errors.push(
+            `Event ${i + 1} (${row.title}): spans more than ${MAX_DERIVED_SCHEDULE_DAYS} days, imported without schedule days; set its days in the dashboard`
+          );
+        }
       } catch (e) {
         result.errors.push(`Event ${i + 1}: ${e instanceof Error ? e.message : String(e)}`);
       }

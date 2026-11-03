@@ -15,7 +15,7 @@ import { logAudit } from "@/lib/audit";
 import { geocodeAddress } from "@/lib/geocode";
 import { assertNeighborhoodSlug, getNeighborhoodOptions } from "@/lib/neighborhoods";
 import { findDuplicateGroups } from "@/lib/venues/match";
-import { findMatchingVenue } from "@/lib/venues/resolve";
+import { lookupVenue } from "@/lib/venues/resolve";
 import { mergeVenues } from "@/lib/venues/merge";
 import { defineTool, ToolError, type McpTool, type ServerInfo } from "./protocol";
 
@@ -126,14 +126,20 @@ async function venueOutcome(s: SubmissionRow) {
   if (!venueName || !venueAddress || !venueCity || !venueState || !venueZip) {
     return { outcome: "incomplete", note: "Venue name, street, city, state, or ZIP is missing, so approval will fail." };
   }
-  const match = await findMatchingVenue({
+  const lookup = await lookupVenue({
     name: venueName,
     address: venueAddress,
     city: venueCity,
     state: venueState,
     zip: venueZip,
   });
-  if (!match) return { outcome: "new", note: "Approval creates a new, geocoded venue." };
+  if (lookup.status === "unplaceable") {
+    return { outcome: "unplaceable", note: "No geocoder can place this address, so approval will fail. Fix the address first." };
+  }
+  if (lookup.status === "new") {
+    return { outcome: "new", lat: lookup.coords.lat, lng: lookup.coords.lng, note: "Approval creates a new venue at these coordinates." };
+  }
+  const match = lookup.venue;
   if (match.deletedAt) {
     return { outcome: "archived", venueId: match.id, name: match.name, note: "Matches an archived venue; restore it before approving." };
   }

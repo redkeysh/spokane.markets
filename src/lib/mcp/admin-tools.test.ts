@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   eventFindUnique: vi.fn(),
   eventCount: vi.fn(),
   approveSubmissionWithEvent: vi.fn(),
-  findMatchingVenue: vi.fn(),
+  lookupVenue: vi.fn(),
   venueFindMany: vi.fn(),
   venueFindFirst: vi.fn(),
   venueCount: vi.fn(),
@@ -59,7 +59,7 @@ vi.mock("@/lib/neighborhoods", () => ({
   assertNeighborhoodSlug: vi.fn(),
   getNeighborhoodOptions: mocks.getNeighborhoodOptions,
 }));
-vi.mock("@/lib/venues/resolve", () => ({ findMatchingVenue: mocks.findMatchingVenue }));
+vi.mock("@/lib/venues/resolve", () => ({ lookupVenue: mocks.lookupVenue }));
 vi.mock("@/lib/venues/merge", () => ({ mergeVenues: vi.fn() }));
 
 import { ADMIN_TOOLS } from "./admin-tools";
@@ -120,7 +120,7 @@ function submissionRow(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.findMatchingVenue.mockResolvedValue(null);
+  mocks.lookupVenue.mockResolvedValue({ status: "new", coords: { lat: 47.65, lng: -117.42 } });
 });
 
 describe("tool gating", () => {
@@ -342,5 +342,46 @@ describe("list_taxonomy", () => {
     expect(tool.unavailableReason({ ...principal("READ"), permissions: ["admin.moderation.manage"] })).toContain(
       "admin.listings.manage"
     );
+  });
+});
+
+describe("venueOutcome", () => {
+  async function outcome() {
+    mocks.submissionFindUnique.mockResolvedValue(submissionRow());
+    const result = await callTool("get_submission", { id: "sub-1" });
+    if (result.isError) throw new Error(result.text);
+    return (result.data as { venueOutcome: unknown }).venueOutcome;
+  }
+
+  it("previews the venue approval reuses, through the same geocoding lookup", async () => {
+    mocks.lookupVenue.mockResolvedValue({
+      status: "existing",
+      venue: { id: "v1", name: "Hall", address: "1 Main Street", deletedAt: null },
+    });
+    await expect(outcome()).resolves.toEqual({ outcome: "existing", venueId: "v1", name: "Hall", address: "1 Main Street" });
+    expect(mocks.lookupVenue).toHaveBeenCalledWith({
+      name: "Hall",
+      address: "1 Main St",
+      city: "Spokane",
+      state: "WA",
+      zip: "99201",
+    });
+  });
+
+  it("shows where a new venue would go", async () => {
+    await expect(outcome()).resolves.toMatchObject({ outcome: "new", lat: 47.65, lng: -117.42 });
+  });
+
+  it("warns when no geocoder can place the address", async () => {
+    mocks.lookupVenue.mockResolvedValue({ status: "unplaceable" });
+    await expect(outcome()).resolves.toMatchObject({ outcome: "unplaceable" });
+  });
+
+  it("flags an archived match", async () => {
+    mocks.lookupVenue.mockResolvedValue({
+      status: "existing",
+      venue: { id: "v2", name: "Hall", address: "1 Main St", deletedAt: new Date() },
+    });
+    await expect(outcome()).resolves.toMatchObject({ outcome: "archived", venueId: "v2" });
   });
 });

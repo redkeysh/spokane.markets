@@ -117,6 +117,24 @@ export async function resolveVenueId(
     input.venueState?.trim() &&
     input.venueZip?.trim()
   ) {
+    const name = input.venueName.trim();
+    const address = input.venueAddress.trim();
+    const matches = await db.venue.findMany({
+      where: {
+        name: { equals: name, mode: "insensitive" },
+        address: { equals: address, mode: "insensitive" },
+      },
+      select: { id: true, deletedAt: true },
+    });
+    const activeMatch = matches.find((v) => v.deletedAt === null);
+    if (activeMatch) return { venueId: activeMatch.id };
+    if (matches.length > 0) {
+      return {
+        venueId: null,
+        error: `The venue "${name}" exists but is archived. Restore it under Catalog > Venues, then approve again.`,
+      };
+    }
+
     const providedLat =
       typeof input.venueLat === "number" && !Number.isNaN(input.venueLat)
         ? input.venueLat
@@ -138,17 +156,18 @@ export async function resolveVenueId(
         zip: input.venueZip.trim(),
       });
       if (!geocoded) {
+        const fullAddress = [address, input.venueCity.trim(), input.venueState.trim(), input.venueZip.trim()].join(", ");
         return {
           venueId: null,
-          error: "Could not determine the venue's location from the address provided.",
+          error: `Couldn't find "${fullAddress}" on the map. Check the street, city, state, and ZIP under Edit details, or pick an existing venue there.`,
         };
       }
       coords = geocoded;
     }
     const venue = await db.venue.create({
       data: {
-        name: input.venueName.trim(),
-        address: input.venueAddress.trim(),
+        name,
+        address,
         city: input.venueCity.trim(),
         state: input.venueState.trim(),
         zip: input.venueZip.trim(),

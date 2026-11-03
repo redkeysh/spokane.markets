@@ -14,7 +14,7 @@ export default async function AdminSubmissionReviewPage({
   await requireAdminPermission("admin.moderation.manage");
   const { id } = await params;
 
-  const [submission, markets, tags, features] = await Promise.all([
+  const [submission, markets, tags, features, venues] = await Promise.all([
     db.submission.findUnique({
       where: { id },
       include: {
@@ -24,6 +24,11 @@ export default async function AdminSubmissionReviewPage({
     db.market.findMany({ select: { id: true, name: true } }),
     db.tag.findMany({ select: { id: true, name: true } }),
     db.feature.findMany({ select: { id: true, name: true } }),
+    db.venue.findMany({
+      where: { deletedAt: null },
+      select: { id: true, name: true, address: true, city: true, state: true, zip: true },
+      orderBy: { name: "asc" },
+    }),
   ]);
 
   if (!submission) notFound();
@@ -69,7 +74,7 @@ export default async function AdminSubmissionReviewPage({
 
   return (
     <div className="space-y-6">
-      <AdminSubmissionReview submission={payload} />
+      <AdminSubmissionReview submission={payload} venues={venues} />
     </div>
   );
 }

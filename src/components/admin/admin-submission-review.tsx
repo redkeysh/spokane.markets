@@ -16,6 +16,7 @@ import { getSubmissionCompletenessChecks } from "@/lib/submission-review-complet
 import { trackEvent } from "@/lib/analytics";
 import { formatDate, cn } from "@/lib/utils";
 import type { ModerationStatus } from "@prisma/client";
+import { VenueSuggestInput, type VenueOption } from "@/components/admin/venue-suggest-input";
 
 export type AdminSubmissionReviewPayload = {
   id: string;
@@ -65,7 +66,17 @@ function statusBadgeVariant(status: ModerationStatus): "warning" | "success" | "
   }
 }
 
-export function AdminSubmissionReview({ submission }: { submission: AdminSubmissionReviewPayload }) {
+function sameText(a: string | null | undefined, b: string | null | undefined): boolean {
+  return (a ?? "").trim().toLowerCase() === (b ?? "").trim().toLowerCase();
+}
+
+export function AdminSubmissionReview({
+  submission,
+  venues = [],
+}: {
+  submission: AdminSubmissionReviewPayload;
+  venues?: VenueOption[];
+}) {
   const router = useRouter();
   const pending = submission.status === "PENDING";
   const [rejectMode, setRejectMode] = useState(false);
@@ -100,6 +111,9 @@ export function AdminSubmissionReview({ submission }: { submission: AdminSubmiss
   const showScheduleTable = scheduleRows.length > 1;
 
   const venueOneLiner = [submission.venueName, submission.venueCity].filter(Boolean).join(" · ");
+  const matchedVenue = venues.find(
+    (v) => sameText(v.name, submission.venueName) && sameText(v.address, submission.venueAddress)
+  );
 
   const completeness = getSubmissionCompletenessChecks({
     eventDescription: submission.eventDescription,
@@ -329,12 +343,26 @@ export function AdminSubmissionReview({ submission }: { submission: AdminSubmiss
             </label>
             <div className="space-y-1">
               <Label htmlFor="edit-venue-name">Venue name</Label>
-              <input
+              <VenueSuggestInput
                 id="edit-venue-name"
                 value={editDraft.venueName}
-                onChange={(e) => setEditDraft((prev) => ({ ...prev, venueName: e.target.value }))}
+                venues={venues}
+                onChange={(venueName) => setEditDraft((prev) => ({ ...prev, venueName }))}
+                onPick={(venue) =>
+                  setEditDraft((prev) => ({
+                    ...prev,
+                    venueName: venue.name,
+                    venueAddress: venue.address,
+                    venueCity: venue.city,
+                    venueState: venue.state,
+                    venueZip: venue.zip,
+                  }))
+                }
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
               />
+              <p className="text-xs text-muted-foreground">
+                Type to pick an existing venue and fill in its address.
+              </p>
             </div>
             <div className="space-y-1">
               <Label htmlFor="edit-venue-address">Venue address</Label>
@@ -623,6 +651,24 @@ export function AdminSubmissionReview({ submission }: { submission: AdminSubmiss
               <br />
               {[submission.venueCity, submission.venueState, submission.venueZip].filter(Boolean).join(", ")}
             </p>
+            {pending ? (
+              <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">
+                {matchedVenue ? (
+                  <>
+                    Uses existing venue{" "}
+                    <Link
+                      href={`/admin/venues/${matchedVenue.id}/edit`}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {matchedVenue.name}
+                    </Link>
+                    .
+                  </>
+                ) : (
+                  "New venue. It's added to your venues and placed on the map when you approve."
+                )}
+              </p>
+            ) : null}
           </section>
 
           {submission.marketName ? (

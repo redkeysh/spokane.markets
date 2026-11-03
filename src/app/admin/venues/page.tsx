@@ -127,6 +127,9 @@ export default async function AdminVenuesPage({
                 {archived ? "Hide archived" : "Show archived"}
               </Link>
             </Button>
+            <Button asChild variant="outline">
+              <Link href="/admin/venues/duplicates">Find duplicates</Link>
+            </Button>
             <Button asChild>
               <Link href="/admin/venues/new">Create Venue</Link>
             </Button>

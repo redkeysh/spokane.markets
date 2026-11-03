@@ -25,6 +25,7 @@ const ACTION_MESSAGES: Record<string, (entry: AuditEntry) => string> = {
   RESTORE_EVENT: () => "restored an event",
   DELETE_VENUE: () => "deleted a venue",
   SOFT_DELETE_VENUE: () => "archived a venue",
+  MERGE_VENUES: () => "merged duplicate venues",
   RESTORE_VENUE: () => "restored a venue",
   DELETE_MARKET: () => "deleted a market",
   SOFT_DELETE_MARKET: () => "archived a market",

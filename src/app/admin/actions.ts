@@ -13,6 +13,7 @@ import {
   type AdminPermissionKey,
 } from "@/lib/admin/permissions";
 import { approveSubmissionWithEvent } from "@/lib/submission-approval";
+import { mergeVenues, type MergeVenuesResult } from "@/lib/venues/merge";
 
 const editSubmissionSchema = z.object({
   eventTitle: z.string().trim().min(1, "Event title is required"),
@@ -169,6 +170,23 @@ export async function restoreVenue(id: string) {
     newValue: { deletedAt: null },
   });
   revalidatePath("/admin/venues");
+}
+
+export async function mergeDuplicateVenues(
+  keepId: string,
+  mergeIds: string[]
+): Promise<MergeVenuesResult> {
+  const session = await requireAdminAction("admin.listings.manage");
+  const result = await mergeVenues(keepId, mergeIds, session.user.id);
+  if (result.ok) {
+    revalidatePath("/admin/venues");
+    revalidatePath("/admin/venues/duplicates");
+    revalidatePath("/admin/events");
+    revalidatePath("/admin/markets");
+    revalidatePath("/events");
+    revalidatePath("/markets");
+  }
+  return result;
 }
 
 export async function restoreMarket(id: string) {

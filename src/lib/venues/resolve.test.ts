@@ -84,6 +84,39 @@ describe("findOrCreateVenue", () => {
     expect(createMock).toHaveBeenCalledWith({ data: expect.objectContaining({ lat: 47.6, lng: -117.5 }) });
   });
 
+  it("looks up candidates near the geocoded spot and reuses one typed with another city and ZIP", async () => {
+    const expo = {
+      id: "expo",
+      name: "Spokane County Fair & Expo Center",
+      address: "404 N Havana St",
+      city: "Spokane Valley",
+      zip: "99216",
+      lat: 47.6626,
+      lng: -117.3511,
+      deletedAt: null,
+    };
+    findManyMock.mockResolvedValueOnce([]).mockResolvedValueOnce([expo]);
+    geocodeMock.mockResolvedValue({ lat: 47.6641, lng: -117.3532 });
+
+    const result = await findOrCreateVenue({
+      name: "Spokane County Fair and Expo Center",
+      address: "404 North Havana Street",
+      city: "Spokane",
+      state: "WA",
+      zip: "99202",
+    });
+
+    expect(result).toEqual({ venueId: "expo", created: false });
+    const firstWhere = findManyMock.mock.calls[0][0].where.OR;
+    const secondWhere = findManyMock.mock.calls[1][0].where.OR;
+    expect(firstWhere).toHaveLength(2);
+    expect(secondWhere[2]).toEqual({
+      lat: { gte: expect.closeTo(47.655, 3), lte: expect.closeTo(47.673, 3) },
+      lng: { gte: expect.closeTo(-117.3665, 3), lte: expect.closeTo(-117.3399, 3) },
+    });
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
   it("returns the venue a concurrent request just created", async () => {
     createMock.mockRejectedValue(Object.assign(new Error("Unique constraint"), { code: "P2002" }));
     findFirstMock.mockResolvedValue({ id: "raced", name: INPUT.name, deletedAt: null });

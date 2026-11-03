@@ -11,6 +11,9 @@ export type VenueLike = {
 /** Coordinates closer than this are treated as the same spot. */
 export const SAME_SPOT_METERS = 75;
 
+/** Within this distance, the same street address and name is one venue even when the city or ZIP differs. */
+export const NEARBY_METERS = 1000;
+
 const TOKEN_ALIASES: Record<string, string> = {
   street: "st",
   avenue: "ave",
@@ -62,6 +65,12 @@ export function normalizeVenueName(name: string): string {
   return tokens.join(" ");
 }
 
+/** The normalized name without a trailing qualifier in parentheses or after a comma or spaced dash ("Kendall Yards (Summit Parkway)" -> "kendall yards"). */
+export function baseVenueName(name: string): string {
+  const base = normalizeVenueName(name.replace(/\([^)]*\)\s*$/, "").split(/,|\s[-–—]\s/)[0]);
+  return base || normalizeVenueName(name);
+}
+
 export function normalizeStreetAddress(address: string): string {
   return normalizeTokens(address).join(" ");
 }
@@ -92,6 +101,13 @@ export function sameLocality(a: VenueLike, b: VenueLike): boolean {
   return normalizeCity(a.city) !== "" && normalizeCity(a.city) === normalizeCity(b.city);
 }
 
+/** Same first three ZIP digits: one postal area, such as 992 for both Spokane and Spokane Valley. */
+function sameZipArea(a: VenueLike, b: VenueLike): boolean {
+  const za = zip5(a.zip);
+  const zb = zip5(b.zip);
+  return /^\d{5}$/.test(za) && /^\d{5}$/.test(zb) && za.slice(0, 3) === zb.slice(0, 3);
+}
+
 function nameTokenOverlap(a: string, b: string) {
   const ta = new Set(normalizeVenueName(a).split(" ").filter(Boolean));
   const tb = new Set(normalizeVenueName(b).split(" ").filter(Boolean));
@@ -105,6 +121,11 @@ export function namesMatch(a: string, b: string): boolean {
   const na = normalizeVenueName(a);
   if (na !== "" && na === normalizeVenueName(b)) return true;
   return nameTokenOverlap(a, b).jaccard >= 0.75;
+}
+
+/** Near-identical once a trailing qualifier is dropped from either ("Spokane Community College, The Lair" = "Spokane Community College"). */
+export function baseNamesMatch(a: string, b: string): boolean {
+  return namesMatch(baseVenueName(a), baseVenueName(b));
 }
 
 /** Looser: mostly overlapping words, or one name inside the other ("Kendall Yards" in "Kendall Yards (Summit Parkway)"). */
@@ -130,9 +151,14 @@ export function distanceMeters(
   return 2 * earthRadius * Math.asin(Math.sqrt(h));
 }
 
-function atSameSpot(a: VenueLike, b: VenueLike): boolean {
+/** False when either side has no coordinates. */
+function withinMeters(a: VenueLike, b: VenueLike, meters: number): boolean {
   if (a.lat == null || a.lng == null || b.lat == null || b.lng == null) return false;
-  return distanceMeters({ lat: a.lat, lng: a.lng }, { lat: b.lat, lng: b.lng }) <= SAME_SPOT_METERS;
+  return distanceMeters({ lat: a.lat, lng: a.lng }, { lat: b.lat, lng: b.lng }) <= meters;
+}
+
+function atSameSpot(a: VenueLike, b: VenueLike): boolean {
+  return withinMeters(a, b, SAME_SPOT_METERS);
 }
 
 function sameStreetAddress(a: VenueLike, b: VenueLike): boolean {
@@ -142,22 +168,29 @@ function sameStreetAddress(a: VenueLike, b: VenueLike): boolean {
 
 /**
  * Strict: safe to reuse an existing venue automatically instead of creating a
- * new one. Requires a near-identical name plus the same street address or spot.
+ * new one. Requires the same street address or spot, plus a near-identical
+ * name or the same name once a trailing qualifier is dropped. Different places
+ * that share an address under unrelated names ("Riverfront Park" and "Spokane
+ * Pavilion at Riverfront Park") stay apart. The city and ZIP must agree unless
+ * both venues have coordinates within NEARBY_METERS.
  */
 export function isSameVenue(a: VenueLike, b: VenueLike): boolean {
-  if (!sameLocality(a, b) && !atSameSpot(a, b)) return false;
-  if (!namesMatch(a.name, b.name)) return false;
+  if (!sameLocality(a, b) && !withinMeters(a, b, NEARBY_METERS)) return false;
+  if (!namesMatch(a.name, b.name) && !baseNamesMatch(a.name, b.name)) return false;
   return sameStreetAddress(a, b) || atSameSpot(a, b);
 }
 
 /**
  * Loose: worth showing an admin as a possible duplicate. Also catches the same
- * address under a different name, and the same name with a mistyped address.
+ * address under a different name, the same name with a mistyped address, and
+ * the same address and name with the city and ZIP typed differently within one
+ * postal area.
  */
 export function isPossibleDuplicate(a: VenueLike, b: VenueLike): boolean {
   if (isSameVenue(a, b)) return true;
   if (sameLocality(a, b) && sameStreetAddress(a, b)) return true;
   if (sameLocality(a, b) && normalizeVenueName(a.name) === normalizeVenueName(b.name)) return true;
+  if (sameZipArea(a, b) && sameStreetAddress(a, b) && namesLookAlike(a.name, b.name)) return true;
   return atSameSpot(a, b) && namesLookAlike(a.name, b.name);
 }
 

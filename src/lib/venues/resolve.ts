@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { geocodeAddress } from "@/lib/geocode";
-import { isSameVenue } from "./match";
+import { isSameVenue, NEARBY_METERS } from "./match";
 
 export type VenueAddressInput = {
   name: string;
@@ -40,14 +40,32 @@ function validCoords(lat?: number | null, lng?: number | null) {
     : null;
 }
 
-/** The venue an input refers to, if one exists. Active venues win over archived ones. */
+const METERS_PER_DEGREE_LAT = 111_320;
+
+/** A lat/lng box around a point that contains every spot within NEARBY_METERS of it. */
+function nearbyBox(coords: { lat: number; lng: number }) {
+  const latDelta = NEARBY_METERS / METERS_PER_DEGREE_LAT;
+  const lngDelta = latDelta / Math.cos((coords.lat * Math.PI) / 180);
+  return {
+    lat: { gte: coords.lat - latDelta, lte: coords.lat + latDelta },
+    lng: { gte: coords.lng - lngDelta, lte: coords.lng + lngDelta },
+  };
+}
+
+/**
+ * The venue an input refers to, if one exists. Active venues win over archived
+ * ones. Candidates share the input's ZIP or city, or lie near its coordinates
+ * when it has them.
+ */
 export async function findMatchingVenue(input: VenueAddressInput): Promise<VenueMatch | null> {
   const zip = input.zip.trim().slice(0, 5);
+  const coords = validCoords(input.lat, input.lng);
   const candidates = await db.venue.findMany({
     where: {
       OR: [
         ...(zip ? [{ zip: { startsWith: zip } }] : []),
         { city: { equals: input.city.trim(), mode: "insensitive" as const } },
+        ...(coords ? [nearbyBox(coords)] : []),
       ],
     },
     select: MATCH_SELECT,

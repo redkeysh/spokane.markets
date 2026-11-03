@@ -1,6 +1,6 @@
 services:
   init:
-    image: ghcr.io/spknmh/spokane.markets:init
+    image: ghcr.io/redkeysh/spokane.markets:init
     depends_on:
       db:
         condition: service_healthy
@@ -8,7 +8,7 @@ services:
     restart: "no"
 
   cron:
-    image: ghcr.io/spknmh/spokane.markets:init
+    image: ghcr.io/redkeysh/spokane.markets:init
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -24,7 +24,7 @@ services:
     restart: unless-stopped
 
   web:
-    image: ghcr.io/spknmh/spokane.markets:latest
+    image: ghcr.io/redkeysh/spokane.markets:latest
     env_file: .env.local
     environment:
       # Pin V8 old-space heap so Node doesn't OOM inside the cgroup.

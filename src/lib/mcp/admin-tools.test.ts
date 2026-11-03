@@ -17,6 +17,9 @@ const mocks = vi.hoisted(() => ({
   venueUpdate: vi.fn(),
   geocodeAddress: vi.fn(),
   logAudit: vi.fn(),
+  tagFindMany: vi.fn(),
+  featureFindMany: vi.fn(),
+  getNeighborhoodOptions: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -39,6 +42,8 @@ vi.mock("@/lib/db", () => ({
       count: mocks.venueCount,
       update: mocks.venueUpdate,
     },
+    tag: { findMany: mocks.tagFindMany },
+    feature: { findMany: mocks.featureFindMany },
   },
 }));
 vi.mock("@/lib/admin/queues", () => ({ getQueuesSummary: vi.fn() }));
@@ -50,7 +55,10 @@ vi.mock("@/lib/submission-approval", () => ({
 vi.mock("@/lib/events/status-notifications", () => ({ notifySubmitterOfStatusChange: vi.fn() }));
 vi.mock("@/lib/audit", () => ({ logAudit: mocks.logAudit }));
 vi.mock("@/lib/geocode", () => ({ geocodeAddress: mocks.geocodeAddress }));
-vi.mock("@/lib/neighborhoods", () => ({ assertNeighborhoodSlug: vi.fn() }));
+vi.mock("@/lib/neighborhoods", () => ({
+  assertNeighborhoodSlug: vi.fn(),
+  getNeighborhoodOptions: mocks.getNeighborhoodOptions,
+}));
 vi.mock("@/lib/venues/resolve", () => ({ findMatchingVenue: mocks.findMatchingVenue }));
 vi.mock("@/lib/venues/merge", () => ({ mergeVenues: vi.fn() }));
 
@@ -305,5 +313,34 @@ describe("update_venue coordinates", () => {
     const result = await callTool("update_venue", { id: "v1", relocate: true });
     expect(result).toMatchObject({ isError: true, text: expect.stringContaining("Couldn't find the address") });
     expect(mocks.venueUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe("list_taxonomy", () => {
+  it("returns tags, features, and active neighborhoods by name and slug", async () => {
+    mocks.tagFindMany.mockResolvedValue([{ name: "Craft Fair", slug: "craft-fair" }]);
+    mocks.featureFindMany.mockResolvedValue([{ name: "Food Trucks", slug: "food-trucks" }]);
+    mocks.getNeighborhoodOptions.mockResolvedValue([{ value: "kendall-yards", label: "Kendall Yards" }]);
+
+    const result = await callTool("list_taxonomy", {}, "READ");
+
+    expect(result).toEqual({
+      isError: false,
+      data: {
+        tags: [{ name: "Craft Fair", slug: "craft-fair" }],
+        features: [{ name: "Food Trucks", slug: "food-trucks" }],
+        neighborhoods: [{ name: "Kendall Yards", slug: "kendall-yards" }],
+      },
+    });
+    expect(mocks.getNeighborhoodOptions).toHaveBeenCalledWith();
+    expect(mocks.tagFindMany).toHaveBeenCalledWith({ select: { name: true, slug: true }, orderBy: { name: "asc" } });
+  });
+
+  it("needs the listings permission", () => {
+    const tool = ADMIN_TOOLS.find((t) => t.name === "list_taxonomy")!;
+    expect(tool.readOnly).toBe(true);
+    expect(tool.unavailableReason({ ...principal("READ"), permissions: ["admin.moderation.manage"] })).toContain(
+      "admin.listings.manage"
+    );
   });
 });

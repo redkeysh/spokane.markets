@@ -13,7 +13,7 @@ import {
 import { notifySubmitterOfStatusChange } from "@/lib/events/status-notifications";
 import { logAudit } from "@/lib/audit";
 import { geocodeAddress } from "@/lib/geocode";
-import { assertNeighborhoodSlug } from "@/lib/neighborhoods";
+import { assertNeighborhoodSlug, getNeighborhoodOptions } from "@/lib/neighborhoods";
 import { findDuplicateGroups } from "@/lib/venues/match";
 import { findMatchingVenue } from "@/lib/venues/resolve";
 import { mergeVenues } from "@/lib/venues/merge";
@@ -744,6 +744,28 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
       );
     },
   }),
+
+  defineTool({
+    name: "list_taxonomy",
+    title: "List taxonomy",
+    description:
+      "Every tag and feature, and every active neighborhood, each with its name and slug, alphabetical. Imports match tagNames and featureNames by these names or slugs and create any they don't find; venue neighborhoods and market base areas must be one of these neighborhood slugs.",
+    readOnly: true,
+    input: z.object({}),
+    unavailableReason: needs("admin.listings.manage"),
+    run: async () => {
+      const [tags, features, neighborhoods] = await Promise.all([
+        db.tag.findMany({ select: { name: true, slug: true }, orderBy: { name: "asc" } }),
+        db.feature.findMany({ select: { name: true, slug: true }, orderBy: { name: "asc" } }),
+        getNeighborhoodOptions(),
+      ]);
+      return {
+        tags,
+        features,
+        neighborhoods: neighborhoods.map((n) => ({ name: n.label, slug: n.value })),
+      };
+    },
+  }),
 ];
 
 export const ADMIN_MCP_SERVER: ServerInfo = {
@@ -755,6 +777,7 @@ export const ADMIN_MCP_SERVER: ServerInfo = {
     "List and search tools return one page with total and hasMore; pass offset to read the next page of an unchanged list. After approving, rejecting, or changing status, list again from offset 0, because the items that were acted on have left the list.",
     "Approving a submission publishes its event immediately; check its venueOutcome first.",
     "Before creating or fixing venues, use find_duplicate_venues and merge duplicates rather than editing them apart.",
+    "Use list_taxonomy for the existing tags, features, and neighborhoods so new listings reuse them instead of inventing near-synonyms.",
     "Write tools change the live site and every change is audit-logged under the token's owner.",
   ].join(" "),
 };

@@ -10,7 +10,9 @@ vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: mocks.checkRateLimit }));
 
 import { GET } from "./route";
 
-const venue = (id: string, name: string, address: string) => ({
+type Where = { AND: Record<string, unknown>[] };
+
+const venue = (id: string, name: string, address = "1 Main St") => ({
   id,
   name,
   address,
@@ -18,6 +20,21 @@ const venue = (id: string, name: string, address: string) => ({
   state: "WA",
   zip: "99201",
 });
+
+const PUBLIC_VENUE = {
+  deletedAt: null,
+  OR: [
+    { events: { some: { status: "PUBLISHED", deletedAt: null } } },
+    { markets: { some: { deletedAt: null } } },
+  ],
+};
+
+/** Answers the prefix query and the word query separately. */
+function mockResults(prefix: ReturnType<typeof venue>[], words: ReturnType<typeof venue>[]) {
+  mocks.venueFindMany.mockImplementation(async ({ where }: { where: Where }) =>
+    where.AND.some((c) => "name" in c && "startsWith" in (c.name as object)) ? prefix : words
+  );
+}
 
 function get(q: string | null, ip = "203.0.113.7") {
   const url = new URL("https://spokane.markets/api/venues/suggest");
@@ -28,46 +45,44 @@ function get(q: string | null, ip = "203.0.113.7") {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.checkRateLimit.mockResolvedValue({ ok: true, remaining: 59 });
-  mocks.venueFindMany.mockResolvedValue([]);
+  mockResults([], []);
 });
 
 describe("GET /api/venues/suggest", () => {
-  it("searches active venues by every word and returns public fields only", async () => {
-    mocks.venueFindMany.mockResolvedValue([
-      venue("2", "Spokane County Fair & Expo Center", "404 N Havana St"),
-      venue("1", "Expo Hall", "1 Main St"),
-    ]);
+  it("searches only venues the public site shows, by every word, returning public fields", async () => {
+    await get("fair expo");
 
-    const res = await get("  expo ");
-
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({
-      venues: [venue("1", "Expo Hall", "1 Main St"), venue("2", "Spokane County Fair & Expo Center", "404 N Havana St")],
+    const select = { id: true, name: true, address: true, city: true, state: true, zip: true };
+    expect(mocks.venueFindMany).toHaveBeenCalledWith({
+      where: { AND: [PUBLIC_VENUE, { name: { startsWith: "fair expo", mode: "insensitive" } }] },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+      take: 6,
+      select,
+    });
+    expect(mocks.venueFindMany).toHaveBeenCalledWith({
+      where: {
+        AND: [
+          PUBLIC_VENUE,
+          { OR: [{ name: { contains: "fair", mode: "insensitive" } }, { address: { contains: "fair", mode: "insensitive" } }] },
+          { OR: [{ name: { contains: "expo", mode: "insensitive" } }, { address: { contains: "expo", mode: "insensitive" } }] },
+        ],
+      },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+      take: 12,
+      select,
     });
     expect(mocks.checkRateLimit).toHaveBeenCalledWith("203.0.113.7", "venueSuggest");
-    expect(mocks.venueFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: {
-          deletedAt: null,
-          AND: [
-            {
-              OR: [
-                { name: { contains: "expo", mode: "insensitive" } },
-                { address: { contains: "expo", mode: "insensitive" } },
-              ],
-            },
-          ],
-        },
-        select: { id: true, name: true, address: true, city: true, state: true, zip: true },
-      })
-    );
   });
 
-  it("matches multi-word queries word by word", async () => {
-    await get("fair expo");
-    const where = mocks.venueFindMany.mock.calls[0][0].where;
-    expect(where.AND).toHaveLength(2);
-    expect(where.AND[1].OR[0]).toEqual({ name: { contains: "expo", mode: "insensitive" } });
+  it("puts name-prefix matches first even when many other names sort before them", async () => {
+    const stLuke = venue("st-luke", "St. Luke Lutheran Church");
+    const others = Array.from({ length: 12 }, (_, i) => venue(`o${i}`, `A${i} Hall`, `${i} Stone St`));
+    mockResults([stLuke], [...others.slice(0, 5), stLuke, ...others.slice(5)]);
+
+    const res = await get("St");
+    const { venues } = (await res.json()) as { venues: { id: string }[] };
+
+    expect(venues.map((v) => v.id)).toEqual(["st-luke", "o0", "o1", "o2", "o3", "o4"]);
   });
 
   it.each([null, "", "a", "  b  "])("returns nothing for the short query %o without a lookup", async (q) => {

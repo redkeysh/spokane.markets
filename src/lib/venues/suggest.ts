@@ -18,12 +18,3 @@ export function suggestQueryWords(query: string): string[] {
   if (q.length < SUGGEST_MIN_QUERY) return [];
   return q.split(/\s+/).slice(0, 5);
 }
-
-/** Name-prefix matches first, then alphabetical by name. */
-export function rankVenueSuggestions<T extends { name: string }>(venues: T[], query: string, limit = SUGGEST_LIMIT): T[] {
-  const q = query.trim().toLowerCase();
-  const startsWith = (v: T) => Number(v.name.toLowerCase().startsWith(q));
-  return [...venues]
-    .sort((a, b) => startsWith(b) - startsWith(a) || a.name.localeCompare(b.name))
-    .slice(0, limit);
-}

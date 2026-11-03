@@ -65,7 +65,7 @@ export default async function EditVendorPage({
   };
 
   return (
-    <div className="max-w-7xl space-y-6">
+    <div className="max-w-[1600px] space-y-6">
       <AdminPageHeader
         title="Edit Vendor"
         breadcrumbs={[

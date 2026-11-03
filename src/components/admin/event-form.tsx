@@ -764,7 +764,7 @@ export function EventForm({
         </div>
       </details>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4">
         <div className="space-y-2">
           <Label htmlFor="websiteUrl">Website URL</Label>
           <Input id="websiteUrl" type="url" {...register("websiteUrl")} />
@@ -858,7 +858,7 @@ export function EventForm({
           {rightColumnSections}
         </div>
       ) : (
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-8">
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-8">
           <div className="min-w-0 space-y-6">{leftColumnSections}</div>
           <div className="min-w-0 space-y-6 lg:sticky lg:top-6">{rightColumnSections}</div>
         </div>
@@ -948,7 +948,7 @@ export function EventForm({
   if (showJsonImport) {
     return (
       <>
-        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[1fr_380px]">
+        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_420px]">
           <div className="min-w-0">{formContent}</div>
           <div className="lg:sticky lg:top-6">
             <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">

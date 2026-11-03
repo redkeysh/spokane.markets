@@ -31,8 +31,10 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { AddressAutofillFields } from "@/components/address-autocomplete";
+import { VenueTypeahead } from "@/components/forms/venue-typeahead";
 import { useAbandonTracking } from "@/hooks/use-abandon-tracking";
 import { formatDateOnlyLocal } from "@/lib/utils";
+import type { PublicVenue } from "@/lib/venues/suggest";
 import {
   DEFAULT_END_TIME,
   DEFAULT_START_TIME,
@@ -141,6 +143,17 @@ export function SubmissionForm({
         ? current.filter((v) => v !== id)
         : [...current, id]
     );
+  };
+
+  /** Fills the venue fields with an existing venue's exact values, so approval matches it instead of creating a copy. */
+  const pickVenue = (venue: PublicVenue) => {
+    const opts = { shouldDirty: true, shouldValidate: true };
+    setValue("venueName", venue.name, opts);
+    setValue("venueAddress", venue.address, opts);
+    setValue("venueCity", venue.city, opts);
+    setValue("venueState", venue.state, opts);
+    setValue("venueZip", venue.zip, opts);
+    trackEvent("submit_event_venue_pick", { form_id: "submission" });
   };
 
   async function onSubmit(data: SubmissionInput | SubmissionInputAuthed) {
@@ -427,11 +440,14 @@ export function SubmissionForm({
 
           <div className="space-y-2">
             <Label htmlFor="venueName">{req("Venue name")}</Label>
-            <Input
+            <p className="text-xs text-muted-foreground">
+              Start typing to pick a venue we already list, which fills in its address. New venues can be typed in full.
+            </p>
+            <VenueTypeahead
               id="venueName"
-              type="text"
               placeholder="e.g., Riverside Park Pavilion, Spokane County Fair & Expo Center"
-              {...register("venueName")}
+              registration={register("venueName")}
+              onPick={pickVenue}
             />
             {errors.venueName && (
               <p className="text-sm text-destructive">

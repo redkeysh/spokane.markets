@@ -13,6 +13,7 @@ const ACTION_CONFIG: Record<string, { windowMs: number; maxRequests: number }> =
   changePassword: { windowMs: 60 * 60 * 1000, maxRequests: 5 },
   application: { windowMs: 60 * 1000, maxRequests: 5 },
   mcp: { windowMs: 60 * 1000, maxRequests: 120 },
+  venueSuggest: { windowMs: 60 * 1000, maxRequests: 60 },
 };
 
 function getConfig(action: string) {

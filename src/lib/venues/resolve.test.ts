@@ -12,7 +12,8 @@ vi.mock("@/lib/db", () => ({
 }));
 vi.mock("@/lib/geocode", () => ({ geocodeAddress: geocodeMock }));
 
-import { findOrCreateVenue } from "./resolve";
+import { DEFAULT_PIN } from "./match";
+import { findMatchingVenue, findOrCreateVenue, lookupVenue } from "./resolve";
 
 const INPUT = {
   name: "Shriners Event Center",
@@ -84,9 +85,88 @@ describe("findOrCreateVenue", () => {
     expect(createMock).toHaveBeenCalledWith({ data: expect.objectContaining({ lat: 47.6, lng: -117.5 }) });
   });
 
+  it("looks up candidates near the geocoded spot and reuses one typed with another city and ZIP", async () => {
+    const expo = {
+      id: "expo",
+      name: "Spokane County Fair & Expo Center",
+      address: "404 N Havana St",
+      city: "Spokane Valley",
+      zip: "99216",
+      lat: 47.6626,
+      lng: -117.3511,
+      deletedAt: null,
+    };
+    findManyMock.mockResolvedValueOnce([]).mockResolvedValueOnce([expo]);
+    geocodeMock.mockResolvedValue({ lat: 47.6641, lng: -117.3532 });
+
+    const result = await findOrCreateVenue({
+      name: "Spokane County Fair and Expo Center",
+      address: "404 North Havana Street",
+      city: "Spokane",
+      state: "WA",
+      zip: "99202",
+    });
+
+    expect(result).toEqual({ venueId: "expo", created: false });
+    const firstWhere = findManyMock.mock.calls[0][0].where.OR;
+    const secondWhere = findManyMock.mock.calls[1][0].where.OR;
+    expect(firstWhere).toHaveLength(2);
+    expect(secondWhere[2]).toEqual({
+      lat: { gte: expect.closeTo(47.655, 3), lte: expect.closeTo(47.673, 3) },
+      lng: { gte: expect.closeTo(-117.3665, 3), lte: expect.closeTo(-117.3399, 3) },
+    });
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
   it("returns the venue a concurrent request just created", async () => {
     createMock.mockRejectedValue(Object.assign(new Error("Unique constraint"), { code: "P2002" }));
     findFirstMock.mockResolvedValue({ id: "raced", name: INPUT.name, deletedAt: null });
     await expect(findOrCreateVenue(INPUT)).resolves.toEqual({ venueId: "raced", created: false });
+  });
+});
+
+describe("findMatchingVenue", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    findManyMock.mockResolvedValue([]);
+  });
+
+  it("does not search around the admin form's default pin", async () => {
+    await findMatchingVenue({ ...INPUT, lat: DEFAULT_PIN.lat, lng: DEFAULT_PIN.lng });
+    expect(findManyMock.mock.calls[0][0].where.OR).toHaveLength(2);
+  });
+});
+
+describe("lookupVenue", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    findManyMock.mockResolvedValue([]);
+  });
+
+  it("finds a venue only the geocoded spot reveals, without creating anything", async () => {
+    const nearby = existing({ address: "7217 Westbow" });
+    findManyMock.mockResolvedValueOnce([nearby]).mockResolvedValueOnce([nearby]);
+    geocodeMock.mockResolvedValue({ lat: 47.6136, lng: -117.5136 });
+    await expect(lookupVenue(INPUT)).resolves.toEqual({ status: "existing", venue: nearby });
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it("returns the coordinates a new venue would get", async () => {
+    geocodeMock.mockResolvedValue({ lat: 47.6136, lng: -117.5136 });
+    await expect(lookupVenue(INPUT)).resolves.toEqual({ status: "new", coords: { lat: 47.6136, lng: -117.5136 } });
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it("uses supplied coordinates without geocoding", async () => {
+    await expect(lookupVenue({ ...INPUT, lat: 47.6, lng: -117.5 })).resolves.toEqual({
+      status: "new",
+      coords: { lat: 47.6, lng: -117.5 },
+    });
+    expect(geocodeMock).not.toHaveBeenCalled();
+  });
+
+  it("reports an address no geocoder can place", async () => {
+    geocodeMock.mockResolvedValue(null);
+    await expect(lookupVenue(INPUT)).resolves.toEqual({ status: "unplaceable" });
   });
 });

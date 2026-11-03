@@ -13,15 +13,25 @@ import {
 import { notifySubmitterOfStatusChange } from "@/lib/events/status-notifications";
 import { logAudit } from "@/lib/audit";
 import { geocodeAddress } from "@/lib/geocode";
-import { assertNeighborhoodSlug } from "@/lib/neighborhoods";
+import { assertNeighborhoodSlug, getNeighborhoodOptions } from "@/lib/neighborhoods";
 import { findDuplicateGroups } from "@/lib/venues/match";
-import { findMatchingVenue } from "@/lib/venues/resolve";
+import { lookupVenue } from "@/lib/venues/resolve";
 import { mergeVenues } from "@/lib/venues/merge";
 import { defineTool, ToolError, type McpTool, type ServerInfo } from "./protocol";
 
 const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://spokane.markets").replace(/\/$/, "");
 const EVENT_STATUSES = ["DRAFT", "PENDING", "PUBLISHED", "CANCELLED", "REJECTED"] as const;
 const SUBMISSION_STATUSES = ["PENDING", "APPROVED", "REJECTED"] as const;
+
+/** Eastern Washington and North Idaho: every venue the site lists lies inside this box. */
+const SERVICE_AREA = { minLat: 46, maxLat: 49, minLng: -119, maxLng: -115.5 } as const;
+const SERVICE_AREA_TEXT = `the Spokane and North Idaho area (latitude ${SERVICE_AREA.minLat} to ${SERVICE_AREA.maxLat}, longitude ${SERVICE_AREA.minLng} to ${SERVICE_AREA.maxLng})`;
+
+function inServiceArea({ lat, lng }: { lat: number; lng: number }) {
+  return (
+    lat >= SERVICE_AREA.minLat && lat <= SERVICE_AREA.maxLat && lng >= SERVICE_AREA.minLng && lng <= SERVICE_AREA.maxLng
+  );
+}
 
 function needs(permission: AdminPermissionKey) {
   return (ctx: TokenPrincipal) =>
@@ -116,14 +126,20 @@ async function venueOutcome(s: SubmissionRow) {
   if (!venueName || !venueAddress || !venueCity || !venueState || !venueZip) {
     return { outcome: "incomplete", note: "Venue name, street, city, state, or ZIP is missing, so approval will fail." };
   }
-  const match = await findMatchingVenue({
+  const lookup = await lookupVenue({
     name: venueName,
     address: venueAddress,
     city: venueCity,
     state: venueState,
     zip: venueZip,
   });
-  if (!match) return { outcome: "new", note: "Approval creates a new, geocoded venue." };
+  if (lookup.status === "unplaceable") {
+    return { outcome: "unplaceable", note: "No geocoder can place this address, so approval will fail. Fix the address first." };
+  }
+  if (lookup.status === "new") {
+    return { outcome: "new", lat: lookup.coords.lat, lng: lookup.coords.lng, note: "Approval creates a new venue at these coordinates." };
+  }
+  const match = lookup.venue;
   if (match.deletedAt) {
     return { outcome: "archived", venueId: match.id, name: match.name, note: "Matches an archived venue; restore it before approving." };
   }
@@ -467,7 +483,7 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
     name: "search_venues",
     title: "Search venues",
     description:
-      "Venues matching a name or street address, one page at a time, alphabetical, with how many events and markets use each.",
+      "Venues matching a name or street address, one page at a time, alphabetical, with their map coordinates (lat, lng) and how many events and markets use each.",
     readOnly: true,
     input: z.object({
       query: z.string().trim().max(200).optional(),
@@ -503,6 +519,8 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
             city: true,
             state: true,
             zip: true,
+            lat: true,
+            lng: true,
             neighborhood: true,
             parkingNotes: true,
             deletedAt: true,
@@ -569,7 +587,7 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
     name: "update_venue",
     title: "Update venue",
     description:
-      "Changes a venue's name, address, neighborhood, or parking notes. Pass only the fields to change. A changed address is geocoded again and rejected if it cannot be found.",
+      "Changes a venue's name, address, neighborhood, parking notes, or map location. Pass only the fields to change. A changed address is geocoded again and rejected if it cannot be found. To fix a misplaced map pin, pass relocate: true to geocode the address again, or pass lat and lng. Coordinates must fall in the Spokane and North Idaho area.",
     readOnly: false,
     input: z
       .object({
@@ -581,8 +599,30 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
         zip: z.string().trim().regex(/^\d{5}(-\d{4})?$/, "ZIP must be 12345 or 12345-6789").optional(),
         neighborhood: z.string().trim().nullable().optional().describe("Neighborhood slug, or null to clear."),
         parkingNotes: z.string().max(1000).nullable().optional(),
+        relocate: z
+          .boolean()
+          .optional()
+          .describe("true to geocode the address again (the new one if passed, otherwise the current one) and save its coordinates."),
+        lat: z
+          .number()
+          .min(SERVICE_AREA.minLat)
+          .max(SERVICE_AREA.maxLat)
+          .optional()
+          .describe("Latitude to save, passed together with lng instead of geocoding."),
+        lng: z
+          .number()
+          .min(SERVICE_AREA.minLng)
+          .max(SERVICE_AREA.maxLng)
+          .optional()
+          .describe("Longitude to save, passed together with lat instead of geocoding."),
       })
-      .refine(hasChange, { message: "Pass at least one field to change." }),
+      .refine((v) => hasChange({ ...v, relocate: v.relocate || undefined }), {
+        message: "Pass at least one field to change.",
+      })
+      .refine((v) => (v.lat === undefined) === (v.lng === undefined), { message: "Pass lat and lng together." })
+      .refine((v) => !(v.relocate && v.lat !== undefined), {
+        message: "Pass either relocate or lat and lng, not both.",
+      }),
     unavailableReason: needsWrite("admin.listings.manage"),
     run: async ({ id, ...changes }, ctx) => {
       const existing = await db.venue.findFirst({ where: { id, deletedAt: null } });
@@ -609,14 +649,28 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
       const addressChanged = (["address", "city", "state", "zip"] as const).some(
         (key) => changes[key] !== undefined && changes[key] !== existing[key]
       );
-      if (addressChanged) {
-        const coords = await geocodeAddress({
+      let coords: { lat: number; lng: number } | null = null;
+      if (changes.lat !== undefined && changes.lng !== undefined) {
+        coords = { lat: changes.lat, lng: changes.lng };
+      } else if (addressChanged || changes.relocate) {
+        coords = await geocodeAddress({
           address: changes.address ?? existing.address,
           city: changes.city ?? existing.city,
           state: changes.state ?? existing.state,
           zip: changes.zip ?? existing.zip,
         });
-        if (!coords) throw new ToolError("Couldn't find the new address on the map. Check the street, city, state, and ZIP.");
+        if (!coords) {
+          throw new ToolError(
+            `Couldn't find the ${addressChanged ? "new " : ""}address on the map. Check the street, city, state, and ZIP, or pass lat and lng.`
+          );
+        }
+        if (!inServiceArea(coords)) {
+          throw new ToolError(
+            `The address was placed at ${coords.lat}, ${coords.lng}, outside ${SERVICE_AREA_TEXT}. Check the city, state, and ZIP, or pass lat and lng.`
+          );
+        }
+      }
+      if (coords) {
         data.lat = coords.lat;
         data.lng = coords.lng;
       }
@@ -639,8 +693,9 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
           zip: existing.zip,
           neighborhood: existing.neighborhood,
           parkingNotes: existing.parkingNotes,
+          ...(coords ? { lat: existing.lat, lng: existing.lng } : {}),
         },
-        newValue: changes,
+        newValue: { ...changes, ...coords },
         ...auditMeta(ctx),
       });
       revalidateListings();
@@ -695,6 +750,28 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
       );
     },
   }),
+
+  defineTool({
+    name: "list_taxonomy",
+    title: "List taxonomy",
+    description:
+      "Every tag and feature, and every active neighborhood, each with its name and slug, alphabetical. Imports match tagNames and featureNames by these names or slugs and create any they don't find; venue neighborhoods and market base areas must be one of these neighborhood slugs.",
+    readOnly: true,
+    input: z.object({}),
+    unavailableReason: needs("admin.listings.manage"),
+    run: async () => {
+      const [tags, features, neighborhoods] = await Promise.all([
+        db.tag.findMany({ select: { name: true, slug: true }, orderBy: { name: "asc" } }),
+        db.feature.findMany({ select: { name: true, slug: true }, orderBy: { name: "asc" } }),
+        getNeighborhoodOptions(),
+      ]);
+      return {
+        tags,
+        features,
+        neighborhoods: neighborhoods.map((n) => ({ name: n.label, slug: n.value })),
+      };
+    },
+  }),
 ];
 
 export const ADMIN_MCP_SERVER: ServerInfo = {
@@ -706,6 +783,7 @@ export const ADMIN_MCP_SERVER: ServerInfo = {
     "List and search tools return one page with total and hasMore; pass offset to read the next page of an unchanged list. After approving, rejecting, or changing status, list again from offset 0, because the items that were acted on have left the list.",
     "Approving a submission publishes its event immediately; check its venueOutcome first.",
     "Before creating or fixing venues, use find_duplicate_venues and merge duplicates rather than editing them apart.",
+    "Use list_taxonomy for the existing tags, features, and neighborhoods so new listings reuse them instead of inventing near-synonyms.",
     "Write tools change the live site and every change is audit-logged under the token's owner.",
   ].join(" "),
 };

@@ -212,7 +212,7 @@ export function AdminSubmissionReview({
     <div className="space-y-6">
       <div
         className={cn(
-          "sticky top-0 z-20 border-b border-border bg-background/95 py-3 backdrop-blur",
+          "sticky top-[var(--sm-sticky-top)] z-20 border-b border-border bg-background/95 py-3 backdrop-blur",
           "supports-[backdrop-filter]:bg-background/80"
         )}
       >

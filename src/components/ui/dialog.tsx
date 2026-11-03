@@ -7,6 +7,9 @@ import { X } from "lucide-react";
 
 const DialogContext = React.createContext<((open: boolean) => void) | null>(null);
 
+/** Where an open Dialog is portaled; null means document.body. */
+const DialogPortalContext = React.createContext<HTMLElement | null>(null);
+
 interface DialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -14,6 +17,7 @@ interface DialogProps {
 }
 
 function Dialog({ open, onOpenChange, children }: DialogProps) {
+  const portalContainer = React.useContext(DialogPortalContext);
   if (!open) return null;
 
   const content = (
@@ -32,7 +36,7 @@ function Dialog({ open, onOpenChange, children }: DialogProps) {
   );
 
   if (typeof document !== "undefined" && document.body) {
-    return createPortal(content, document.body);
+    return createPortal(content, portalContainer ?? document.body);
   }
   return content;
 }
@@ -105,4 +109,12 @@ const DialogFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLD
 );
 DialogFooter.displayName = "DialogFooter";
 
-export { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter };
+export {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogPortalContext,
+};

@@ -1,19 +1,12 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { AdminButton } from "@/components/admin/kit/button";
+import { AdminDialog } from "@/components/admin/kit/dialog";
 
 /**
- * Shared confirmation dialog for destructive or high-impact actions. Use this
- * instead of window.confirm so every confirmation across the admin looks and
- * behaves the same. Controlled via `open` / `onOpenChange`.
+ * Shared confirmation dialog for destructive or high-impact actions, on the native AdminDialog.
+ * Use this instead of window.confirm so every confirmation across the admin looks and behaves
+ * the same. Controlled via `open` / `onOpenChange`.
  */
 export function ConfirmDialog({
   open,
@@ -37,31 +30,26 @@ export function ConfirmDialog({
   onConfirm: () => void;
 }) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          {description && <DialogDescription>{description}</DialogDescription>}
-        </DialogHeader>
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={pending}
-          >
+    <AdminDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      description={description}
+      footer={
+        <>
+          <AdminButton variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
             {cancelLabel}
-          </Button>
-          <Button
-            type="button"
-            variant={variant === "destructive" ? "destructive" : "default"}
+          </AdminButton>
+          <AdminButton
+            variant={variant === "destructive" ? "danger" : "ink"}
             onClick={onConfirm}
             disabled={pending}
+            aria-busy={pending || undefined}
           >
             {confirmLabel}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </AdminButton>
+        </>
+      }
+    />
   );
 }

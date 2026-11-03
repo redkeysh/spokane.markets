@@ -1,13 +1,22 @@
 "use client";
 
-export default function AdminError({ error, reset }: { error: Error; reset: () => void }) {
+import { AdminButton } from "@/components/admin/kit/button";
+
+/** Rendered inside the admin shell, so the top bar and rail stay. */
+export default function AdminError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
-    <div className="container mx-auto px-4 py-16 text-center">
-      <h2 className="text-2xl font-bold mb-4">Something went wrong</h2>
-      <p className="text-muted-foreground mb-6">{error.message || "Failed to load admin dashboard"}</p>
-      <button onClick={reset} className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90">
-        Try again
-      </button>
+    <div className="max-w-[72ch] py-8">
+      <h1 className="font-display text-2xl/[30px] font-bold text-basalt">Something went wrong loading this page.</h1>
+      <div className="mt-4">
+        <AdminButton variant="ink" onClick={reset}>
+          Try again
+        </AdminButton>
+      </div>
+      <details className="mt-6">
+        <summary className="w-fit cursor-pointer rounded-sm text-sm font-medium text-lilac">Details</summary>
+        <p className="mt-2 text-sm break-words text-ash">{error.message || "No message was given."}</p>
+        {error.digest && <p className="mt-1 text-xs text-ash tabular-nums">Reference {error.digest}</p>}
+      </details>
     </div>
   );
 }

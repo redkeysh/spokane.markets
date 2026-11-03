@@ -6,16 +6,10 @@ import type { AnalyticsParams } from "@/lib/analytics";
 import { trackEvent } from "@/lib/analytics";
 import { toast } from "sonner";
 import { isNextControlFlowError } from "@/lib/api-client";
-import { Recycle, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Archive, Trash2 } from "lucide-react";
+import { AdminButton } from "@/components/admin/kit/button";
+import { Tooltip } from "@/components/admin/kit/tooltip";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 
 export function DeleteButton({
   action,
@@ -56,41 +50,36 @@ export function DeleteButton({
     });
   }
 
-  const Icon = iconName === "recycle" ? Recycle : Trash2;
+  // "recycle" is the soft, restorable archive.
+  const Icon = iconName === "recycle" ? Archive : Trash2;
+
+  const trigger = (
+    <AdminButton
+      variant={iconOnly ? "quiet" : "danger-outline"}
+      size={iconOnly ? "icon-sm" : "sm"}
+      busy={isPending}
+      busyLabel={iconOnly ? undefined : pendingLabel}
+      onClick={() => setOpen(true)}
+      aria-label={iconOnly ? title : undefined}
+      className={iconOnly && iconName === "trash" ? "text-ponderosa hover:text-ponderosa" : undefined}
+    >
+      {iconOnly ? <Icon strokeWidth={1.75} aria-hidden="true" /> : label}
+    </AdminButton>
+  );
 
   return (
     <>
-      <Button
-        type="button"
-        variant={iconOnly ? "ghost" : "destructive"}
-        size={iconOnly ? "icon" : "sm"}
-        disabled={isPending}
-        onClick={() => setOpen(true)}
-        aria-label={title}
-        className={iconOnly ? "h-8 w-8 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10" : undefined}
-      >
-        {iconOnly ? (
-          <Icon className="h-4 w-4" />
-        ) : (
-          isPending ? pendingLabel : label
-        )}
-      </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
-            <DialogDescription>{description}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
-              Cancel
-            </Button>
-            <Button type="button" variant="destructive" onClick={handleConfirm} disabled={isPending}>
-              {isPending ? pendingLabel : confirmLabel}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {iconOnly ? <Tooltip content={title}>{trigger}</Tooltip> : trigger}
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={title}
+        description={description}
+        confirmLabel={isPending ? pendingLabel : confirmLabel}
+        variant="destructive"
+        pending={isPending}
+        onConfirm={handleConfirm}
+      />
     </>
   );
 }
@@ -117,11 +106,10 @@ export function StatusButton({
   const [isPending, startTransition] = useTransition();
 
   return (
-    <Button
-      type="button"
-      variant={variant}
+    <AdminButton
+      variant={variant === "default" ? "ink" : variant === "destructive" ? "danger-outline" : "outline"}
       size="sm"
-      disabled={isPending}
+      busy={isPending}
       onClick={() =>
         startTransition(async () => {
           try {
@@ -148,7 +136,7 @@ export function StatusButton({
         })
       }
     >
-      {isPending ? "..." : label}
-    </Button>
+      {label}
+    </AdminButton>
   );
 }

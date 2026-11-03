@@ -42,6 +42,7 @@
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.5.4",
+    "@floating-ui/react-dom": "2.1.2",
     "@hookform/resolvers": "^5.2.2",
     "@mapbox/search-js-react": "^1.5.1",
     "@prisma/adapter-pg": "^7.10.1",
@@ -50,6 +51,7 @@
     "better-auth": "^1.6.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cmdk": "1.1.1",
     "dotenv": "^17.3.1",
     "ioredis": "^5.10.0",
     "leaflet": "^1.9.4",

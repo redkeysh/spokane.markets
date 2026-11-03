@@ -860,7 +860,7 @@ export function EventForm({
       ) : (
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-8">
           <div className="min-w-0 space-y-6">{leftColumnSections}</div>
-          <div className="min-w-0 space-y-6 lg:sticky lg:top-6">{rightColumnSections}</div>
+          <div className="min-w-0 space-y-6">{rightColumnSections}</div>
         </div>
       )}
     </form>
@@ -950,7 +950,7 @@ export function EventForm({
       <>
         <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_420px]">
           <div className="min-w-0">{formContent}</div>
-          <div className="lg:sticky lg:top-6">
+          <div>
             <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
               <Label className="text-base font-medium">Import from JSON</Label>
               <p className="text-xs text-muted-foreground">

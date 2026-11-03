@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
-/* Class-based dark mode for theme toggle */
-@custom-variant dark (&:where(.dark, .dark *));
+/* Class-based dark mode for the public theme toggle; it does not reach into the admin subtree */
+@custom-variant dark (&:where(.dark, .dark *):not(:where([data-theme="admin"], [data-theme="admin"] *)));
 
 /* Cedar & Harvest brand — warm community, modern PNW
  * Cream, Paper, Fog, Charcoal, Ash | Cedar Green, Moss, Honey
@@ -34,11 +34,44 @@
   --shadow-md: 0 4px 6px -1px rgb(31 36 34 / 0.06), 0 2px 4px -2px rgb(31 36 34 / 0.04);
 }
 
-/* Main site theme palettes — 60/30/10 rule, white cards, tinted backgrounds */
+/* Admin-only utility names; they resolve only inside [data-theme="admin"] */
+@theme inline {
+  --color-fog: var(--sm-fog);
+  --color-sheet: var(--sm-sheet);
+  --color-raised: var(--sm-raised);
+  --color-hover: var(--sm-hover);
+  --color-basalt: var(--sm-basalt);
+  --color-on-basalt: var(--sm-on-basalt);
+  --color-basalt-hover: var(--sm-basalt-hover);
+  --color-ash: var(--sm-ash);
+  --color-ash-quiet: var(--sm-ash-quiet);
+  --color-seam: var(--sm-seam);
+  --color-seam-strong: var(--sm-seam-strong);
+  --color-cedar: var(--sm-cedar);
+  --color-cedar-hover: var(--sm-cedar-hover);
+  --color-on-cedar: var(--sm-on-cedar);
+  --color-cedar-tint: var(--sm-cedar-tint);
+  --color-honey: var(--sm-honey);
+  --color-honey-ink: var(--sm-honey-ink);
+  --color-honey-tint: var(--sm-honey-tint);
+  --color-honey-text: var(--sm-honey-text);
+  --color-lilac: var(--sm-lilac);
+  --color-lilac-tint: var(--sm-lilac-tint);
+  --color-ponderosa: var(--sm-ponderosa);
+  --color-on-ponderosa: var(--sm-on-ponderosa);
+  --color-ponderosa-tint: var(--sm-ponderosa-tint);
+  --color-draft-tint: var(--sm-draft-tint);
+  --font-display: var(--sm-font-display), ui-sans-serif, system-ui, sans-serif;
+  --font-text: var(--sm-font-text), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Main site theme palettes: 60/30/10 rule, white cards, tinted backgrounds.
+ * `.sm-public-island[data-palette]` applies the same palette to a public component previewed in the admin. */
 
 /* Evergreen Mist */
 @layer theme {
-  [data-theme="evergreen"] {
+  [data-theme="evergreen"],
+  .sm-public-island[data-palette="evergreen"] {
     --color-background: #F6F7F8;
     --color-foreground: #111827;
     --color-muted: #EEF1F0;
@@ -60,7 +93,8 @@
 
 /* Paper Forest */
 @layer theme {
-  [data-theme="paper"] {
+  [data-theme="paper"],
+  .sm-public-island[data-palette="paper"] {
     --color-background: #FFFFFF;
     --color-foreground: #111827;
     --color-muted: #F3F4F6;
@@ -82,7 +116,8 @@
 
 /* Soft Clay */
 @layer theme {
-  [data-theme="clay"] {
+  [data-theme="clay"],
+  .sm-public-island[data-palette="clay"] {
     --color-background: #FAF7F2;
     --color-foreground: #111827;
     --color-muted: #F1E9DD;
@@ -102,32 +137,106 @@
   }
 }
 
-/* Admin dashboard — SaaS dark blue (applies only when data-theme="admin") */
+/* Admin: one token set for both modes through light-dark(), driven by color-scheme on the admin root.
+ * data-mode="system" follows the OS; "light" and "dark" pin the scheme. */
 @layer theme {
   [data-theme="admin"] {
-    color: var(--color-foreground);
-    --color-background: #0f172a;
-    --color-foreground: #f8fafc;
-    --color-muted: #1e293b;
-    --color-muted-foreground: #cbd5e1;
-    --color-border: #475569;
-    --color-primary: #3b82f6;
-    --color-primary-foreground: #ffffff;
-    --color-card: #1e293b;
-    --color-card-foreground: #f8fafc;
-    --color-ring: #60a5fa;
-    --color-destructive: #ef4444;
-    --color-destructive-foreground: #ffffff;
-    --color-accent: #2563eb;
-    --color-accent-foreground: #ffffff;
-    --color-going: #22c55e;
-    --color-going-foreground: #ffffff;
-    --color-interested: #eab308;
-    --color-interested-foreground: #0f172a;
-    --color-link: #93c5fd;
-    --color-nav: #1e293b;
-    --font-heading: ui-sans-serif, system-ui, "Inter", sans-serif;
+    color-scheme: light dark;
+    --sm-fog: light-dark(#F1EEF4, #1B1920);
+    --sm-sheet: light-dark(#FBFAFC, #24212A);
+    --sm-raised: light-dark(#FBFAFC, #2E2A35);
+    --sm-hover: light-dark(#E9E5EE, #2B2832);
+    --sm-basalt: light-dark(#24202B, #EDEAF2);
+    --sm-on-basalt: light-dark(#FBFAFC, #1B1920);
+    --sm-basalt-hover: light-dark(#3A3542, #D9D5E0);
+    --sm-ash: light-dark(#5A5466, #B0A9BC);
+    --sm-ash-quiet: light-dark(#655F71, #A39CAE);
+    --sm-seam: light-dark(#D9D5DF, #39353F);
+    --sm-seam-strong: light-dark(#827B8E, #827B8A);
+    --sm-cedar: light-dark(#1F4D3A, #7FC6A0);
+    --sm-cedar-hover: light-dark(#173D2E, #96D3B2);
+    --sm-on-cedar: light-dark(#FBFAFC, #13261C);
+    --sm-cedar-tint: light-dark(#DCEBE2, #1E3328);
+    --sm-honey: light-dark(#D6A23A, #E2B355);
+    --sm-honey-ink: light-dark(#7E5410, #E2B355);
+    --sm-honey-tint: light-dark(#F6E2B0, #3A2F1A);
+    --sm-honey-text: light-dark(#6B470B, #EBC370);
+    --sm-lilac: light-dark(#74508F, #C9ABE0);
+    --sm-lilac-tint: light-dark(#EEE7F4, #33293D);
+    --sm-ponderosa: light-dark(#9A3C22, #EE9A7E);
+    --sm-on-ponderosa: light-dark(#FBFAFC, #2A120C);
+    --sm-ponderosa-tint: light-dark(#F6DED6, #3B231C);
+    --sm-draft-tint: light-dark(#E6E3EC, #2E2B35);
+    --sm-scrim: light-dark(rgb(36 32 43 / 0.45), rgb(0 0 0 / 0.6));
+
+    /* Existing Tailwind names, so ui/* and the admin pages built on them follow the admin tokens */
+    --color-background: var(--sm-sheet);
+    --color-foreground: var(--sm-basalt);
+    --color-muted: var(--sm-fog);
+    --color-muted-foreground: var(--sm-ash);
+    --color-border: var(--sm-seam-strong);
+    --color-card: var(--sm-sheet);
+    --color-card-foreground: var(--sm-basalt);
+    --color-primary: var(--sm-basalt);
+    --color-primary-foreground: var(--sm-on-basalt);
+    --color-ring: var(--sm-lilac);
+    --color-destructive: var(--sm-ponderosa);
+    --color-destructive-foreground: var(--sm-on-ponderosa);
+    --color-accent: var(--sm-honey-tint);
+    --color-accent-foreground: var(--sm-honey-text);
+    --color-link: var(--sm-lilac);
+    --color-going: var(--sm-cedar);
+    --color-going-foreground: var(--sm-on-cedar);
+    --color-interested: var(--sm-honey);
+    --color-interested-foreground: var(--sm-basalt);
+    --color-nav: var(--sm-fog);
+    --font-heading: var(--sm-font-display);
+    --font-sans: var(--sm-font-text);
+    --radius-sm: 3px;
+    --radius-md: 5px;
+    --radius-lg: 8px;
+    --radius-xl: 8px;
+
+    font-family: var(--sm-font-text), ui-sans-serif, system-ui, sans-serif;
+    background-color: var(--sm-fog);
+    color: var(--sm-basalt);
+  }
+  [data-theme="admin"][data-mode="light"] {
+    color-scheme: light;
+  }
+  [data-theme="admin"][data-mode="dark"] {
     color-scheme: dark;
+  }
+
+  /* A real public component previewed inside the admin (event card, announcement bar).
+   * :where() keeps this below the palette selectors above, so a chosen data-palette wins. */
+  :where([data-theme="admin"]) .sm-public-island {
+    color-scheme: light;
+    --color-background: #FBF7F0;
+    --color-foreground: #1F2422;
+    --color-muted: #F4EEE3;
+    --color-muted-foreground: #4A5450;
+    --color-border: #E5DDD1;
+    --color-primary: #1F4D3A;
+    --color-primary-foreground: #FBF7F0;
+    --color-card: #F4EEE3;
+    --color-card-foreground: #1F2422;
+    --color-ring: #1F4D3A;
+    --color-destructive: #B5423A;
+    --color-destructive-foreground: #FBF7F0;
+    --color-accent: #D6A23A;
+    --color-accent-foreground: #1F2422;
+    --color-link: #2F6F7E;
+    --color-nav: #F4EEE3;
+    --radius-sm: 0.875rem;
+    --radius-md: 1rem;
+    --radius-lg: 1.125rem;
+    --radius-xl: 0.75rem;
+    --font-heading: var(--sm-public-heading);
+    --font-sans: var(--sm-public-sans);
+    font-family: var(--sm-public-sans), ui-sans-serif, system-ui, sans-serif;
+    background: var(--color-background);
+    color: var(--color-foreground);
   }
 }
 
@@ -195,13 +304,331 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading), ui-sans-serif, system-ui, sans-serif;
   }
+  [data-theme="admin"] :focus-visible {
+    outline: 2px solid var(--sm-lilac);
+    outline-offset: 2px;
+  }
+  [data-theme="admin"] ::placeholder {
+    color: var(--sm-ash-quiet);
+  }
   [data-theme="admin"] h1,
   [data-theme="admin"] h2,
-  [data-theme="admin"] h3,
-  [data-theme="admin"] h4,
-  [data-theme="admin"] h5,
-  [data-theme="admin"] h6 {
-    font-weight: 600;
+  [data-theme="admin"] h3 {
+    font-weight: 700;
+  }
+  [data-theme="admin"] ::selection {
+    background-color: var(--sm-lilac-tint);
+    color: var(--sm-basalt);
+  }
+
+  /* The document canvas, scrollbars and overscroll follow the admin mode, not the public theme
+   * (next-themes writes color-scheme inline on <html>, hence !important). */
+  html:has(body [data-theme="admin"]) {
+    color-scheme: light dark !important;
+  }
+  html:has(body [data-theme="admin"][data-mode="light"]) {
+    color-scheme: light !important;
+  }
+  html:has(body [data-theme="admin"][data-mode="dark"]) {
+    color-scheme: dark !important;
+  }
+  /* Until the admin shell mounts, the color-scheme meta from the admin layout's viewport carries
+   * the mode. */
+  html:has(meta[name="color-scheme"][content="light"]):not(:has([data-theme="admin"])) body,
+  html:has(meta[name="color-scheme"][content="light dark"]):not(:has([data-theme="admin"])) body {
+    background-color: #F1EEF4;
+  }
+  html:has(meta[name="color-scheme"][content="dark"]):not(:has([data-theme="admin"])) body {
+    background-color: #1B1920;
+  }
+  @media (prefers-color-scheme: dark) {
+    html:has(meta[name="color-scheme"][content="light dark"]):not(:has([data-theme="admin"])) body {
+      background-color: #1B1920;
+    }
+  }
+  /* Set with media queries: the compiled light-dark() fallback reads variables that the
+   * !important color-scheme above pins to light. */
+  body:has([data-theme="admin"]) {
+    background-color: #F1EEF4;
+  }
+  body:has([data-theme="admin"][data-mode="dark"]) {
+    background-color: #1B1920;
+  }
+  @media (prefers-color-scheme: dark) {
+    body:has([data-theme="admin"][data-mode="system"]) {
+      background-color: #1B1920;
+    }
+  }
+  /* The admin shell has its own skip link to #sm-main */
+  body:has([data-theme="admin"]) > .skip-link {
+    display: none;
+  }
+
+  @media (forced-colors: active) {
+    [data-theme="admin"] :focus-visible {
+      outline-color: Highlight;
+    }
+  }
+}
+
+/* One elevation, for floating layers only (dialogs, popovers, menus, toasts, Jump) */
+@utility sm-float {
+  background-color: var(--sm-raised);
+  border: 1px solid light-dark(transparent, #827B8A);
+  box-shadow:
+    0 1px 2px light-dark(rgb(36 32 43 / 0.08), rgb(0 0 0 / 0.40)),
+    0 8px 24px light-dark(rgb(36 32 43 / 0.14), rgb(0 0 0 / 0.50));
+}
+
+/* Admin shell, rail and stall. Pane mode (at least 1024 x 600): a fixed-height grid whose screen row
+ * holds panes that scroll by themselves. Page mode (narrower or shorter, which covers 400% zoom):
+ * the document scrolls and the bars are sticky. */
+@layer components {
+  /* --sm-sticky-top: where a sticky heading stops, below the sticky top bar in page mode. */
+  .sm-shell {
+    position: relative;
+    min-height: 100dvh;
+    --sm-bottom-bar-h: 0px;
+    --sm-sticky-top: 48px;
+  }
+  .sm-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    height: 48px;
+  }
+  .sm-main {
+    padding: 16px 16px calc(24px + var(--sm-bottom-bar-h));
+  }
+  .sm-main:focus:not(:focus-visible) {
+    outline: none;
+  }
+  .sm-main:focus-visible {
+    outline-offset: -2px;
+  }
+  .sm-main:has(> .sm-screen) {
+    padding: 0 0 var(--sm-bottom-bar-h);
+  }
+  .sm-overlays {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+  }
+  #sm-layer {
+    position: relative;
+    z-index: 40;
+  }
+  .sm-bottom-bar {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 30;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .sm-shell:has([data-no-bottom-bar]) .sm-bottom-bar {
+    display: none;
+  }
+  .sm-pane {
+    padding: 16px;
+  }
+  .sm-sticky-bottom {
+    position: sticky;
+    bottom: var(--sm-bottom-bar-h);
+    z-index: 20;
+  }
+  /* Older engines do not inherit custom properties into ::backdrop, hence the fallback. */
+  .sm-dialog::backdrop {
+    background-color: var(--sm-scrim, rgb(36 32 43 / 0.45));
+  }
+  @media (forced-colors: active) {
+    .sm-dialog {
+      border: 1px solid CanvasText;
+    }
+  }
+  /* The admin has one animation (the stall fill); toasts appear and leave instantly. */
+  .sm-toaster [data-sonner-toast] {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  @media (max-width: 767px) {
+    .sm-shell {
+      --sm-bottom-bar-h: calc(56px + env(safe-area-inset-bottom));
+    }
+    .sm-shell:has([data-no-bottom-bar]) {
+      --sm-bottom-bar-h: 0px;
+    }
+  }
+  @media (min-width: 768px) {
+    .sm-main {
+      padding: 24px;
+    }
+    .sm-main:has(> .sm-screen) {
+      padding: 0;
+    }
+    .sm-bottom-bar {
+      display: none;
+    }
+    .sm-pane {
+      padding: 20px;
+    }
+  }
+  @media (min-width: 1024px) and (min-height: 600px) {
+    .sm-shell {
+      display: grid;
+      grid-template-rows: 48px auto minmax(0, 1fr);
+      height: 100dvh;
+      min-height: 0;
+      --sm-sticky-top: 0px;
+    }
+    .sm-topbar {
+      position: static;
+    }
+    .sm-main {
+      min-height: 0;
+      overflow-y: auto;
+    }
+    .sm-main:has(> .sm-screen) {
+      overflow: hidden;
+    }
+    .sm-screen {
+      height: 100%;
+      min-height: 0;
+    }
+    .sm-pane {
+      min-height: 0;
+      overflow-y: auto;
+    }
+    .sm-sticky-bottom {
+      position: static;
+    }
+  }
+  @media (max-width: 1023.98px), (max-height: 599.98px) {
+    html:has(body [data-theme="admin"]) {
+      scroll-padding-top: 56px;
+      scroll-padding-bottom: calc(56px + var(--sm-bottom-bar-h, 0px));
+    }
+  }
+
+  /* List rows: the stretched title link is the roving focus target; the ring and cursor ground
+   * are drawn on the row, inset so a scrolling pane never clips them. */
+  .sm-row {
+    position: relative;
+  }
+  .sm-row-link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+  .sm-row-link:focus-visible {
+    outline: none;
+  }
+  .sm-row [data-row-action] {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Stall glyph. Colors are inline per part; forced-colors overrides them with system colors. */
+  .sm-stall {
+    display: block;
+    flex: none;
+    overflow: visible;
+    forced-color-adjust: none;
+  }
+  .sm-stall--md {
+    width: 12px;
+    height: 14px;
+  }
+  .sm-stall--sm,
+  .sm-stall--rail {
+    width: 10px;
+    height: 12px;
+  }
+  .sm-stall--xs {
+    width: 8px;
+    height: 9.333px;
+  }
+  @media (min-width: 1280px) {
+    .sm-stall--rail {
+      width: 12px;
+      height: 14px;
+    }
+  }
+  .sm-booth {
+    display: none;
+  }
+  /* Below 2dppx the 10 px scallop smears into a bar, so dense glyphs draw the booth squares. */
+  @media (max-resolution: 1.99dppx) {
+    .sm-stall--sm .sm-stall-shape,
+    .sm-stall--xs .sm-stall-shape {
+      display: none;
+    }
+    .sm-stall--sm .sm-booth,
+    .sm-stall--xs .sm-booth {
+      display: inline;
+    }
+  }
+  @media (max-width: 1279.98px) and (max-resolution: 1.99dppx) {
+    .sm-stall--rail .sm-stall-shape {
+      display: none;
+    }
+    .sm-stall--rail .sm-booth {
+      display: inline;
+    }
+  }
+  .sm-stall[data-reach] {
+    outline: 2px solid var(--sm-lilac);
+    outline-offset: 1px;
+    border-radius: 3px;
+  }
+  .sm-stall-fill {
+    animation: sm-stall-fill 240ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sm-stall-fill {
+      animation: none;
+    }
+  }
+  @media (forced-colors: active) {
+    .sm-stall [data-part="solid"] {
+      fill: CanvasText !important;
+      stroke: CanvasText !important;
+    }
+    .sm-stall [data-part="wait-fill"] {
+      fill: Canvas !important;
+    }
+    .sm-stall [data-part="line"] {
+      stroke: CanvasText !important;
+    }
+    .sm-stall [data-part="hatch"] {
+      display: none;
+    }
+    .sm-stall[data-reach] {
+      outline-color: Highlight;
+    }
+  }
+}
+
+/* The keyboard cursor on a list row. Unlayered, so it wins over the row's background utilities. */
+.sm-row:has(.sm-row-link:focus-visible) {
+  outline: 2px solid var(--sm-lilac);
+  outline-offset: -2px;
+  background-color: var(--sm-lilac-tint);
+}
+@media (forced-colors: active) {
+  .sm-row:has(.sm-row-link:focus-visible) {
+    outline-color: Highlight;
+  }
+}
+
+/* With no reference box given, an SVG group clips against its stroke box. */
+@keyframes sm-stall-fill {
+  from {
+    clip-path: inset(calc(100% + 1px) -1px -1px -1px);
+  }
+  to {
+    clip-path: inset(-1px);
   }
 }
 

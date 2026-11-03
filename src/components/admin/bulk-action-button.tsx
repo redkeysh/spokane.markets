@@ -2,6 +2,8 @@
 
 import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { adminButtonClass } from "@/components/admin/kit/button";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 
 type BulkActionResult = void | { ok: true; message: string } | { ok: false; error: string };
@@ -51,8 +53,9 @@ export function BulkActionButton({
       <button
         ref={triggerRef}
         type="button"
-        className={className}
+        className={cn(adminButtonClass({ variant: "outline", size: "sm" }), className)}
         disabled={pending}
+        aria-busy={pending || undefined}
         onClick={() => setOpen(true)}
       >
         {label}

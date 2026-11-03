@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-/** Consistent bordered, horizontally-scrollable table container. */
+/** Table container on sheet with seam row lines; scrolls sideways only when it must. */
 export function AdminTable({
   children,
   className,
@@ -9,22 +9,22 @@ export function AdminTable({
   className?: string;
 }) {
   return (
-    <div className={cn("overflow-x-auto rounded-xl border border-border", className)}>
-      <table className="w-full text-sm">{children}</table>
+    <div className={cn("overflow-x-auto border-y border-seam bg-sheet", className)}>
+      <table className="w-full font-text text-[13px]/[18px] tabular-nums">{children}</table>
     </div>
   );
 }
 
-/** Standard header row. Pass <th> cells as children. */
+/** Header row: sentence-case labels in ash, no fill. Pass <th> cells as children. */
 export function AdminTableHead({ children }: { children: React.ReactNode }) {
   return (
-    <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+    <thead className="border-b border-seam-strong text-left text-xs font-semibold text-ash">
       <tr>{children}</tr>
     </thead>
   );
 }
 
-/** Standard body wrapper with row dividers. */
+/** Body wrapper with seam row dividers. */
 export function AdminTableBody({ children }: { children: React.ReactNode }) {
-  return <tbody className="divide-y divide-border">{children}</tbody>;
+  return <tbody className="divide-y divide-seam">{children}</tbody>;
 }

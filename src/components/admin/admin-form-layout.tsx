@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
+/** Main and side columns that scroll together; nothing in them is sticky. */
 export function AdminTwoColumnFormLayout({
   main,
   aside,
@@ -9,13 +10,17 @@ export function AdminTwoColumnFormLayout({
   aside: ReactNode;
 }) {
   return (
-    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)] lg:gap-8">
-      <div className="min-w-0 space-y-6">{main}</div>
-      <aside className="min-w-0 space-y-6 lg:sticky lg:top-6">{aside}</aside>
+    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(296px,1fr)] xl:gap-10">
+      <div className="min-w-0 space-y-8">{main}</div>
+      <aside className="min-w-0 space-y-8">{aside}</aside>
     </div>
   );
 }
 
+/**
+ * The form's action row. In pane mode it is a static footer at the end of the form; in page
+ * mode it sticks to the bottom of the viewport, above the phone bottom bar.
+ */
 export function AdminStickyActionBar({
   children,
   className,
@@ -26,9 +31,7 @@ export function AdminStickyActionBar({
   return (
     <div
       className={cn(
-        "sticky bottom-0 z-20 -mx-4 mt-8 border-t border-border bg-background/95 px-4 py-3 backdrop-blur",
-        "sm:-mx-6 sm:px-6",
-        "lg:mx-0 lg:rounded-lg lg:border lg:bg-background lg:px-4 lg:py-3",
+        "sm-sticky-bottom -mx-4 mt-8 border-t border-seam bg-sheet px-4 py-3 md:-mx-6 md:px-6",
         className
       )}
     >

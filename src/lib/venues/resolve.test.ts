@@ -12,7 +12,8 @@ vi.mock("@/lib/db", () => ({
 }));
 vi.mock("@/lib/geocode", () => ({ geocodeAddress: geocodeMock }));
 
-import { findOrCreateVenue } from "./resolve";
+import { DEFAULT_PIN } from "./match";
+import { findMatchingVenue, findOrCreateVenue, lookupVenue } from "./resolve";
 
 const INPUT = {
   name: "Shriners Event Center",
@@ -121,5 +122,51 @@ describe("findOrCreateVenue", () => {
     createMock.mockRejectedValue(Object.assign(new Error("Unique constraint"), { code: "P2002" }));
     findFirstMock.mockResolvedValue({ id: "raced", name: INPUT.name, deletedAt: null });
     await expect(findOrCreateVenue(INPUT)).resolves.toEqual({ venueId: "raced", created: false });
+  });
+});
+
+describe("findMatchingVenue", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    findManyMock.mockResolvedValue([]);
+  });
+
+  it("does not search around the admin form's default pin", async () => {
+    await findMatchingVenue({ ...INPUT, lat: DEFAULT_PIN.lat, lng: DEFAULT_PIN.lng });
+    expect(findManyMock.mock.calls[0][0].where.OR).toHaveLength(2);
+  });
+});
+
+describe("lookupVenue", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    findManyMock.mockResolvedValue([]);
+  });
+
+  it("finds a venue only the geocoded spot reveals, without creating anything", async () => {
+    const nearby = existing({ address: "7217 Westbow" });
+    findManyMock.mockResolvedValueOnce([nearby]).mockResolvedValueOnce([nearby]);
+    geocodeMock.mockResolvedValue({ lat: 47.6136, lng: -117.5136 });
+    await expect(lookupVenue(INPUT)).resolves.toEqual({ status: "existing", venue: nearby });
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it("returns the coordinates a new venue would get", async () => {
+    geocodeMock.mockResolvedValue({ lat: 47.6136, lng: -117.5136 });
+    await expect(lookupVenue(INPUT)).resolves.toEqual({ status: "new", coords: { lat: 47.6136, lng: -117.5136 } });
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it("uses supplied coordinates without geocoding", async () => {
+    await expect(lookupVenue({ ...INPUT, lat: 47.6, lng: -117.5 })).resolves.toEqual({
+      status: "new",
+      coords: { lat: 47.6, lng: -117.5 },
+    });
+    expect(geocodeMock).not.toHaveBeenCalled();
+  });
+
+  it("reports an address no geocoder can place", async () => {
+    geocodeMock.mockResolvedValue(null);
+    await expect(lookupVenue(INPUT)).resolves.toEqual({ status: "unplaceable" });
   });
 });

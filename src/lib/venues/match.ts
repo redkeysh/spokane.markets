@@ -14,6 +14,16 @@ export const SAME_SPOT_METERS = 75;
 /** Within this distance, the same street address and name is one venue even when the city or ZIP differs. */
 export const NEARBY_METERS = 1000;
 
+/** The admin venue form's starting pin. A venue saved without moving it has no real location. */
+export const DEFAULT_PIN = { lat: 47.6588, lng: -117.426 } as const;
+
+/** The coordinates, or null when they are missing or still the untouched DEFAULT_PIN. */
+export function realCoords(v: { lat?: number | null; lng?: number | null }): { lat: number; lng: number } | null {
+  if (v.lat == null || v.lng == null || Number.isNaN(v.lat) || Number.isNaN(v.lng)) return null;
+  if (Math.abs(v.lat - DEFAULT_PIN.lat) < 1e-6 && Math.abs(v.lng - DEFAULT_PIN.lng) < 1e-6) return null;
+  return { lat: v.lat, lng: v.lng };
+}
+
 const TOKEN_ALIASES: Record<string, string> = {
   street: "st",
   avenue: "ave",
@@ -67,7 +77,7 @@ export function normalizeVenueName(name: string): string {
 
 /** The normalized name without a trailing qualifier in parentheses or after a comma or spaced dash ("Kendall Yards (Summit Parkway)" -> "kendall yards"). */
 export function baseVenueName(name: string): string {
-  const base = normalizeVenueName(name.replace(/\([^)]*\)\s*$/, "").split(/,|\s[-–—]\s/)[0]);
+  const base = normalizeVenueName(name.replace(/\([^)]*\)\s*$/, "").split(/,|\s\p{Pd}\s/u)[0]);
   return base || normalizeVenueName(name);
 }
 
@@ -83,6 +93,13 @@ export function streetCore(address: string): string {
   const tokens = normalizeTokens(address);
   const unitAt = tokens.findIndex((t) => UNIT_MARKERS.has(t));
   return (unitAt === -1 ? tokens : tokens.slice(0, unitAt)).filter((t) => !STREET_TYPES.has(t)).join(" ");
+}
+
+/** The unit after a suite or unit marker ("404 N Havana St Suite 1" -> "1"), or "" when there is none. */
+export function streetUnit(address: string): string {
+  const tokens = normalizeTokens(address);
+  const unitAt = tokens.findIndex((t) => UNIT_MARKERS.has(t));
+  return unitAt === -1 ? "" : tokens.slice(unitAt + 1).join(" ");
 }
 
 function normalizeCity(city: string): string {
@@ -116,16 +133,31 @@ function nameTokenOverlap(a: string, b: string) {
   return { ta, tb, jaccard: union > 0 ? shared / union : 0 };
 }
 
-/** Near-identical names: safe for automatic reuse ("St. Luke Lutheran Church" = "St Luke Lutheran Church"). */
+function numberTokens(tokens: Set<string>): string {
+  return [...tokens].filter((t) => /\d/.test(t)).sort().join(" ");
+}
+
+/**
+ * Near-identical names: safe for automatic reuse ("St. Luke Lutheran Church" =
+ * "St Luke Lutheran Church"). Names with different numbers never match
+ * ("Building 7" and "Building 8").
+ */
 export function namesMatch(a: string, b: string): boolean {
   const na = normalizeVenueName(a);
   if (na !== "" && na === normalizeVenueName(b)) return true;
-  return nameTokenOverlap(a, b).jaccard >= 0.75;
+  const { ta, tb, jaccard } = nameTokenOverlap(a, b);
+  return numberTokens(ta) === numberTokens(tb) && jaccard >= 0.75;
 }
 
-/** Near-identical once a trailing qualifier is dropped from either ("Spokane Community College, The Lair" = "Spokane Community College"). */
-export function baseNamesMatch(a: string, b: string): boolean {
-  return namesMatch(baseVenueName(a), baseVenueName(b));
+/**
+ * One-way: `qualified` has a trailing qualifier and equals `plain` without it
+ * ("Kendall Yards (Summit Parkway)" against "Kendall Yards"). A plain name
+ * never matches a qualified one, and two qualifiers on one base name never
+ * match each other.
+ */
+export function qualifiedNameMatches(qualified: string, plain: string): boolean {
+  const base = baseVenueName(qualified);
+  return base !== normalizeVenueName(qualified) && base === normalizeVenueName(plain);
 }
 
 /** Looser: mostly overlapping words, or one name inside the other ("Kendall Yards" in "Kendall Yards (Summit Parkway)"). */
@@ -151,33 +183,42 @@ export function distanceMeters(
   return 2 * earthRadius * Math.asin(Math.sqrt(h));
 }
 
-/** False when either side has no coordinates. */
+/** False when either side has no real coordinates (see realCoords). */
 function withinMeters(a: VenueLike, b: VenueLike, meters: number): boolean {
-  if (a.lat == null || a.lng == null || b.lat == null || b.lng == null) return false;
-  return distanceMeters({ lat: a.lat, lng: a.lng }, { lat: b.lat, lng: b.lng }) <= meters;
+  const ca = realCoords(a);
+  const cb = realCoords(b);
+  return ca !== null && cb !== null && distanceMeters(ca, cb) <= meters;
 }
 
 function atSameSpot(a: VenueLike, b: VenueLike): boolean {
   return withinMeters(a, b, SAME_SPOT_METERS);
 }
 
+/** Same street number and name, and the same unit unless either address has none. */
 function sameStreetAddress(a: VenueLike, b: VenueLike): boolean {
   const core = streetCore(a.address);
-  return core !== "" && core === streetCore(b.address);
+  if (core === "" || core !== streetCore(b.address)) return false;
+  const ua = streetUnit(a.address);
+  const ub = streetUnit(b.address);
+  return ua === "" || ub === "" || ua === ub;
 }
 
 /**
- * Strict: safe to reuse an existing venue automatically instead of creating a
- * new one. Requires the same street address or spot, plus a near-identical
- * name or the same name once a trailing qualifier is dropped. Different places
- * that share an address under unrelated names ("Riverfront Park" and "Spokane
- * Pavilion at Riverfront Park") stay apart. The city and ZIP must agree unless
- * both venues have coordinates within NEARBY_METERS.
+ * Strict: safe to reuse `existing` automatically instead of creating `input`.
+ * Requires a near-identical name at the same street address (or, in the same
+ * city or ZIP, the same spot), or a qualified input name whose base equals the
+ * existing plain name at the same street address. Different places that share
+ * an address under unrelated names ("Riverfront Park" and "Spokane Pavilion at
+ * Riverfront Park") or different qualifiers stay apart. When the city and ZIP
+ * differ, the street address must match and both venues must have real
+ * coordinates within NEARBY_METERS.
  */
-export function isSameVenue(a: VenueLike, b: VenueLike): boolean {
-  if (!sameLocality(a, b) && !withinMeters(a, b, NEARBY_METERS)) return false;
-  if (!namesMatch(a.name, b.name) && !baseNamesMatch(a.name, b.name)) return false;
-  return sameStreetAddress(a, b) || atSameSpot(a, b);
+export function isSameVenue(input: VenueLike, existing: VenueLike): boolean {
+  const sameAddress = sameStreetAddress(input, existing);
+  const localityMatches = sameLocality(input, existing);
+  if (!localityMatches && !(sameAddress && withinMeters(input, existing, NEARBY_METERS))) return false;
+  if (namesMatch(input.name, existing.name)) return sameAddress || atSameSpot(input, existing);
+  return sameAddress && qualifiedNameMatches(input.name, existing.name);
 }
 
 /**
@@ -187,7 +228,7 @@ export function isSameVenue(a: VenueLike, b: VenueLike): boolean {
  * postal area.
  */
 export function isPossibleDuplicate(a: VenueLike, b: VenueLike): boolean {
-  if (isSameVenue(a, b)) return true;
+  if (isSameVenue(a, b) || isSameVenue(b, a)) return true;
   if (sameLocality(a, b) && sameStreetAddress(a, b)) return true;
   if (sameLocality(a, b) && normalizeVenueName(a.name) === normalizeVenueName(b.name)) return true;
   if (sameZipArea(a, b) && sameStreetAddress(a, b) && namesLookAlike(a.name, b.name)) return true;

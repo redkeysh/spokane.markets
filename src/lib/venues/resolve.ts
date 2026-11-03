@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { geocodeAddress } from "@/lib/geocode";
-import { isSameVenue, NEARBY_METERS } from "./match";
+import { isSameVenue, NEARBY_METERS, realCoords } from "./match";
 
 export type VenueAddressInput = {
   name: string;
@@ -55,11 +55,11 @@ function nearbyBox(coords: { lat: number; lng: number }) {
 /**
  * The venue an input refers to, if one exists. Active venues win over archived
  * ones. Candidates share the input's ZIP or city, or lie near its coordinates
- * when it has them.
+ * when it has real ones (see realCoords).
  */
 export async function findMatchingVenue(input: VenueAddressInput): Promise<VenueMatch | null> {
   const zip = input.zip.trim().slice(0, 5);
-  const coords = validCoords(input.lat, input.lng);
+  const coords = realCoords(input);
   const candidates = await db.venue.findMany({
     where: {
       OR: [
@@ -87,34 +87,55 @@ function reuseExisting(venue: { id: string; name: string; deletedAt: Date | null
   return { venueId: venue.id, created: false };
 }
 
-/**
- * Reuses the existing venue for an address when there is one; otherwise
- * geocodes (when no coordinates were supplied) and creates it. Never
- * fabricates a location: an address no provider can place is rejected.
- */
-export async function findOrCreateVenue(input: VenueAddressInput): Promise<FindOrCreateVenueResult> {
-  const fields = {
+function trimFields(input: VenueAddressInput) {
+  return {
     name: input.name.trim(),
     address: input.address.trim(),
     city: input.city.trim(),
     state: input.state.trim(),
     zip: input.zip.trim(),
   };
-  let coords = validCoords(input.lat, input.lng);
+}
 
-  const existing = await findMatchingVenue({ ...fields, ...coords });
-  if (existing) return reuseExisting(existing);
+export type VenueLookup =
+  | { status: "existing"; venue: VenueMatch }
+  | { status: "new"; coords: { lat: number; lng: number } }
+  | { status: "unplaceable" };
 
-  if (!coords) {
-    coords = await geocodeAddress(fields);
-    if (!coords) {
-      return {
-        error: `Couldn't find "${fields.address}, ${fields.city}, ${fields.state} ${fields.zip}" on the map. Check the street, city, state, and ZIP, or choose an existing venue.`,
-      };
-    }
-    const nearby = await findMatchingVenue({ ...fields, ...coords });
-    if (nearby) return reuseExisting(nearby);
+/**
+ * What findOrCreateVenue does for an input, without creating anything: the
+ * matching venue (possibly archived), the coordinates a new venue would get,
+ * or "unplaceable" when no geocoder can place the address. Without supplied
+ * coordinates it geocodes and matches again at the geocoded spot.
+ */
+export async function lookupVenue(input: VenueAddressInput): Promise<VenueLookup> {
+  const fields = trimFields(input);
+  const supplied = validCoords(input.lat, input.lng);
+  const existing = await findMatchingVenue({ ...fields, ...supplied });
+  if (existing) return { status: "existing", venue: existing };
+  if (supplied) return { status: "new", coords: supplied };
+
+  const geocoded = await geocodeAddress(fields);
+  if (!geocoded) return { status: "unplaceable" };
+  const nearby = await findMatchingVenue({ ...fields, ...geocoded });
+  return nearby ? { status: "existing", venue: nearby } : { status: "new", coords: geocoded };
+}
+
+/**
+ * Reuses the existing venue for an address when there is one; otherwise
+ * creates it at the supplied or geocoded coordinates (see lookupVenue). Never
+ * fabricates a location: an address no provider can place is rejected.
+ */
+export async function findOrCreateVenue(input: VenueAddressInput): Promise<FindOrCreateVenueResult> {
+  const fields = trimFields(input);
+  const lookup = await lookupVenue(input);
+  if (lookup.status === "existing") return reuseExisting(lookup.venue);
+  if (lookup.status === "unplaceable") {
+    return {
+      error: `Couldn't find "${fields.address}, ${fields.city}, ${fields.state} ${fields.zip}" on the map. Check the street, city, state, and ZIP, or choose an existing venue.`,
+    };
   }
+  const coords = lookup.coords;
 
   try {
     const venue = await db.venue.create({ data: { ...fields, lat: coords.lat, lng: coords.lng } });

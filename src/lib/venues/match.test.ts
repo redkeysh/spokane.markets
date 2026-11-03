@@ -1,14 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
-  baseNamesMatch,
   baseVenueName,
+  DEFAULT_PIN,
   findDuplicateGroups,
   isPossibleDuplicate,
   isSameVenue,
   namesLookAlike,
   namesMatch,
   normalizeVenueName,
+  qualifiedNameMatches,
+  realCoords,
   streetCore,
+  streetUnit,
   type VenueLike,
 } from "./match";
 
@@ -35,6 +38,18 @@ describe("normalization", () => {
     expect(streetCore("404 N Havana St Suit 1")).toBe(streetCore("404 North Havana Street"));
     expect(streetCore("1622 E Wellesley Ave")).toBe(streetCore("1622 E Wellesley"));
   });
+
+  it("reads the unit after a suite or unit marker", () => {
+    expect(streetUnit("404 N Havana St Suit 1")).toBe("1");
+    expect(streetUnit("835 N Post St Suite 120")).toBe(streetUnit("835 N Post St Ste 120"));
+    expect(streetUnit("404 N Havana St")).toBe("");
+  });
+
+  it("treats the admin form's untouched default pin as no location", () => {
+    expect(realCoords(DEFAULT_PIN)).toBeNull();
+    expect(realCoords({ lat: null, lng: -117.4 })).toBeNull();
+    expect(realCoords({ lat: 47.6626, lng: -117.3511 })).toEqual({ lat: 47.6626, lng: -117.3511 });
+  });
 });
 
 describe("name rules", () => {
@@ -42,6 +57,11 @@ describe("name rules", () => {
     expect(namesMatch("St. Luke Lutheran Church", "St Luke Lutheran Church")).toBe(true);
     expect(namesMatch("Riverfront Park", "Spokane Pavilion at Riverfront Park")).toBe(false);
     expect(namesMatch("Convention Center", "Spokane Convention Center")).toBe(false);
+  });
+
+  it("namesMatch keeps names with different numbers apart", () => {
+    expect(namesMatch("Spokane Valley Mall Food Court Suite 100", "Spokane Valley Mall Food Court Suite 200")).toBe(false);
+    expect(namesMatch("Page 42 Bookstore", "The Page 42 Bookstore")).toBe(true);
   });
 
   it("namesLookAlike also accepts one name inside another", () => {
@@ -57,11 +77,14 @@ describe("name rules", () => {
     expect(baseVenueName("(TBD)")).toBe("tbd");
   });
 
-  it("baseNamesMatch compares names without their qualifiers", () => {
-    expect(baseNamesMatch("Kendall Yards", "Kendall Yards (Summit Parkway)")).toBe(true);
-    expect(baseNamesMatch("Spokane Community College, The Lair", "Spokane Community College")).toBe(true);
-    expect(baseNamesMatch("Riverfront Park", "Spokane Pavilion at Riverfront Park")).toBe(false);
-    expect(baseNamesMatch("Kendall Yards", "Kendall Yards Night Market")).toBe(false);
+  it("qualifiedNameMatches lets a qualified name match its plain base, one way only", () => {
+    expect(qualifiedNameMatches("Kendall Yards (Summit Parkway)", "Kendall Yards")).toBe(true);
+    expect(qualifiedNameMatches("Spokane Community College, The Lair", "Spokane Community College")).toBe(true);
+    expect(qualifiedNameMatches("Kendall Yards", "Kendall Yards (Summit Parkway)")).toBe(false);
+    expect(qualifiedNameMatches("River Park Square (Nordstrom)", "River Park Square (AMC Theatres)")).toBe(false);
+    expect(qualifiedNameMatches("Spokane County Fair & Expo Center (East)", "Spokane County Fair & Expo Center West")).toBe(false);
+    expect(qualifiedNameMatches("Riverfront Park", "Spokane Pavilion at Riverfront Park")).toBe(false);
+    expect(qualifiedNameMatches("Kendall Yards", "Kendall Yards")).toBe(false);
   });
 });
 
@@ -87,24 +110,95 @@ describe("isSameVenue (automatic reuse)", () => {
     expect(isSameVenue(a, b)).toBe(true);
   });
 
-  it("matches a name with a trailing qualifier at the same address", () => {
+  it("matches a qualified input to the plain existing venue at the same address", () => {
     expect(
       isSameVenue(
-        v("Kendall Yards", "1335 W Summit Pkwy", { zip: "99201" }),
-        v("Kendall Yards (Summit Parkway)", "1335 W Summit Pkwy", { zip: "99201" })
+        v("Kendall Yards (Summit Parkway)", "1335 W Summit Pkwy", { zip: "99201" }),
+        v("Kendall Yards", "1335 W Summit Pkwy", { zip: "99201" })
       )
     ).toBe(true);
     expect(
       isSameVenue(
-        v("Spokane Community College", "1810 North Greene Street", { zip: "99217" }),
-        v("Spokane Community College, The Lair", "1810 N Greene St", { zip: "99217" })
+        v("Spokane Community College, The Lair", "1810 N Greene St", { zip: "99217" }),
+        v("Spokane Community College", "1810 North Greene Street", { zip: "99217" })
       )
     ).toBe(true);
   });
 
-  it("does not match a qualified name at a different address", () => {
+  it("does not let a plain input match a qualified existing venue", () => {
     expect(
-      isSameVenue(v("Kendall Yards", "1335 W Summit Pkwy"), v("Kendall Yards (Olmsted Brothers Green)", "1101 W Summit Pkwy"))
+      isSameVenue(v("NorthTown Mall", "4750 N Division St"), v("NorthTown Mall (Regal Cinemas)", "4750 N Division St"))
+    ).toBe(false);
+  });
+
+  it("keeps different sub-venues at one address apart", () => {
+    const pairs: [VenueLike, VenueLike][] = [
+      [v("River Park Square (Nordstrom)", "808 W Main Ave"), v("River Park Square (AMC Theatres)", "808 W Main Ave")],
+      [v("Spokane Community College (Building 7)", "1810 N Greene St"), v("Spokane Community College (The Lair)", "1810 N Greene St")],
+      [v("Wonder Building, Suite 120", "835 N Post St Ste 120"), v("Wonder Building, Suite 210", "835 N Post St Ste 210")],
+    ];
+    for (const [a, b] of pairs) {
+      expect(isSameVenue(a, b)).toBe(false);
+      expect(isSameVenue(b, a)).toBe(false);
+    }
+  });
+
+  it("keeps suites at one street address apart, but allows one side to omit the suite", () => {
+    expect(isSameVenue(v("Spokane Art Supply", "1303 N Monroe St Ste 1"), v("Spokane Art Supply", "1303 N Monroe St Ste 2"))).toBe(false);
+    expect(isSameVenue(v("Spokane Art Supply", "1303 N Monroe St Suite 1"), v("Spokane Art Supply", "1303 N Monroe St"))).toBe(true);
+  });
+
+  it("does not match a qualified name at a different address, even at the same spot", () => {
+    const spot = { lat: 47.6683, lng: -117.4316 };
+    expect(
+      isSameVenue(v("Kendall Yards (Olmsted Brothers Green)", "1101 W Summit Pkwy"), v("Kendall Yards", "1335 W Summit Pkwy"))
+    ).toBe(false);
+    expect(
+      isSameVenue(v("Kendall Yards (Olmsted Brothers Green)", "1101 W Summit Pkwy", spot), v("Kendall Yards", "1335 W Summit Pkwy", spot))
+    ).toBe(false);
+  });
+
+  describe("the admin form's default pin", () => {
+    const pin = { lat: DEFAULT_PIN.lat, lng: DEFAULT_PIN.lng };
+
+    it("does not join same-named venues in different cities", () => {
+      expect(
+        isSameVenue(
+          v("City Hall", "710 E Mullan Ave", { city: "Coeur d'Alene", zip: "83814", ...pin }),
+          v("City Hall", "10210 E Sprague Ave", { city: "Spokane Valley", zip: "99206", ...pin })
+        )
+      ).toBe(false);
+      expect(
+        isSameVenue(
+          v("City Hall", "100 Main St", { city: "Coeur d'Alene", zip: "83814", ...pin }),
+          v("City Hall", "100 Main St", { city: "Spokane Valley", zip: "99206", ...pin })
+        )
+      ).toBe(false);
+    });
+
+    it("does not count as the same spot", () => {
+      expect(
+        isSameVenue(
+          v("Spokane Farmers Market", "20 W 5th Ave", { zip: "99201", ...pin }),
+          v("Spokane Valley Farmers Market", "2426 N Discovery Pl", { zip: "99201", ...pin })
+        )
+      ).toBe(false);
+      expect(
+        isPossibleDuplicate(
+          v("Yoke's Fresh Market (Mead)", "14202 N Market St", { city: "Mead", zip: "99021", ...pin }),
+          v("Yoke's Fresh Market (Spokane Valley)", "14715 E Sprague Ave", { city: "Spokane Valley", zip: "99216", ...pin })
+        )
+      ).toBe(false);
+    });
+  });
+
+  it("never joins different cities by spot alone", () => {
+    const spot = { lat: 47.6626, lng: -117.3511 };
+    expect(
+      isSameVenue(
+        v("Spokane County Fair & Expo Center", "404 N Havana St", { city: "Spokane Valley", zip: "99216", ...spot }),
+        v("Spokane County Fair & Expo Center", "400 N Havana St", { city: "Spokane", zip: "99202", ...spot })
+      )
     ).toBe(false);
   });
 
@@ -161,6 +255,19 @@ describe("isPossibleDuplicate (admin suggestions)", () => {
         v("Spokane County Fair and Expo Center", "404 N Havana St Suit 1", { city: "Spokane", zip: "99201" })
       )
     ).toBe(true);
+  });
+
+  it("still shows sub-venues at one address to an admin", () => {
+    expect(
+      isPossibleDuplicate(v("River Park Square (Nordstrom)", "808 W Main Ave"), v("River Park Square (AMC Theatres)", "808 W Main Ave"))
+    ).toBe(true);
+  });
+
+  it("suggests a plain and a qualified name at one address in either order", () => {
+    const plain = v("NorthTown Mall", "4750 N Division St");
+    const qualified = v("NorthTown Mall (Regal Cinemas)", "4750 N Division St");
+    expect(isPossibleDuplicate(plain, qualified)).toBe(true);
+    expect(isPossibleDuplicate(qualified, plain)).toBe(true);
   });
 
   it("does not suggest the same address and name across postal areas", () => {

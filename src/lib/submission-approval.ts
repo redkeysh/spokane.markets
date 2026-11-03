@@ -183,7 +183,8 @@ export function buildEventDataFromSubmission(
   };
 }
 
-function revalidateAfterSubmissionEvent() {
+function revalidateAfterSubmissionEvent(eventSlug: string) {
+  revalidatePath(`/events/${eventSlug}`);
   revalidatePath("/events");
   revalidatePath("/events/calendar");
   revalidatePath("/events/map");
@@ -194,8 +195,8 @@ function revalidateAfterSubmissionEvent() {
 }
 
 /**
- * Approves a pending submission and creates a PENDING event. Idempotent if
- * `createdEventId` is already set.
+ * Approves a pending submission and creates its event as PUBLISHED. Idempotent
+ * if `createdEventId` is already set.
  */
 export async function approveSubmissionWithEvent(
   submissionId: string,
@@ -222,7 +223,7 @@ export async function approveSubmissionWithEvent(
   });
 
   const result = await createEvent(eventData, {
-    status: "PENDING",
+    status: "PUBLISHED",
     submittedById: submitterUser?.id ?? null,
   });
 
@@ -244,7 +245,7 @@ export async function approveSubmissionWithEvent(
       userId: submitterUser.id,
       type: "SUBMISSION_APPROVED",
       title: "Your event submission was approved",
-      link: "/events",
+      link: `/events/${result.event.slug}`,
       objectType: "submission",
       objectId: submissionId,
     });
@@ -255,5 +256,5 @@ export async function approveSubmissionWithEvent(
     newValue: { status: "APPROVED", createdEventId: result.event.id },
   });
 
-  revalidateAfterSubmissionEvent();
+  revalidateAfterSubmissionEvent(result.event.slug);
 }

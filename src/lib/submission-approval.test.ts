@@ -1,17 +1,40 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { Submission } from "@prisma/client";
 
-const { findFirstMock } = vi.hoisted(() => ({
+const {
+  findFirstMock,
+  submissionFindUniqueMock,
+  submissionUpdateMock,
+  userFindUniqueMock,
+  createEventMock,
+  createNotificationMock,
+  logAuditMock,
+  revalidatePathMock,
+} = vi.hoisted(() => ({
   findFirstMock: vi.fn(),
+  submissionFindUniqueMock: vi.fn(),
+  submissionUpdateMock: vi.fn(),
+  userFindUniqueMock: vi.fn(),
+  createEventMock: vi.fn(),
+  createNotificationMock: vi.fn(),
+  logAuditMock: vi.fn(),
+  revalidatePathMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
   db: {
     event: { findFirst: findFirstMock },
+    submission: { findUnique: submissionFindUniqueMock, update: submissionUpdateMock },
+    user: { findUnique: userFindUniqueMock },
   },
 }));
+vi.mock("@/lib/shared/event-service", () => ({ createEvent: createEventMock }));
+vi.mock("@/lib/notifications", () => ({ createNotification: createNotificationMock }));
+vi.mock("@/lib/audit", () => ({ logAudit: logAuditMock }));
+vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 
 import {
+  approveSubmissionWithEvent,
   buildEventDataFromSubmission,
   ensureUniqueEventSlug,
   submissionHasCompleteVenueForEvent,
@@ -124,5 +147,69 @@ describe("ensureUniqueEventSlug", () => {
       .mockResolvedValueOnce(null);
     const slug = await ensureUniqueEventSlug("Hello");
     expect(slug).toBe("hello-1");
+  });
+});
+
+describe("approveSubmissionWithEvent", () => {
+  const pendingSubmission = {
+    id: "sub-1",
+    status: "PENDING",
+    createdEventId: null,
+    submitterEmail: "maker@example.com",
+    eventTitle: "Market Day",
+    eventDate: "2026-07-04",
+    eventTime: "10:00",
+    endDate: null,
+    endTime: "15:00",
+    allDay: false,
+    scheduleDays: null,
+    eventDescription: null,
+    imageUrl: null,
+    websiteUrl: null,
+    facebookUrl: null,
+    instagramUrl: null,
+    marketId: null,
+    tagIds: [],
+    featureIds: [],
+    venueName: "Shriners Event Center",
+    venueAddress: "7217 W Westbow Blvd",
+    venueCity: "Spokane",
+    venueState: "WA",
+    venueZip: "99224",
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    findFirstMock.mockResolvedValue(null);
+    submissionFindUniqueMock.mockResolvedValue(pendingSubmission);
+    userFindUniqueMock.mockResolvedValue({ id: "user-1" });
+    createEventMock.mockResolvedValue({ event: { id: "event-1", slug: "market-day" }, error: null });
+  });
+
+  it("publishes the event instead of sending it to a second review", async () => {
+    await approveSubmissionWithEvent("sub-1", "admin-1");
+    expect(createEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({ slug: "market-day" }),
+      expect.objectContaining({ status: "PUBLISHED", submittedById: "user-1" })
+    );
+    expect(submissionUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: "APPROVED", createdEventId: "event-1" }),
+      })
+    );
+  });
+
+  it("links the submitter to the live event and refreshes its page", async () => {
+    await approveSubmissionWithEvent("sub-1", "admin-1");
+    expect(createNotificationMock).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "SUBMISSION_APPROVED", link: "/events/market-day" })
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith("/events/market-day");
+  });
+
+  it("does nothing for a submission that was already approved", async () => {
+    submissionFindUniqueMock.mockResolvedValue({ ...pendingSubmission, status: "APPROVED" });
+    await approveSubmissionWithEvent("sub-1", "admin-1");
+    expect(createEventMock).not.toHaveBeenCalled();
   });
 });

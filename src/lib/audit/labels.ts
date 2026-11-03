@@ -6,6 +6,19 @@ export type AuditEntry = {
   user: { name: string | null; email: string } | null;
 };
 
+/**
+ * Status changes are logged as { newValue: { status } } by the server actions,
+ * but the review PATCH route logs a top-level { status }. Read both so an
+ * approval is never mislabeled as a rejection.
+ */
+function statusOf(e: AuditEntry): string | undefined {
+  const m = e.metadata as
+    | { status?: string; newValue?: { status?: string } }
+    | null
+    | undefined;
+  return m?.newValue?.status ?? m?.status;
+}
+
 const ACTION_MESSAGES: Record<string, (entry: AuditEntry) => string> = {
   DELETE_EVENT: () => "deleted an event",
   SOFT_DELETE_EVENT: () => "archived an event",
@@ -18,31 +31,24 @@ const ACTION_MESSAGES: Record<string, (entry: AuditEntry) => string> = {
   RESTORE_MARKET: () => "restored a market",
   SOFT_DELETE_VENDOR: () => "archived a vendor",
   RESTORE_VENDOR: () => "restored a vendor",
-  UPDATE_SUBMISSION_STATUS: (e) => {
-    const status = (e.metadata as { status?: string })?.status;
-    return status === "APPROVED" ? "approved a submission" : "rejected a submission";
-  },
-  UPDATE_REVIEW_STATUS: (e) => {
-    const status = (e.metadata as { status?: string })?.status;
-    return status === "APPROVED" ? "approved a review" : "rejected a review";
-  },
-  UPDATE_PHOTO_STATUS: (e) => {
-    const status = (e.metadata as { status?: string })?.status;
-    return status === "APPROVED" ? "approved a photo" : "rejected a photo";
-  },
-  UPDATE_CLAIM_STATUS: (e) => {
-    const status = (e.metadata as { status?: string })?.status;
-    return status === "APPROVED" ? "approved a market claim" : "rejected a market claim";
-  },
-  UPDATE_VENDOR_CLAIM_STATUS: (e) => {
-    const status = (e.metadata as { status?: string })?.status;
-    return status === "APPROVED" ? "approved a vendor claim" : "rejected a vendor claim";
-  },
-  UPDATE_REPORT_STATUS: (e) => {
-    const status = (e.metadata as { newValue?: { status?: string } })?.newValue?.status;
-    if (status === "DISMISSED") return "dismissed a report";
-    return "resolved a report";
-  },
+  UPDATE_SUBMISSION_STATUS: (e) =>
+    statusOf(e) === "APPROVED" ? "approved a submission" : "rejected a submission",
+  BULK_UPDATE_SUBMISSION_STATUS: (e) =>
+    statusOf(e) === "APPROVED" ? "approved submissions" : "rejected submissions",
+  UPDATE_REVIEW_STATUS: (e) =>
+    statusOf(e) === "APPROVED" ? "approved a review" : "rejected a review",
+  BULK_UPDATE_REVIEW_STATUS: (e) =>
+    statusOf(e) === "APPROVED" ? "approved reviews" : "rejected reviews",
+  UPDATE_PHOTO_STATUS: (e) =>
+    statusOf(e) === "APPROVED" ? "approved a photo" : "rejected a photo",
+  BULK_UPDATE_PHOTO_STATUS: (e) =>
+    statusOf(e) === "APPROVED" ? "approved photos" : "rejected photos",
+  UPDATE_CLAIM_STATUS: (e) =>
+    statusOf(e) === "APPROVED" ? "approved a market claim" : "rejected a market claim",
+  UPDATE_VENDOR_CLAIM_STATUS: (e) =>
+    statusOf(e) === "APPROVED" ? "approved a vendor claim" : "rejected a vendor claim",
+  UPDATE_REPORT_STATUS: (e) =>
+    statusOf(e) === "DISMISSED" ? "dismissed a report" : "resolved a report",
   ASSIGN_REPORT: () => "assigned a report",
   UNASSIGN_REPORT: () => "unassigned a report",
   UPDATE_REPORT_INTERNAL_NOTES: () => "updated report internal notes",

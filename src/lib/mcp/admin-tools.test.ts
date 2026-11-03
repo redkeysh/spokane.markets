@@ -11,6 +11,12 @@ const mocks = vi.hoisted(() => ({
   eventCount: vi.fn(),
   approveSubmissionWithEvent: vi.fn(),
   findMatchingVenue: vi.fn(),
+  venueFindMany: vi.fn(),
+  venueFindFirst: vi.fn(),
+  venueCount: vi.fn(),
+  venueUpdate: vi.fn(),
+  geocodeAddress: vi.fn(),
+  logAudit: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -27,6 +33,12 @@ vi.mock("@/lib/db", () => ({
       findUnique: mocks.eventFindUnique,
       count: mocks.eventCount,
     },
+    venue: {
+      findMany: mocks.venueFindMany,
+      findFirst: mocks.venueFindFirst,
+      count: mocks.venueCount,
+      update: mocks.venueUpdate,
+    },
   },
 }));
 vi.mock("@/lib/admin/queues", () => ({ getQueuesSummary: vi.fn() }));
@@ -36,8 +48,8 @@ vi.mock("@/lib/submission-approval", () => ({
   rejectSubmission: vi.fn(),
 }));
 vi.mock("@/lib/events/status-notifications", () => ({ notifySubmitterOfStatusChange: vi.fn() }));
-vi.mock("@/lib/audit", () => ({ logAudit: vi.fn() }));
-vi.mock("@/lib/geocode", () => ({ geocodeAddress: vi.fn() }));
+vi.mock("@/lib/audit", () => ({ logAudit: mocks.logAudit }));
+vi.mock("@/lib/geocode", () => ({ geocodeAddress: mocks.geocodeAddress }));
 vi.mock("@/lib/neighborhoods", () => ({ assertNeighborhoodSlug: vi.fn() }));
 vi.mock("@/lib/venues/resolve", () => ({ findMatchingVenue: mocks.findMatchingVenue }));
 vi.mock("@/lib/venues/merge", () => ({ mergeVenues: vi.fn() }));
@@ -195,5 +207,103 @@ describe("approve_submission", () => {
       isError: false,
       data: { approved: true, event: { id: "event-1", status: "PUBLISHED" } },
     });
+  });
+});
+
+describe("search_venues", () => {
+  it("returns each venue's coordinates", async () => {
+    mocks.venueFindMany.mockResolvedValue([]);
+    mocks.venueCount.mockResolvedValue(0);
+    await callTool("search_venues", { query: "expo" });
+    expect(mocks.venueFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({ select: expect.objectContaining({ lat: true, lng: true }) })
+    );
+  });
+});
+
+describe("update_venue coordinates", () => {
+  const venue = {
+    id: "v1",
+    name: "Spokane County Fair & Expo Center",
+    address: "404 N Havana St",
+    city: "Spokane Valley",
+    state: "WA",
+    zip: "99216",
+    lat: 47.7,
+    lng: -117.5,
+    neighborhood: null,
+    parkingNotes: null,
+  };
+
+  beforeEach(() => {
+    mocks.venueFindFirst.mockResolvedValue(venue);
+    mocks.venueUpdate.mockImplementation(async ({ data }: { data: object }) => ({ ...venue, ...data }));
+  });
+
+  it("geocodes the current address again on relocate and audits the move", async () => {
+    mocks.geocodeAddress.mockResolvedValue({ lat: 47.6626, lng: -117.3511 });
+    const result = await callTool("update_venue", { id: "v1", relocate: true });
+
+    expect(mocks.geocodeAddress).toHaveBeenCalledWith({
+      address: "404 N Havana St",
+      city: "Spokane Valley",
+      state: "WA",
+      zip: "99216",
+    });
+    expect(mocks.venueUpdate).toHaveBeenCalledWith({ where: { id: "v1" }, data: { lat: 47.6626, lng: -117.3511 } });
+    expect(result).toMatchObject({ isError: false, data: { lat: 47.6626, lng: -117.3511 } });
+    expect(mocks.logAudit).toHaveBeenCalledWith(
+      "admin-1",
+      "UPDATE_VENUE",
+      "VENUE",
+      "v1",
+      expect.objectContaining({
+        previousValue: expect.objectContaining({ lat: 47.7, lng: -117.5 }),
+        newValue: { relocate: true, lat: 47.6626, lng: -117.3511 },
+        via: "mcp",
+        tokenId: "tok1",
+      })
+    );
+  });
+
+  it("saves explicit coordinates without geocoding", async () => {
+    const result = await callTool("update_venue", { id: "v1", lat: 47.6626, lng: -117.3511 });
+    expect(mocks.geocodeAddress).not.toHaveBeenCalled();
+    expect(mocks.venueUpdate).toHaveBeenCalledWith({ where: { id: "v1" }, data: { lat: 47.6626, lng: -117.3511 } });
+    expect(result).toMatchObject({ isError: false });
+  });
+
+  it("uses explicit coordinates instead of geocoding a changed address", async () => {
+    await callTool("update_venue", { id: "v1", address: "406 N Havana St", lat: 47.6626, lng: -117.3511 });
+    expect(mocks.geocodeAddress).not.toHaveBeenCalled();
+    expect(mocks.venueUpdate).toHaveBeenCalledWith({
+      where: { id: "v1" },
+      data: { address: "406 N Havana St", lat: 47.6626, lng: -117.3511 },
+    });
+  });
+
+  it.each([
+    [{ lat: 39.74, lng: -104.99 }],
+    [{ lat: 47.66 }],
+    [{ relocate: true, lat: 47.66, lng: -117.35 }],
+    [{ relocate: false }],
+  ])("rejects %o before touching the venue", async (args) => {
+    const result = await callTool("update_venue", { id: "v1", ...args });
+    expect(result).toMatchObject({ isError: true });
+    expect(mocks.venueFindFirst).not.toHaveBeenCalled();
+  });
+
+  it("rejects a geocode that lands outside the service area", async () => {
+    mocks.geocodeAddress.mockResolvedValue({ lat: 39.74, lng: -104.99 });
+    const result = await callTool("update_venue", { id: "v1", relocate: true });
+    expect(result).toMatchObject({ isError: true, text: expect.stringContaining("outside the Spokane and North Idaho area") });
+    expect(mocks.venueUpdate).not.toHaveBeenCalled();
+  });
+
+  it("reports an address no geocoder can place", async () => {
+    mocks.geocodeAddress.mockResolvedValue(null);
+    const result = await callTool("update_venue", { id: "v1", relocate: true });
+    expect(result).toMatchObject({ isError: true, text: expect.stringContaining("Couldn't find the address") });
+    expect(mocks.venueUpdate).not.toHaveBeenCalled();
   });
 });

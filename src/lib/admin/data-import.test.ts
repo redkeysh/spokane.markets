@@ -158,6 +158,13 @@ describe("deriveScheduleDays", () => {
     ]);
   });
 
+  it("ends a span that stops at exactly Pacific midnight on the day before", () => {
+    expect(derive("2026-07-10T16:00:00Z", "2026-07-12T07:00:00Z")).toEqual([
+      { date: "2026-07-10", startTime: "09:00", endTime: "23:59", allDay: false },
+      { date: "2026-07-11", startTime: "00:00", endTime: "23:59", allDay: true },
+    ]);
+  });
+
   it("derives up to seven days and gives up on longer spans", () => {
     expect(derive("2026-07-01T16:00:00Z", "2026-07-07T23:00:00Z")).toHaveLength(7);
     expect(derive("2026-07-01T16:00:00Z", "2026-07-08T23:00:00Z")).toBeNull();
@@ -219,11 +226,69 @@ describe("importData schedule days", () => {
     expect(mocks.eventCreate).not.toHaveBeenCalled();
   });
 
-  it("rejects a day that ends before it starts", async () => {
-    const result = await importEvent({ scheduleDays: [{ date: "2026-12-05", startTime: "16:00", endTime: "10:00" }] });
-    expect(result.errors).toEqual(["Event 1 (Craft Fair): schedule ends before it starts"]);
+  it("rejects a timed day that starts after it ends, naming the day", async () => {
+    const result = await importEvent({
+      scheduleDays: [
+        { date: "2026-12-05", startTime: "10:00", endTime: "16:00" },
+        { date: "2026-12-06", startTime: "16:00", endTime: "10:00" },
+      ],
+    });
+    expect(result.errors).toEqual(["Event 1 (Craft Fair): scheduleDays.1 starts at 16:00, after it ends at 10:00"]);
     expect(mocks.eventCreate).not.toHaveBeenCalled();
   });
+
+  it.each(["24:00", "25:00", "12:60"])("rejects the out-of-range time %s", async (time) => {
+    const result = await importEvent({ scheduleDays: [{ date: "2026-12-05", startTime: "09:00", endTime: time }] });
+    expect(result.errors).toEqual([
+      `Event 1 (Craft Fair): invalid scheduleDays.0.endTime "${time}": use a time from 00:00 to 23:59`,
+    ]);
+    expect(mocks.eventCreate).not.toHaveBeenCalled();
+  });
+
+  it("reads a date-only start and end as all-day Pacific dates", async () => {
+    await importEvent({ startDate: "2026-12-05", endDate: "2026-12-06" });
+    expect(dayRecords()).toEqual([
+      { eventId: "event-craft-fair", date: "2026-12-05", startTime: "00:00", endTime: "23:59", allDay: true },
+      { eventId: "event-craft-fair", date: "2026-12-06", startTime: "00:00", endTime: "23:59", allDay: true },
+    ]);
+    expect(eventData().startDate.toISOString()).toBe("2026-12-05T08:00:00.000Z");
+    expect(eventData().endDate.toISOString()).toBe("2026-12-07T07:59:00.000Z");
+  });
+
+  it("reads a date and time without an offset as Pacific time", async () => {
+    await importEvent({ startDate: "2026-07-04T10:00", endDate: "2026-07-04T16:00:00" });
+    expect(dayRecords()).toEqual([
+      { eventId: "event-craft-fair", date: "2026-07-04", startTime: "10:00", endTime: "16:00", allDay: false },
+    ]);
+    expect(eventData().startDate.toISOString()).toBe("2026-07-04T17:00:00.000Z");
+  });
+
+  it("ends an event that stops at exactly Pacific midnight on the day before, without a phantom day", async () => {
+    await importEvent({ startDate: "2026-12-05T18:00:00-08:00", endDate: "2026-12-06T00:00:00-08:00" });
+    expect(dayRecords()).toEqual([
+      { eventId: "event-craft-fair", date: "2026-12-05", startTime: "18:00", endTime: "23:59", allDay: false },
+    ]);
+    expect(eventData().endDate.toISOString()).toBe("2026-12-06T07:59:00.000Z");
+  });
+
+  it("treats an iCal-style midnight-to-midnight span as all-day days", async () => {
+    await importEvent({ startDate: "2026-12-05T00:00", endDate: "2026-12-07T00:00" });
+    expect(dayRecords().map((d) => [d.date, d.allDay])).toEqual([
+      ["2026-12-05", true],
+      ["2026-12-06", true],
+    ]);
+  });
+
+  it.each(["12/05/2026", "Dec 5, 2026", "2026-12-05T25:00", "2026-02-30", "2026-12-05T10:00:00+0800", "1733400000000"])(
+    "rejects the date format %s with a row error",
+    async (startDate) => {
+      const result = await importEvent({ startDate, endDate: "2026-12-06" });
+      expect(result.errors).toEqual([
+        `Event 1 (Craft Fair): invalid startDate "${startDate}": use YYYY-MM-DD, YYYY-MM-DDTHH:mm in Pacific time, or an ISO time with Z or an offset`,
+      ]);
+      expect(mocks.eventCreate).not.toHaveBeenCalled();
+    }
+  );
 
   it("requires start and end dates when the row has no schedule days", async () => {
     const result = await importEvent({ startDate: "2026-12-05T18:00:00Z" });

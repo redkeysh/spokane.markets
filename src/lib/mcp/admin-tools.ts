@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import type { AdminPermissionKey } from "@/lib/admin/permissions";
@@ -10,12 +9,13 @@ import {
   approveSubmissionWithEvent,
   rejectSubmission,
 } from "@/lib/submission-approval";
-import { notifySubmitterOfStatusChange } from "@/lib/events/status-notifications";
+import { EventMutationError, updateEventFields } from "@/lib/events/mutations";
+import { revalidateAdmin } from "@/lib/admin/revalidate";
+import { venueOutcome } from "@/lib/submissions/venue-outcome";
 import { logAudit } from "@/lib/audit";
 import { geocodeAddress } from "@/lib/geocode";
 import { assertNeighborhoodSlug, getNeighborhoodOptions } from "@/lib/neighborhoods";
 import { findDuplicateGroups } from "@/lib/venues/match";
-import { lookupVenue } from "@/lib/venues/resolve";
 import { mergeVenues } from "@/lib/venues/merge";
 import {
   EVENT_SLUG_MAX_LENGTH,
@@ -127,33 +127,6 @@ const SUBMISSION_SELECT = {
   createdEventId: true,
 } satisfies Prisma.SubmissionSelect;
 
-type SubmissionRow = Prisma.SubmissionGetPayload<{ select: typeof SUBMISSION_SELECT }>;
-
-async function venueOutcome(s: SubmissionRow) {
-  const { venueName, venueAddress, venueCity, venueState, venueZip } = s;
-  if (!venueName || !venueAddress || !venueCity || !venueState || !venueZip) {
-    return { outcome: "incomplete", note: "Venue name, street, city, state, or ZIP is missing, so approval will fail." };
-  }
-  const lookup = await lookupVenue({
-    name: venueName,
-    address: venueAddress,
-    city: venueCity,
-    state: venueState,
-    zip: venueZip,
-  });
-  if (lookup.status === "unplaceable") {
-    return { outcome: "unplaceable", note: "No geocoder can place this address, so approval will fail. Fix the address first." };
-  }
-  if (lookup.status === "new") {
-    return { outcome: "new", lat: lookup.coords.lat, lng: lookup.coords.lng, note: "Approval creates a new venue at these coordinates." };
-  }
-  const match = lookup.venue;
-  if (match.deletedAt) {
-    return { outcome: "archived", venueId: match.id, name: match.name, note: "Matches an archived venue; restore it before approving." };
-  }
-  return { outcome: "existing", venueId: match.id, name: match.name, address: match.address };
-}
-
 async function activeVenueRows() {
   return db.venue.findMany({
     where: { deletedAt: null },
@@ -170,17 +143,6 @@ async function activeVenueRows() {
       _count: { select: { events: true, markets: true } },
     },
   });
-}
-
-function revalidateListings(eventSlug?: string) {
-  revalidatePath("/events");
-  revalidatePath("/events/calendar");
-  revalidatePath("/events/map");
-  revalidatePath("/markets");
-  revalidatePath("/");
-  revalidatePath("/admin/events");
-  revalidatePath("/admin/venues");
-  if (eventSlug) revalidatePath(`/events/${eventSlug}`);
 }
 
 export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
@@ -296,8 +258,7 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
         where: { id: created.id },
         select: { id: true, title: true, slug: true, status: true },
       });
-      revalidatePath("/admin/submissions");
-      revalidatePath("/admin/queues");
+      revalidateAdmin({ eventSlugs: [created.slug] });
       return { approved: true, event: { ...(event ?? created), url: `${APP_URL}/events/${created.slug}` } };
     },
   }),
@@ -318,8 +279,7 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
       if (s.status !== "PENDING") throw new ToolError(`Submission is already ${s.status.toLowerCase()}.`);
       const result = await rejectSubmission(id, ctx.user.id, reason, { auditMeta: auditMeta(ctx) });
       if (!result.ok) throw new ToolError(result.error);
-      revalidatePath("/admin/submissions");
-      revalidatePath("/admin/queues");
+      revalidateAdmin();
       return { rejected: true };
     },
   }),
@@ -446,81 +406,20 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
       .refine(hasChange, { message: "Pass at least one field to change." }),
     unavailableReason: needsWrite("admin.listings.manage"),
     run: async ({ id, ...changes }, ctx) => {
-      const existing = await db.event.findFirst({
-        where: { id, deletedAt: null },
-        select: {
-          id: true,
-          title: true,
-          slug: true,
-          status: true,
-          submittedById: true,
-          description: true,
-          venueId: true,
-          marketId: true,
-          websiteUrl: true,
-          facebookUrl: true,
-          instagramUrl: true,
-          imageUrl: true,
-        },
-      });
-      if (!existing) throw new ToolError("Event not found or archived.");
-      if (changes.venueId) {
-        const venue = await db.venue.findFirst({ where: { id: changes.venueId, deletedAt: null }, select: { id: true } });
-        if (!venue) throw new ToolError("That venue does not exist or is archived.");
-      }
-      if (changes.marketId) {
-        const market = await db.market.findFirst({ where: { id: changes.marketId, deletedAt: null }, select: { id: true } });
-        if (!market) throw new ToolError("That market does not exist or is archived.");
-      }
-
-      const slugChanged = changes.slug !== undefined && changes.slug !== existing.slug;
-      if (slugChanged) {
-        const problem = await eventSlugProblem(id, changes.slug!);
-        if (problem) throw new ToolError(problem);
-      }
-
-      const data = Object.fromEntries(Object.entries(changes).filter(([, value]) => value !== undefined));
       let event;
-      let previousSlug = existing.slug;
-      let redirected = false;
       try {
-        event = await db.$transaction(async (tx) => {
-          const before = await lockEventForSlugChange(tx, id);
-          const updated = await tx.event.update({
-            where: { id },
-            data,
-            select: { id: true, title: true, slug: true, status: true },
-          });
-          previousSlug = before.slug;
-          redirected = await recordEventSlugChange(tx, id, before.slug, updated.slug, { previousStatus: before.status });
-          return updated;
-        });
+        event = await updateEventFields(id, changes, ctx.user.id, { auditMeta: auditMeta(ctx) });
       } catch (err) {
-        if (err && typeof err === "object" && "code" in err && (err as { code: unknown }).code === "P2002") {
-          throw new ToolError(`Another event took /events/${changes.slug} at the same moment. Pick another slug.`);
-        }
+        if (err instanceof EventMutationError) throw new ToolError(err.message);
         throw err;
       }
-
-      await notifySubmitterOfStatusChange({
-        submittedById: existing.submittedById,
-        previousStatus: existing.status,
-        newStatus: event.status,
-        event,
-      });
-      const previousValue = Object.fromEntries(
-        Object.keys(data).map((key) => [key, existing[key as keyof typeof existing]])
-      );
-      await logAudit(ctx.user.id, "UPDATE_EVENT", "EVENT", id, {
-        previousValue,
-        newValue: data,
-        ...auditMeta(ctx),
-      });
-      revalidateListings(event.slug);
-      if (previousSlug !== event.slug) revalidatePath(`/events/${previousSlug}`);
+      const { id: eventId, title, slug, status, previousSlug, redirected } = event;
       return {
-        ...event,
-        url: `${APP_URL}/events/${event.slug}`,
+        id: eventId,
+        title,
+        slug,
+        status,
+        url: `${APP_URL}/events/${slug}`,
         ...(redirected ? { redirectFrom: `${APP_URL}/events/${previousSlug}` } : {}),
       };
     },
@@ -624,8 +523,7 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
     run: async ({ keepId, mergeIds }, ctx) => {
       const result = await mergeVenues(keepId, mergeIds, ctx.user.id, { auditMeta: auditMeta(ctx) });
       if (!result.ok) throw new ToolError(result.error);
-      revalidateListings();
-      revalidatePath("/admin/venues/duplicates");
+      revalidateAdmin();
       return result;
     },
   }),
@@ -745,7 +643,7 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
         newValue: { ...changes, ...coords },
         ...auditMeta(ctx),
       });
-      revalidateListings();
+      revalidateAdmin();
       return venue;
     },
   }),

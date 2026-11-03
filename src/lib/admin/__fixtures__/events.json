@@ -1,0 +1,2138 @@
+[
+  {
+    "id": "cmvv9iv5w002c01mmr4teas9y",
+    "title": "Family Fall Festival 2027",
+    "slug": "rathdrum-craft-and-farmers-market-2027-10-16",
+    "status": "PENDING",
+    "startDate": "2027-10-16T17:00:00.000Z",
+    "endDate": "2027-10-17T23:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv1e001d01mmrn66qseh",
+      "name": "Rathdrum Lions Club",
+      "city": "Rathdrum"
+    },
+    "market": {
+      "id": "cmvv9iv1q001i01mmql2udwe3",
+      "name": "Rathdrum Craft and Farmers Market"
+    },
+    "url": "https://spokane.markets/events/rathdrum-craft-and-farmers-market-2027-10-16"
+  },
+  {
+    "id": "cmw0clzv3000101tekstaaon1",
+    "title": "10th Annual Jacked Up Big Show \"BIG GIVE\"",
+    "slug": "10th-annual-jacked-up-big-show-big-give",
+    "status": "PENDING",
+    "startDate": "2027-07-17T18:00:00.000Z",
+    "endDate": "2027-07-18T02:00:00.000Z",
+    "venue": {
+      "id": "cmw0clzuk000001temhd347ii",
+      "name": "Shriners Event Center",
+      "city": "SPOKANE"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/10th-annual-jacked-up-big-show-big-give"
+  },
+  {
+    "id": "cmw0avyox005u01mm8yso2wxd",
+    "title": "North Idaho Eat's and Beats",
+    "slug": "north-idaho-eats-and-beats-2027-06-04",
+    "status": "PENDING",
+    "startDate": "2027-06-04T18:00:00.000Z",
+    "endDate": "2027-06-07T04:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv10000t01mmezyemuxe",
+      "name": "Kootenai County Fairgrounds",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/north-idaho-eats-and-beats-2027-06-04"
+  },
+  {
+    "id": "cmw0avyor005t01mmnlp9zvib",
+    "title": "Spokane Expo 2027",
+    "slug": "spokane-expo-2027-2027-04-17",
+    "status": "DRAFT",
+    "startDate": "2027-04-17T07:00:00.000Z",
+    "endDate": "2027-04-19T06:59:00.000Z",
+    "venue": {
+      "id": "cmmadcu7p000201o4ame6xj2h",
+      "name": "Spokane County Fair & Expo Center",
+      "city": "Spokane Valley"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/spokane-expo-2027-2027-04-17"
+  },
+  {
+    "id": "cmvv9iv93002u01mm1l963czp",
+    "title": "Rebel Junk Spring Vintage Market",
+    "slug": "rebel-junk-spring-vintage-market-2027-03-26",
+    "status": "DRAFT",
+    "startDate": "2027-03-26T07:00:00.000Z",
+    "endDate": "2027-03-28T06:59:00.000Z",
+    "venue": {
+      "id": "cmvv9iv10000t01mmezyemuxe",
+      "name": "Kootenai County Fairgrounds",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/rebel-junk-spring-vintage-market-2027-03-26"
+  },
+  {
+    "id": "cmw0avygy004q01mm1gwjmrvx",
+    "title": "Community Market at Silver Lake",
+    "slug": "community-market-at-silver-lake-2027-03-13",
+    "status": "PENDING",
+    "startDate": "2027-03-13T18:00:00.000Z",
+    "endDate": "2027-03-14T00:00:00.000Z",
+    "venue": {
+      "id": "cmw0avycf003o01mmpopvs5pi",
+      "name": "Silver Lake Mall",
+      "city": "Coeur d'Alene"
+    },
+    "market": {
+      "id": "cmw0avycy004101mmilzrpn7s",
+      "name": "Community Market at Silver Lake"
+    },
+    "url": "https://spokane.markets/events/community-market-at-silver-lake-2027-03-13"
+  },
+  {
+    "id": "cmvv9iv81002p01mmvzmywuo0",
+    "title": "Cabin Fever Indoor Market",
+    "slug": "cabin-fever-indoor-market-2027-02-27",
+    "status": "DRAFT",
+    "startDate": "2027-02-27T08:00:00.000Z",
+    "endDate": "2027-02-28T07:59:00.000Z",
+    "venue": {
+      "id": "cmvv9iv10000t01mmezyemuxe",
+      "name": "Kootenai County Fairgrounds",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/cabin-fever-indoor-market-2027-02-27"
+  },
+  {
+    "id": "cmvv9iv59002501mmrc3o46a4",
+    "title": "Spokane Home & Yard Show",
+    "slug": "spokane-home-yard-show-2027-02-25",
+    "status": "PENDING",
+    "startDate": "2027-02-25T20:00:00.000Z",
+    "endDate": "2027-03-01T00:00:00.000Z",
+    "venue": {
+      "id": "cmmadcu7p000201o4ame6xj2h",
+      "name": "Spokane County Fair & Expo Center",
+      "city": "Spokane Valley"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/spokane-home-yard-show-2027-02-25"
+  },
+  {
+    "id": "cmw0avyoo005s01mmldsilb1c",
+    "title": "Custer's Spokane Home & Yard Show",
+    "slug": "custers-spokane-home-yard-show-2027-02-25",
+    "status": "PENDING",
+    "startDate": "2027-02-25T20:00:00.000Z",
+    "endDate": "2027-03-01T00:00:00.000Z",
+    "venue": {
+      "id": "cmmadcu7p000201o4ame6xj2h",
+      "name": "Spokane County Fair & Expo Center",
+      "city": "Spokane Valley"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/custers-spokane-home-yard-show-2027-02-25"
+  },
+  {
+    "id": "cmvv9iv5o002a01mmf58o4l68",
+    "title": "Spokane Golf & Travel Show with the Great Outdoors & Bike Expo",
+    "slug": "spokane-golf-travel-show-with-the-great-outdoors-bike-expo-2027-02-20",
+    "status": "PENDING",
+    "startDate": "2027-02-20T17:00:00.000Z",
+    "endDate": "2027-02-22T00:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv1c001a01mm6uysr6ym",
+      "name": "Spokane Convention Center",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/spokane-golf-travel-show-with-the-great-outdoors-bike-expo-2027-02-20"
+  },
+  {
+    "id": "cmw0avyok005r01mmsad2ot8w",
+    "title": "Spokane Golf & Travel Show",
+    "slug": "spokane-golf-travel-show-2027-02-20",
+    "status": "PENDING",
+    "startDate": "2027-02-20T17:00:00.000Z",
+    "endDate": "2027-02-22T00:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv1c001a01mm6uysr6ym",
+      "name": "Spokane Convention Center",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/spokane-golf-travel-show-2027-02-20"
+  },
+  {
+    "id": "cmw0avygt004p01mmkjjtgu0r",
+    "title": "Community Market at Silver Lake",
+    "slug": "community-market-at-silver-lake-2027-02-13",
+    "status": "PENDING",
+    "startDate": "2027-02-13T18:00:00.000Z",
+    "endDate": "2027-02-14T00:00:00.000Z",
+    "venue": {
+      "id": "cmw0avycf003o01mmpopvs5pi",
+      "name": "Silver Lake Mall",
+      "city": "Coeur d'Alene"
+    },
+    "market": {
+      "id": "cmw0avycy004101mmilzrpn7s",
+      "name": "Community Market at Silver Lake"
+    },
+    "url": "https://spokane.markets/events/community-market-at-silver-lake-2027-02-13"
+  },
+  {
+    "id": "cmvv9iv5g002701mmevlj9q7t",
+    "title": "Ag Expo 2027",
+    "slug": "ag-expo-2027-2027-02-02",
+    "status": "PENDING",
+    "startDate": "2027-02-02T17:00:00.000Z",
+    "endDate": "2027-02-04T22:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv1c001a01mm6uysr6ym",
+      "name": "Spokane Convention Center",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/ag-expo-2027-2027-02-02"
+  },
+  {
+    "id": "cmvv9iv7r002o01mmmzk7hbue",
+    "title": "Cabin Fever Indoor Market",
+    "slug": "cabin-fever-indoor-market-2027-01-30",
+    "status": "DRAFT",
+    "startDate": "2027-01-30T08:00:00.000Z",
+    "endDate": "2027-01-31T07:59:00.000Z",
+    "venue": {
+      "id": "cmvv9iv10000t01mmezyemuxe",
+      "name": "Kootenai County Fairgrounds",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/cabin-fever-indoor-market-2027-01-30"
+  },
+  {
+    "id": "cmvv9iv5l002901mmtqmieyk0",
+    "title": "Spokane Boat Show",
+    "slug": "spokane-boat-show-2027-01-28",
+    "status": "PENDING",
+    "startDate": "2027-01-28T18:00:00.000Z",
+    "endDate": "2027-02-01T00:00:00.000Z",
+    "venue": {
+      "id": "cmmadcu7p000201o4ame6xj2h",
+      "name": "Spokane County Fair & Expo Center",
+      "city": "Spokane Valley"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/spokane-boat-show-2027-01-28"
+  },
+  {
+    "id": "cmw0avyoh005q01mmbsy08fio",
+    "title": "Nspire Wedding Show",
+    "slug": "nspire-wedding-show-2027-01-24",
+    "status": "PENDING",
+    "startDate": "2027-01-24T19:00:00.000Z",
+    "endDate": "2027-01-25T01:00:00.000Z",
+    "venue": {
+      "id": "cmw0avycg003p01mm4prm9av6",
+      "name": "The Coeur d'Alene Resort",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/nspire-wedding-show-2027-01-24"
+  },
+  {
+    "id": "cmvv9iv5d002601mm1b395k54",
+    "title": "Inland Northwest RV Show & Sale",
+    "slug": "inland-northwest-rv-show-sale-2027-01-21",
+    "status": "PENDING",
+    "startDate": "2027-01-21T20:00:00.000Z",
+    "endDate": "2027-01-25T00:00:00.000Z",
+    "venue": {
+      "id": "cmmadcu7p000201o4ame6xj2h",
+      "name": "Spokane County Fair & Expo Center",
+      "city": "Spokane Valley"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/inland-northwest-rv-show-sale-2027-01-21"
+  },
+  {
+    "id": "cmvv9iv5r002b01mmw8iewvi8",
+    "title": "Post Falls Bridal Tour & Special Event Fair",
+    "slug": "post-falls-bridal-tour-special-event-fair-2027-01-16",
+    "status": "PENDING",
+    "startDate": "2027-01-16T18:00:00.000Z",
+    "endDate": "2027-01-16T23:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv12000v01mmmxjqgkfo",
+      "name": "Q'emiln Trailhead Event Center",
+      "city": "Post Falls"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/post-falls-bridal-tour-special-event-fair-2027-01-16"
+  },
+  {
+    "id": "cmvv9iv5i002801mmvplnu2gf",
+    "title": "The Bridal Festival",
+    "slug": "the-bridal-festival-2027-01-09",
+    "status": "PENDING",
+    "startDate": "2027-01-09T18:00:00.000Z",
+    "endDate": "2027-01-10T23:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv1c001a01mm6uysr6ym",
+      "name": "Spokane Convention Center",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/the-bridal-festival-2027-01-09"
+  },
+  {
+    "id": "cmw0avygk004o01mmp3rm8b8x",
+    "title": "Community Market at Silver Lake",
+    "slug": "community-market-at-silver-lake-2027-01-09",
+    "status": "PENDING",
+    "startDate": "2027-01-09T18:00:00.000Z",
+    "endDate": "2027-01-10T00:00:00.000Z",
+    "venue": {
+      "id": "cmw0avycf003o01mmpopvs5pi",
+      "name": "Silver Lake Mall",
+      "city": "Coeur d'Alene"
+    },
+    "market": {
+      "id": "cmw0avycy004101mmilzrpn7s",
+      "name": "Community Market at Silver Lake"
+    },
+    "url": "https://spokane.markets/events/community-market-at-silver-lake-2027-01-09"
+  },
+  {
+    "id": "cmw0avyo3005n01mm40kap8yp",
+    "title": "Northwest's Premier Bridal Festival",
+    "slug": "northwests-premier-bridal-festival-2027-01-09",
+    "status": "PENDING",
+    "startDate": "2027-01-09T18:00:00.000Z",
+    "endDate": "2027-01-10T23:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv1c001a01mm6uysr6ym",
+      "name": "Spokane Convention Center",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/northwests-premier-bridal-festival-2027-01-09"
+  },
+  {
+    "id": "cmvv9iv39001q01mmhp7zgpm0",
+    "title": "Gather & Grow Holiday Market",
+    "slug": "gather-grow-holiday-market-2026-12-19",
+    "status": "PENDING",
+    "startDate": "2026-12-19T18:00:00.000Z",
+    "endDate": "2026-12-20T23:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv10000t01mmezyemuxe",
+      "name": "Kootenai County Fairgrounds",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/gather-grow-holiday-market-2026-12-19"
+  },
+  {
+    "id": "cmvv9iv8w002t01mmi4gh1xah",
+    "title": "Last Minute Shopping Craft Fair",
+    "slug": "rathdrum-craft-and-farmers-market-2026-12-19",
+    "status": "DRAFT",
+    "startDate": "2026-12-19T18:00:00.000Z",
+    "endDate": "2026-12-19T23:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv1e001d01mmrn66qseh",
+      "name": "Rathdrum Lions Club",
+      "city": "Rathdrum"
+    },
+    "market": {
+      "id": "cmvv9iv1q001i01mmql2udwe3",
+      "name": "Rathdrum Craft and Farmers Market"
+    },
+    "url": "https://spokane.markets/events/rathdrum-craft-and-farmers-market-2026-12-19"
+  },
+  {
+    "id": "cmw0avym9005801mmrlhl6jp9",
+    "title": "A Very Merry Market",
+    "slug": "a-very-merry-market-2026-12-18",
+    "status": "PENDING",
+    "startDate": "2026-12-18T18:00:00.000Z",
+    "endDate": "2026-12-21T02:00:00.000Z",
+    "venue": {
+      "id": "cmw0avycf003o01mmpopvs5pi",
+      "name": "Silver Lake Mall",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/a-very-merry-market-2026-12-18"
+  },
+  {
+    "id": "cmw0avymo005c01mmx3bhdl6s",
+    "title": "German Christmas Market (Post Falls Public Market)",
+    "slug": "german-christmas-market-post-falls-public-market-2026-12-18",
+    "status": "DRAFT",
+    "startDate": "2026-12-18T18:00:00.000Z",
+    "endDate": "2026-12-21T01:00:00.000Z",
+    "venue": {
+      "id": "cmw0avycj003v01mmbctg2u3r",
+      "name": "Post Falls Public Market",
+      "city": "Post Falls"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/german-christmas-market-post-falls-public-market-2026-12-18"
+  },
+  {
+    "id": "cmw0avylg005401mmvlb1kb57",
+    "title": "Kendall Yards Christmas Market",
+    "slug": "kendall-yards-night-market-2026-12-13",
+    "status": "PENDING",
+    "startDate": "2026-12-13T20:00:00.000Z",
+    "endDate": "2026-12-14T00:00:00.000Z",
+    "venue": {
+      "id": "cmw0avy9x003301mmswzuhaco",
+      "name": "Kendall Yards (Summit Parkway)",
+      "city": "Spokane"
+    },
+    "market": {
+      "id": "cmmacl70l000m3pmwhwiekmut",
+      "name": "Kendall Yards Night Market"
+    },
+    "url": "https://spokane.markets/events/kendall-yards-night-market-2026-12-13"
+  },
+  {
+    "id": "cmw0avylb005301mm8b340daa",
+    "title": "Kendall Yards Christmas Market",
+    "slug": "kendall-yards-night-market-2026-12-12",
+    "status": "PENDING",
+    "startDate": "2026-12-12T20:00:00.000Z",
+    "endDate": "2026-12-13T00:00:00.000Z",
+    "venue": {
+      "id": "cmw0avy9x003301mmswzuhaco",
+      "name": "Kendall Yards (Summit Parkway)",
+      "city": "Spokane"
+    },
+    "market": {
+      "id": "cmmacl70l000m3pmwhwiekmut",
+      "name": "Kendall Yards Night Market"
+    },
+    "url": "https://spokane.markets/events/kendall-yards-night-market-2026-12-12"
+  },
+  {
+    "id": "cmvv9iv23001j01mmk9l75p7l",
+    "title": "Spokane Valley Winter Market 2026",
+    "slug": "spokane-valley-winter-market-2026-2026-12-12",
+    "status": "PENDING",
+    "startDate": "2026-12-12T18:00:00.000Z",
+    "endDate": "2026-12-13T00:00:00.000Z",
+    "venue": {
+      "id": "cmmadcu81000701o4mauzdecz",
+      "name": "CenterPlace Regional Event Center",
+      "city": "Spokane Valley"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/spokane-valley-winter-market-2026-2026-12-12"
+  },
+  {
+    "id": "cmvv9iv2x001o01mm34oajjjg",
+    "title": "North Idaho's Cowboy Christmas",
+    "slug": "north-idahos-cowboy-christmas-2026-12-12",
+    "status": "PENDING",
+    "startDate": "2026-12-12T18:00:00.000Z",
+    "endDate": "2026-12-14T00:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv10000t01mmezyemuxe",
+      "name": "Kootenai County Fairgrounds",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/north-idahos-cowboy-christmas-2026-12-12"
+  },
+  {
+    "id": "cmw0avyng005j01mm6vrttzsv",
+    "title": "Spokane Valley Winter Market",
+    "slug": "spokane-valley-winter-market-2026-12-12",
+    "status": "PENDING",
+    "startDate": "2026-12-12T18:00:00.000Z",
+    "endDate": "2026-12-13T00:00:00.000Z",
+    "venue": {
+      "id": "cmmadcu81000701o4mauzdecz",
+      "name": "CenterPlace Regional Event Center",
+      "city": "Spokane Valley"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/spokane-valley-winter-market-2026-12-12"
+  },
+  {
+    "id": "cmw0avynm005k01mmlgqy6ey3",
+    "title": "Terrain BRRRZAAR",
+    "slug": "terrain-bazaar-2026-12-12",
+    "status": "PENDING",
+    "startDate": "2026-12-12T18:00:00.000Z",
+    "endDate": "2026-12-13T04:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv15000y01mme6raxk88",
+      "name": "River Park Square",
+      "city": "Spokane"
+    },
+    "market": {
+      "id": "cmmadebhk000h01o4rqef6h9k",
+      "name": "Terrain Bazaar"
+    },
+    "url": "https://spokane.markets/events/terrain-bazaar-2026-12-12"
+  },
+  {
+    "id": "cmw0avynt005l01mm1e9ohsa6",
+    "title": "Winter Market (Kootenai County Farmers' Market)",
+    "slug": "kootenai-county-farmers-market-2026-12-12",
+    "status": "DRAFT",
+    "startDate": "2026-12-12T08:00:00.000Z",
+    "endDate": "2026-12-13T07:59:00.000Z",
+    "venue": {
+      "id": "cmvv9iv10000t01mmezyemuxe",
+      "name": "Kootenai County Fairgrounds",
+      "city": "Coeur d'Alene"
+    },
+    "market": {
+      "id": "cmw0avyco004001mmxicboc40",
+      "name": "Kootenai County Farmers' Market"
+    },
+    "url": "https://spokane.markets/events/kootenai-county-farmers-market-2026-12-12"
+  },
+  {
+    "id": "cmw0avyl7005201mmayq7snvp",
+    "title": "Kendall Yards Christmas Market",
+    "slug": "kendall-yards-night-market-2026-12-11",
+    "status": "PENDING",
+    "startDate": "2026-12-11T20:00:00.000Z",
+    "endDate": "2026-12-12T00:00:00.000Z",
+    "venue": {
+      "id": "cmw0avy9x003301mmswzuhaco",
+      "name": "Kendall Yards (Summit Parkway)",
+      "city": "Spokane"
+    },
+    "market": {
+      "id": "cmmacl70l000m3pmwhwiekmut",
+      "name": "Kendall Yards Night Market"
+    },
+    "url": "https://spokane.markets/events/kendall-yards-night-market-2026-12-11"
+  },
+  {
+    "id": "cmw0avym5005701mm7lm2fqk7",
+    "title": "A Very Merry Market",
+    "slug": "a-very-merry-market-2026-12-11",
+    "status": "PENDING",
+    "startDate": "2026-12-11T18:00:00.000Z",
+    "endDate": "2026-12-14T02:00:00.000Z",
+    "venue": {
+      "id": "cmw0avycf003o01mmpopvs5pi",
+      "name": "Silver Lake Mall",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/a-very-merry-market-2026-12-11"
+  },
+  {
+    "id": "cmw0avyml005b01mmixj80nl0",
+    "title": "German Christmas Market (Post Falls Public Market)",
+    "slug": "german-christmas-market-post-falls-public-market-2026-12-11",
+    "status": "DRAFT",
+    "startDate": "2026-12-11T18:00:00.000Z",
+    "endDate": "2026-12-14T01:00:00.000Z",
+    "venue": {
+      "id": "cmw0avycj003v01mmbctg2u3r",
+      "name": "Post Falls Public Market",
+      "city": "Post Falls"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/german-christmas-market-post-falls-public-market-2026-12-11"
+  },
+  {
+    "id": "cmvv9iv62002d01mmyadcot5j",
+    "title": "Holiday Village",
+    "slug": "holiday-village-2026-12-10",
+    "status": "DRAFT",
+    "startDate": "2026-12-11T01:00:00.000Z",
+    "endDate": "2026-12-14T02:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv13000x01mm4fj8vrhu",
+      "name": "Gesa Pavilion at Riverfront Park",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/holiday-village-2026-12-10"
+  },
+  {
+    "id": "cmvv9iv4b001x01mm4lwg8l7f",
+    "title": "Cheney Blackhawk Boosters Craft Fair",
+    "slug": "cheney-blackhawk-boosters-craft-fair-2026-12-05",
+    "status": "PENDING",
+    "startDate": "2026-12-05T18:00:00.000Z",
+    "endDate": "2026-12-06T00:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv1d001b01mmg9czk9n4",
+      "name": "Cheney High School",
+      "city": "Cheney"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/cheney-blackhawk-boosters-craft-fair-2026-12-05"
+  },
+  {
+    "id": "cmvv9iv4g001y01mm66mprb1t",
+    "title": "Chewelah Farmers Market Christmas Faire",
+    "slug": "chewelah-farmers-market-christmas-faire-2026-12-05",
+    "status": "PENDING",
+    "startDate": "2026-12-05T18:00:00.000Z",
+    "endDate": "2026-12-05T23:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv1m001f01mmj6yr0h57",
+      "name": "Downtown Chewelah (Main Ave)",
+      "city": "Chewelah"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/chewelah-farmers-market-christmas-faire-2026-12-05"
+  },
+  {
+    "id": "cmvv9iv8m002s01mmtsal7iqp",
+    "title": "Holiday Craft Fair",
+    "slug": "rathdrum-craft-and-farmers-market-2026-12-05",
+    "status": "DRAFT",
+    "startDate": "2026-12-05T18:00:00.000Z",
+    "endDate": "2026-12-05T23:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv1e001d01mmrn66qseh",
+      "name": "Rathdrum Lions Club",
+      "city": "Rathdrum"
+    },
+    "market": {
+      "id": "cmvv9iv1q001i01mmql2udwe3",
+      "name": "Rathdrum Craft and Farmers Market"
+    },
+    "url": "https://spokane.markets/events/rathdrum-craft-and-farmers-market-2026-12-05"
+  },
+  {
+    "id": "cmw0avymz005f01mmb9l3pjcr",
+    "title": "Athol Christmas Market",
+    "slug": "athol-christmas-market-2026-12-05",
+    "status": "DRAFT",
+    "startDate": "2026-12-05T18:00:00.000Z",
+    "endDate": "2026-12-06T22:00:00.000Z",
+    "venue": {
+      "id": "cmw0avycl003x01mmjshu88az",
+      "name": "Athol Community Center",
+      "city": "Athol"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/athol-christmas-market-2026-12-05"
+  },
+  {
+    "id": "cmw0avyn3005g01mmaeaoa5yu",
+    "title": "Cheney Blackhawk Booster Club Craft Fair",
+    "slug": "cheney-blackhawk-booster-club-craft-fair-2026-12-05",
+    "status": "PENDING",
+    "startDate": "2026-12-05T18:00:00.000Z",
+    "endDate": "2026-12-06T00:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv1d001b01mmg9czk9n4",
+      "name": "Cheney High School",
+      "city": "Cheney"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/cheney-blackhawk-booster-club-craft-fair-2026-12-05"
+  },
+  {
+    "id": "cmnikinsh000f01mhgti62ath",
+    "title": "Ridgeline Craft & Vendor Fair",
+    "slug": "ridgeline-craft-vendor-fair",
+    "status": "PUBLISHED",
+    "startDate": "2026-12-05T17:00:00.000Z",
+    "endDate": "2026-12-06T23:00:00.000Z",
+    "venue": {
+      "id": "cmnikinsa000e01mhnguty40r",
+      "name": "Ridgeline High School",
+      "city": "Liberty Lake"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/ridgeline-craft-vendor-fair"
+  },
+  {
+    "id": "cmonsbsa5000z01te4zr67fy3",
+    "title": "Rogers High School Holiday Craft Fair",
+    "slug": "rogers-high-school-holiday-craft-fair",
+    "status": "PUBLISHED",
+    "startDate": "2026-12-05T17:00:00.000Z",
+    "endDate": "2026-12-06T23:00:00.000Z",
+    "venue": {
+      "id": "cmonsbs9z000y01telwbsa6t4",
+      "name": "Rogers High School",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/rogers-high-school-holiday-craft-fair"
+  },
+  {
+    "id": "cmvv9iv75002k01mmnvg1n12e",
+    "title": "The General Store Trading Card Show",
+    "slug": "the-general-store-trading-card-show-2026-12-05",
+    "status": "DRAFT",
+    "startDate": "2026-12-05T17:00:00.000Z",
+    "endDate": "2026-12-06T00:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv1c001901mmzdhezymr",
+      "name": "The General Store",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/the-general-store-trading-card-show-2026-12-05"
+  },
+  {
+    "id": "cmvv9iv2r001n01mmgxqpfkj8",
+    "title": "Post Falls Winterfest & Plaza Market",
+    "slug": "post-falls-winterfest-plaza-market-2026-12-04",
+    "status": "PENDING",
+    "startDate": "2026-12-05T00:00:00.000Z",
+    "endDate": "2026-12-05T04:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv11000u01mmxp9ldi9b",
+      "name": "Post Falls City Hall",
+      "city": "Post Falls"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/post-falls-winterfest-plaza-market-2026-12-04"
+  },
+  {
+    "id": "cmvv9iv4l001z01mmf7onaexx",
+    "title": "Millwood Farmers Market Holiday Market",
+    "slug": "millwood-farmers-market-holiday-market-2026-12-04",
+    "status": "PENDING",
+    "startDate": "2026-12-05T00:00:00.000Z",
+    "endDate": "2026-12-05T03:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv1m001g01mm4jr7tpln",
+      "name": "Argonne Rd & Dalton Ave (Millwood)",
+      "city": "Millwood"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/millwood-farmers-market-holiday-market-2026-12-04"
+  },
+  {
+    "id": "cmw0avym1005601mm9y0m9cex",
+    "title": "A Very Merry Market",
+    "slug": "a-very-merry-market-2026-12-04",
+    "status": "PENDING",
+    "startDate": "2026-12-04T18:00:00.000Z",
+    "endDate": "2026-12-07T02:00:00.000Z",
+    "venue": {
+      "id": "cmw0avycf003o01mmpopvs5pi",
+      "name": "Silver Lake Mall",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/a-very-merry-market-2026-12-04"
+  },
+  {
+    "id": "cmw0avymg005a01mms7hj80oe",
+    "title": "German Christmas Market (Post Falls Public Market)",
+    "slug": "german-christmas-market-post-falls-public-market-2026-12-04",
+    "status": "DRAFT",
+    "startDate": "2026-12-04T18:00:00.000Z",
+    "endDate": "2026-12-07T01:00:00.000Z",
+    "venue": {
+      "id": "cmw0avycj003v01mmbctg2u3r",
+      "name": "Post Falls Public Market",
+      "city": "Post Falls"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/german-christmas-market-post-falls-public-market-2026-12-04"
+  },
+  {
+    "id": "cmw0avymw005e01mmj1errpzb",
+    "title": "Celebrate the Season (Community Presbyterian Church, Post Falls)",
+    "slug": "celebrate-the-season-community-presbyterian-church-post-falls-2026-12-04",
+    "status": "DRAFT",
+    "startDate": "2026-12-04T17:00:00.000Z",
+    "endDate": "2026-12-05T23:00:00.000Z",
+    "venue": {
+      "id": "cmw0avyck003w01mmx3w5giua",
+      "name": "Community Presbyterian Church",
+      "city": "Post Falls"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/celebrate-the-season-community-presbyterian-church-post-falls-2026-12-04"
+  },
+  {
+    "id": "cmw0avyl2005101mm5tknsfof",
+    "title": "Kendall Yards Christmas Market",
+    "slug": "kendall-yards-night-market-2026-11-29",
+    "status": "PENDING",
+    "startDate": "2026-11-29T20:00:00.000Z",
+    "endDate": "2026-11-30T00:00:00.000Z",
+    "venue": {
+      "id": "cmw0avy9x003301mmswzuhaco",
+      "name": "Kendall Yards (Summit Parkway)",
+      "city": "Spokane"
+    },
+    "market": {
+      "id": "cmmacl70l000m3pmwhwiekmut",
+      "name": "Kendall Yards Night Market"
+    },
+    "url": "https://spokane.markets/events/kendall-yards-night-market-2026-11-29"
+  },
+  {
+    "id": "cmw0avyky005001mm1d94dicd",
+    "title": "Kendall Yards Christmas Market",
+    "slug": "kendall-yards-night-market-2026-11-28",
+    "status": "PENDING",
+    "startDate": "2026-11-28T20:00:00.000Z",
+    "endDate": "2026-11-29T00:00:00.000Z",
+    "venue": {
+      "id": "cmw0avy9x003301mmswzuhaco",
+      "name": "Kendall Yards (Summit Parkway)",
+      "city": "Spokane"
+    },
+    "market": {
+      "id": "cmmacl70l000m3pmwhwiekmut",
+      "name": "Kendall Yards Night Market"
+    },
+    "url": "https://spokane.markets/events/kendall-yards-night-market-2026-11-28"
+  },
+  {
+    "id": "cmvv9iv47001w01mm5lut2h2a",
+    "title": "33 Artists Market",
+    "slug": "33-artists-market-2026-11-28",
+    "status": "PENDING",
+    "startDate": "2026-11-28T19:00:00.000Z",
+    "endDate": "2026-11-29T01:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv15000z01mmsht74nfu",
+      "name": "The Woman's Club of Spokane",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/33-artists-market-2026-11-28"
+  },
+  {
+    "id": "cmw0avykl004y01mmwf14dky1",
+    "title": "33 Artists Market: Small Business Saturday",
+    "slug": "33-artists-market-small-business-saturday-2026-11-28",
+    "status": "PENDING",
+    "startDate": "2026-11-28T19:00:00.000Z",
+    "endDate": "2026-11-29T01:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv15000z01mmsht74nfu",
+      "name": "The Woman's Club of Spokane",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/33-artists-market-small-business-saturday-2026-11-28"
+  },
+  {
+    "id": "cmvv9iv3r001t01mmcd96ngzl",
+    "title": "Winter Market at The Quarry",
+    "slug": "winter-market-at-the-quarry-2026-11-28",
+    "status": "PENDING",
+    "startDate": "2026-11-28T16:00:00.000Z",
+    "endDate": "2026-11-30T00:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv0r000r01mmpq4b1jhj",
+      "name": "Scale House Market",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/winter-market-at-the-quarry-2026-11-28"
+  },
+  {
+    "id": "cmw0avyku004z01mmxhbc2auj",
+    "title": "Kendall Yards Christmas Market",
+    "slug": "kendall-yards-night-market-2026-11-27",
+    "status": "PENDING",
+    "startDate": "2026-11-27T20:00:00.000Z",
+    "endDate": "2026-11-28T00:00:00.000Z",
+    "venue": {
+      "id": "cmw0avy9x003301mmswzuhaco",
+      "name": "Kendall Yards (Summit Parkway)",
+      "city": "Spokane"
+    },
+    "market": {
+      "id": "cmmacl70l000m3pmwhwiekmut",
+      "name": "Kendall Yards Night Market"
+    },
+    "url": "https://spokane.markets/events/kendall-yards-night-market-2026-11-27"
+  },
+  {
+    "id": "cmw0avymd005901mm2robu6xi",
+    "title": "German Christmas Market (Post Falls Public Market)",
+    "slug": "german-christmas-market-post-falls-public-market-2026-11-27",
+    "status": "DRAFT",
+    "startDate": "2026-11-27T18:00:00.000Z",
+    "endDate": "2026-11-30T01:00:00.000Z",
+    "venue": {
+      "id": "cmw0avycj003v01mmbctg2u3r",
+      "name": "Post Falls Public Market",
+      "city": "Post Falls"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/german-christmas-market-post-falls-public-market-2026-11-27"
+  },
+  {
+    "id": "cmw0avylj005501mmdipasdjl",
+    "title": "A Very Merry Market",
+    "slug": "a-very-merry-market-2026-11-27",
+    "status": "PENDING",
+    "startDate": "2026-11-27T17:00:00.000Z",
+    "endDate": "2026-11-30T02:00:00.000Z",
+    "venue": {
+      "id": "cmw0avycf003o01mmpopvs5pi",
+      "name": "Silver Lake Mall",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/a-very-merry-market-2026-11-27"
+  },
+  {
+    "id": "cmvv9iv4p002001mmxv4ft0hy",
+    "title": "Newport Farmers Market Holiday Market",
+    "slug": "newport-farmers-market-holiday-market-2026-11-21",
+    "status": "PENDING",
+    "startDate": "2026-11-21T18:00:00.000Z",
+    "endDate": "2026-11-21T22:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv1o001h01mm2giblpjo",
+      "name": "WaFd Bank Parking Lot (Newport)",
+      "city": "Newport"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/newport-farmers-market-holiday-market-2026-11-21"
+  },
+  {
+    "id": "cmvv9iv56002401mmp3v140mj",
+    "title": "Spokane Farmers' Market",
+    "slug": "spokane-farmers-market-2026-11-21",
+    "status": "PENDING",
+    "startDate": "2026-11-21T18:00:00.000Z",
+    "endDate": "2026-11-21T21:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv0z000s01mmfkt84gfs",
+      "name": "Coeur d'Alene Park",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/spokane-farmers-market-2026-11-21"
+  },
+  {
+    "id": "cmvv9iv8g002r01mmxbcrmfqs",
+    "title": "Santa Helpers For Seniors Craft Fair",
+    "slug": "rathdrum-craft-and-farmers-market-2026-11-21",
+    "status": "DRAFT",
+    "startDate": "2026-11-21T18:00:00.000Z",
+    "endDate": "2026-11-21T23:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv1e001d01mmrn66qseh",
+      "name": "Rathdrum Lions Club",
+      "city": "Rathdrum"
+    },
+    "market": {
+      "id": "cmvv9iv1q001i01mmql2udwe3",
+      "name": "Rathdrum Craft and Farmers Market"
+    },
+    "url": "https://spokane.markets/events/rathdrum-craft-and-farmers-market-2026-11-21"
+  },
+  {
+    "id": "cmw0avyjr004v01mm94q0ljm2",
+    "title": "Lake City Center Fall Arts & Craft Fair",
+    "slug": "lake-city-center-fall-arts-craft-fair-2026-11-21",
+    "status": "DRAFT",
+    "startDate": "2026-11-21T18:00:00.000Z",
+    "endDate": "2026-11-21T22:00:00.000Z",
+    "venue": {
+      "id": "cmw0avycj003u01mmdze85luo",
+      "name": "Lake City Center",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/lake-city-center-fall-arts-craft-fair-2026-11-21"
+  },
+  {
+    "id": "cmvv9iv3e001r01mmim42zukd",
+    "title": "Coeur d'Alene Ski Swap",
+    "slug": "coeur-dalene-ski-swap-2026-11-21",
+    "status": "PENDING",
+    "startDate": "2026-11-21T17:00:00.000Z",
+    "endDate": "2026-11-22T00:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv10000t01mmezyemuxe",
+      "name": "Kootenai County Fairgrounds",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/coeur-dalene-ski-swap-2026-11-21"
+  },
+  {
+    "id": "cmndzqad2000901noiaqiabk7",
+    "title": "Custer's Christmas Arts & Crafts Show",
+    "slug": "custers-christmas-arts-crafts-show",
+    "status": "PUBLISHED",
+    "startDate": "2026-11-20T18:00:00.000Z",
+    "endDate": "2026-11-23T00:00:00.000Z",
+    "venue": {
+      "id": "cmndzqacw000801nohq0j502a",
+      "name": "Spokane County Fair and Expo Center",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/custers-christmas-arts-crafts-show"
+  },
+  {
+    "id": "cmw0avyik004u01mmj78cmaxh",
+    "title": "Bestland Senior Living Annual Bazaar & Craft Fair",
+    "slug": "bestland-senior-living-annual-bazaar-craft-fair-2026-11-20",
+    "status": "DRAFT",
+    "startDate": "2026-11-20T18:00:00.000Z",
+    "endDate": "2026-11-22T00:00:00.000Z",
+    "venue": {
+      "id": "cmw0avyci003t01mm9gf2z67a",
+      "name": "Bestland Senior Living",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/bestland-senior-living-annual-bazaar-craft-fair-2026-11-20"
+  },
+  {
+    "id": "cmvv9iv79002l01mmqe04wuyc",
+    "title": "The Spokane Jeweler's Guild Show",
+    "slug": "the-spokane-jewelers-guild-show-2026-11-14",
+    "status": "DRAFT",
+    "startDate": "2026-11-14T20:00:00.000Z",
+    "endDate": "2026-11-15T00:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv1l001e01mm0pdr0axo",
+      "name": "New Moon Art Gallery",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/the-spokane-jewelers-guild-show-2026-11-14"
+  },
+  {
+    "id": "cmw0avyfe004i01mmugcfok4z",
+    "title": "Fall Folk Festival",
+    "slug": "fall-folk-festival-2026-11-14",
+    "status": "PENDING",
+    "startDate": "2026-11-14T19:00:00.000Z",
+    "endDate": "2026-11-16T01:00:00.000Z",
+    "venue": {
+      "id": "cmw0avyal003801mmo9agxk14",
+      "name": "Spokane Community College, The Lair",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/fall-folk-festival-2026-11-14"
+  },
+  {
+    "id": "cmvv9iv2i001l01mmcuw70ze4",
+    "title": "The Fall First Look Bridal Show",
+    "slug": "the-fall-first-look-bridal-show-2026-11-14",
+    "status": "PENDING",
+    "startDate": "2026-11-14T18:00:00.000Z",
+    "endDate": "2026-11-15T00:00:00.000Z",
+    "venue": {
+      "id": "cmmadcu81000701o4mauzdecz",
+      "name": "CenterPlace Regional Event Center",
+      "city": "Spokane Valley"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/the-fall-first-look-bridal-show-2026-11-14"
+  },
+  {
+    "id": "cmvv9iv52002301mmngoisrbh",
+    "title": "Spokane Farmers' Market",
+    "slug": "spokane-farmers-market-2026-11-14",
+    "status": "PENDING",
+    "startDate": "2026-11-14T18:00:00.000Z",
+    "endDate": "2026-11-14T21:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv0z000s01mmfkt84gfs",
+      "name": "Coeur d'Alene Park",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/spokane-farmers-market-2026-11-14"
+  },
+  {
+    "id": "cmvv9iv68002e01mmixgjumjd",
+    "title": "Elk Soup's Native Arts Market",
+    "slug": "elk-soups-native-arts-market-2026-11-14",
+    "status": "DRAFT",
+    "startDate": "2026-11-14T18:00:00.000Z",
+    "endDate": "2026-11-15T03:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv15000y01mme6raxk88",
+      "name": "River Park Square",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/elk-soups-native-arts-market-2026-11-14"
+  },
+  {
+    "id": "cmw0avyf7004h01mmav65alez",
+    "title": "Cabin Fever Market (Kootenai County Farmers' Market)",
+    "slug": "kootenai-county-farmers-market-2026-11-14",
+    "status": "PENDING",
+    "startDate": "2026-11-14T18:00:00.000Z",
+    "endDate": "2026-11-14T23:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv10000t01mmezyemuxe",
+      "name": "Kootenai County Fairgrounds",
+      "city": "Coeur d'Alene"
+    },
+    "market": {
+      "id": "cmw0avyco004001mmxicboc40",
+      "name": "Kootenai County Farmers' Market"
+    },
+    "url": "https://spokane.markets/events/kootenai-county-farmers-market-2026-11-14"
+  },
+  {
+    "id": "cmw0avyfr004l01mml3grq3r3",
+    "title": "Fall First Look Bridal Show",
+    "slug": "fall-first-look-bridal-show-2026-11-14",
+    "status": "PENDING",
+    "startDate": "2026-11-14T18:00:00.000Z",
+    "endDate": "2026-11-15T00:00:00.000Z",
+    "venue": {
+      "id": "cmmadcu81000701o4mauzdecz",
+      "name": "CenterPlace Regional Event Center",
+      "city": "Spokane Valley"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/fall-first-look-bridal-show-2026-11-14"
+  },
+  {
+    "id": "cmw0avyg3004n01mm1namqgnd",
+    "title": "Community Market at Silver Lake",
+    "slug": "community-market-at-silver-lake-2026-11-14",
+    "status": "PENDING",
+    "startDate": "2026-11-14T18:00:00.000Z",
+    "endDate": "2026-11-15T00:00:00.000Z",
+    "venue": {
+      "id": "cmw0avycf003o01mmpopvs5pi",
+      "name": "Silver Lake Mall",
+      "city": "Coeur d'Alene"
+    },
+    "market": {
+      "id": "cmw0avycy004101mmilzrpn7s",
+      "name": "Community Market at Silver Lake"
+    },
+    "url": "https://spokane.markets/events/community-market-at-silver-lake-2026-11-14"
+  },
+  {
+    "id": "cmw0avyh4004r01mmhqrr066c",
+    "title": "Brookdale Coeur d'Alene Winter Craft Fair",
+    "slug": "brookdale-coeur-dalene-winter-craft-fair-2026-11-14",
+    "status": "DRAFT",
+    "startDate": "2026-11-14T18:00:00.000Z",
+    "endDate": "2026-11-14T23:00:00.000Z",
+    "venue": {
+      "id": "cmw0avych003r01mml169ez25",
+      "name": "Brookdale Coeur d'Alene",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/brookdale-coeur-dalene-winter-craft-fair-2026-11-14"
+  },
+  {
+    "id": "cmw0avyhh004s01mm8tnxym13",
+    "title": "Holiday Market (Spirit Lake Community Center)",
+    "slug": "holiday-market-spirit-lake-community-center-2026-11-14",
+    "status": "DRAFT",
+    "startDate": "2026-11-14T18:00:00.000Z",
+    "endDate": "2026-11-15T00:00:00.000Z",
+    "venue": {
+      "id": "cmw0avyci003s01mm3ti8n5r5",
+      "name": "Spirit Lake Community Center",
+      "city": "Spirit Lake"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/holiday-market-spirit-lake-community-center-2026-11-14"
+  },
+  {
+    "id": "cmnikxwu9001p01mh23t36zfw",
+    "title": "Shadle Park Boosters Fall Craft Show 2026",
+    "slug": "shadle-park-craft-fall-26",
+    "status": "PUBLISHED",
+    "startDate": "2026-11-14T17:00:00.000Z",
+    "endDate": "2026-11-15T23:00:00.000Z",
+    "venue": {
+      "id": "cmnikxwu0001o01mh4va4xema",
+      "name": "Shadle Park High School",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/shadle-park-craft-fall-26"
+  },
+  {
+    "id": "cmnikxxnu001v01mhbz7fbvjh",
+    "title": "Mead Craft Fair",
+    "slug": "mead-craft-fair",
+    "status": "PUBLISHED",
+    "startDate": "2026-11-14T17:00:00.000Z",
+    "endDate": "2026-11-16T00:00:00.000Z",
+    "venue": {
+      "id": "cmnikxxnr001u01mhlzjlgtt4",
+      "name": "Mead High School",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/mead-craft-fair"
+  },
+  {
+    "id": "cmw0avyfk004j01mmokyf5l4b",
+    "title": "Snow & ATV Show (Spokane Winter Knights)",
+    "slug": "snow-atv-show-spokane-winter-knights-2026-11-14",
+    "status": "PENDING",
+    "startDate": "2026-11-14T17:00:00.000Z",
+    "endDate": "2026-11-15T01:00:00.000Z",
+    "venue": {
+      "id": "cmmadcu7p000201o4ame6xj2h",
+      "name": "Spokane County Fair & Expo Center",
+      "city": "Spokane Valley"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/snow-atv-show-spokane-winter-knights-2026-11-14"
+  },
+  {
+    "id": "cmw0avyfu004m01mmvqpvtvw7",
+    "title": "Snowflake Faire (St. Luke's Episcopal Church)",
+    "slug": "snowflake-faire-st-lukes-episcopal-church-2026-11-14",
+    "status": "PENDING",
+    "startDate": "2026-11-14T17:00:00.000Z",
+    "endDate": "2026-11-14T23:00:00.000Z",
+    "venue": {
+      "id": "cmw0avyce003n01mme90xbdur",
+      "name": "St. Luke's Episcopal Church",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/snowflake-faire-st-lukes-episcopal-church-2026-11-14"
+  },
+  {
+    "id": "cmvv9iv7m002n01mmjvkr82rn",
+    "title": "Autumn Indoor Market",
+    "slug": "autumn-indoor-market-2026-11-14",
+    "status": "DRAFT",
+    "startDate": "2026-11-14T08:00:00.000Z",
+    "endDate": "2026-11-15T07:59:00.000Z",
+    "venue": {
+      "id": "cmvv9iv10000t01mmezyemuxe",
+      "name": "Kootenai County Fairgrounds",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/autumn-indoor-market-2026-11-14"
+  },
+  {
+    "id": "cmw0avyhy004t01mme28vgow6",
+    "title": "Winter Bazaar (Blanchard Community Center)",
+    "slug": "winter-bazaar-blanchard-community-center-2026-11-13",
+    "status": "DRAFT",
+    "startDate": "2026-11-13T20:00:00.000Z",
+    "endDate": "2026-11-15T00:00:00.000Z",
+    "venue": {
+      "id": "cmw0avycl003y01mmtuwo57gh",
+      "name": "Blanchard Community Center",
+      "city": "Blanchard"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/winter-bazaar-blanchard-community-center-2026-11-13"
+  },
+  {
+    "id": "cmw0avydn004401mmvwa61rvp",
+    "title": "Emerge Holiday Market",
+    "slug": "emerge-holiday-market-2026-11-07",
+    "status": "PENDING",
+    "startDate": "2026-11-07T19:00:00.000Z",
+    "endDate": "2026-11-08T02:00:00.000Z",
+    "venue": {
+      "id": "cmw0avyce003m01mmv7izebbe",
+      "name": "Emerge",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/emerge-holiday-market-2026-11-07"
+  },
+  {
+    "id": "cmw0avye4004801mm4y2ziq1t",
+    "title": "Spokane Potters' Guild SouperBowl Fundraiser",
+    "slug": "spokane-potters-guild-souperbowl-fundraiser-2026-11-07",
+    "status": "PENDING",
+    "startDate": "2026-11-07T19:00:00.000Z",
+    "endDate": "2026-11-07T23:00:00.000Z",
+    "venue": {
+      "id": "cmw0avyal003801mmo9agxk14",
+      "name": "Spokane Community College, The Lair",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/spokane-potters-guild-souperbowl-fundraiser-2026-11-07"
+  },
+  {
+    "id": "cmvv9iv2d001k01mmfeltxwi5",
+    "title": "Fall Holistic Festival 2026",
+    "slug": "fall-holistic-festival-2026-2026-11-07",
+    "status": "PENDING",
+    "startDate": "2026-11-07T18:00:00.000Z",
+    "endDate": "2026-11-08T01:00:00.000Z",
+    "venue": {
+      "id": "cmmadcu81000701o4mauzdecz",
+      "name": "CenterPlace Regional Event Center",
+      "city": "Spokane Valley"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/fall-holistic-festival-2026-2026-11-07"
+  },
+  {
+    "id": "cmvv9iv3j001s01mm2cgds04q",
+    "title": "Mistequa Casino Hotel Holiday Marketplace",
+    "slug": "mistequa-casino-hotel-holiday-marketplace-2026-11-07",
+    "status": "PENDING",
+    "startDate": "2026-11-07T18:00:00.000Z",
+    "endDate": "2026-11-08T21:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv13000w01mmd9tkjto7",
+      "name": "Mistequa Casino Hotel",
+      "city": "Chewelah"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/mistequa-casino-hotel-holiday-marketplace-2026-11-07"
+  },
+  {
+    "id": "cmvv9iv4y002201mmkx4n39zb",
+    "title": "Spokane Farmers' Market",
+    "slug": "spokane-farmers-market-2026-11-07",
+    "status": "PENDING",
+    "startDate": "2026-11-07T18:00:00.000Z",
+    "endDate": "2026-11-07T21:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv0z000s01mmfkt84gfs",
+      "name": "Coeur d'Alene Park",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/spokane-farmers-market-2026-11-07"
+  },
+  {
+    "id": "cmvv9iv6t002h01mmhhl0mc6j",
+    "title": "Hillyard Senior Center Holiday Craft Bazaar",
+    "slug": "hillyard-senior-center-holiday-craft-bazaar-2026-11-07",
+    "status": "DRAFT",
+    "startDate": "2026-11-07T18:00:00.000Z",
+    "endDate": "2026-11-07T22:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv19001501mmd3cy7v5r",
+      "name": "Hillyard Senior Center",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/hillyard-senior-center-holiday-craft-bazaar-2026-11-07"
+  },
+  {
+    "id": "cmvv9iv71002j01mm7xmm1gkx",
+    "title": "Craft and Bake Sale at Pilgrim Lutheran Church",
+    "slug": "craft-and-bake-sale-at-pilgrim-lutheran-church-2026-11-07",
+    "status": "DRAFT",
+    "startDate": "2026-11-07T18:00:00.000Z",
+    "endDate": "2026-11-08T00:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv1a001701mm057trkwu",
+      "name": "Pilgrim Lutheran Church",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/craft-and-bake-sale-at-pilgrim-lutheran-church-2026-11-07"
+  },
+  {
+    "id": "cmvv9iv89002q01mmqfci60ar",
+    "title": "Handmade Holiday Craft Fair",
+    "slug": "rathdrum-craft-and-farmers-market-2026-11-07",
+    "status": "DRAFT",
+    "startDate": "2026-11-07T18:00:00.000Z",
+    "endDate": "2026-11-07T23:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv1e001d01mmrn66qseh",
+      "name": "Rathdrum Lions Club",
+      "city": "Rathdrum"
+    },
+    "market": {
+      "id": "cmvv9iv1q001i01mmql2udwe3",
+      "name": "Rathdrum Craft and Farmers Market"
+    },
+    "url": "https://spokane.markets/events/rathdrum-craft-and-farmers-market-2026-11-07"
+  },
+  {
+    "id": "cmw0avydr004501mmvrlluldx",
+    "title": "Fall Holistic Festival",
+    "slug": "fall-holistic-festival-2026-11-07",
+    "status": "PENDING",
+    "startDate": "2026-11-07T18:00:00.000Z",
+    "endDate": "2026-11-08T01:00:00.000Z",
+    "venue": {
+      "id": "cmmadcu81000701o4mauzdecz",
+      "name": "CenterPlace Regional Event Center",
+      "city": "Spokane Valley"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/fall-holistic-festival-2026-11-07"
+  },
+  {
+    "id": "cmw0avye0004701mmdyfy6gap",
+    "title": "Hillyard Senior Center Craft Bazaar",
+    "slug": "hillyard-senior-center-craft-bazaar-2026-11-07",
+    "status": "PENDING",
+    "startDate": "2026-11-07T18:00:00.000Z",
+    "endDate": "2026-11-07T22:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv19001501mmd3cy7v5r",
+      "name": "Hillyard Senior Center",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/hillyard-senior-center-craft-bazaar-2026-11-07"
+  },
+  {
+    "id": "cmw0avyea004901mm7u6fnjf2",
+    "title": "CardCon",
+    "slug": "cardcon-2026-11-07",
+    "status": "DRAFT",
+    "startDate": "2026-11-07T18:00:00.000Z",
+    "endDate": "2026-11-08T01:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv10000t01mmezyemuxe",
+      "name": "Kootenai County Fairgrounds",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/cardcon-2026-11-07"
+  },
+  {
+    "id": "cmvv9iv2m001m01mm3h5lc0pi",
+    "title": "Post Falls Holiday Craft Fair",
+    "slug": "post-falls-holiday-craft-fair-2026-11-07",
+    "status": "PENDING",
+    "startDate": "2026-11-07T17:00:00.000Z",
+    "endDate": "2026-11-07T23:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv12000v01mmmxjqgkfo",
+      "name": "Q'emiln Trailhead Event Center",
+      "city": "Post Falls"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/post-falls-holiday-craft-fair-2026-11-07"
+  },
+  {
+    "id": "cmvv9iv6g002f01mmwetenxg5",
+    "title": "Holiday Bazaar in Cheney",
+    "slug": "holiday-bazaar-in-cheney-2026-11-07",
+    "status": "DRAFT",
+    "startDate": "2026-11-07T17:00:00.000Z",
+    "endDate": "2026-11-07T22:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv18001301mm14iovyka",
+      "name": "Cheney United Methodist Church",
+      "city": "Cheney"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/holiday-bazaar-in-cheney-2026-11-07"
+  },
+  {
+    "id": "cmvv9iv6n002g01mmt20iyyz8",
+    "title": "Annual St. Gregorios Christian Bazaar",
+    "slug": "annual-st-gregorios-christian-bazaar-2026-11-07",
+    "status": "DRAFT",
+    "startDate": "2026-11-07T17:00:00.000Z",
+    "endDate": "2026-11-08T04:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv19001401mmzeabu4h3",
+      "name": "St. Gregorios Malankara Orthodox Syrian Church",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/annual-st-gregorios-christian-bazaar-2026-11-07"
+  },
+  {
+    "id": "cmvv9iv6x002i01mmate75i9t",
+    "title": "Whitworth Auxiliary 2026 Fall Bazaar",
+    "slug": "whitworth-auxiliary-2026-fall-bazaar-2026-11-07",
+    "status": "DRAFT",
+    "startDate": "2026-11-07T17:00:00.000Z",
+    "endDate": "2026-11-07T22:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv1a001601mmr3cmznnl",
+      "name": "St. Luke Lutheran Church",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/whitworth-auxiliary-2026-fall-bazaar-2026-11-07"
+  },
+  {
+    "id": "cmvv9iv7f002m01mm8ctuawo5",
+    "title": "Central Valley High School Fall Craft Fair",
+    "slug": "central-valley-high-school-fall-craft-fair-2026-11-07",
+    "status": "DRAFT",
+    "startDate": "2026-11-07T17:00:00.000Z",
+    "endDate": "2026-11-09T01:00:00.000Z",
+    "venue": {
+      "id": "cmmadcu7u000401o4zzqk12dm",
+      "name": "Central Valley High School",
+      "city": "Spokane Valley"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/central-valley-high-school-fall-craft-fair-2026-11-07"
+  },
+  {
+    "id": "cmw0avydh004301mmpeii1gqd",
+    "title": "Holiday Craft Fair (Post Falls Parks & Recreation)",
+    "slug": "holiday-craft-fair-post-falls-parks-recreation-2026-11-07",
+    "status": "PENDING",
+    "startDate": "2026-11-07T17:00:00.000Z",
+    "endDate": "2026-11-07T23:00:00.000Z",
+    "venue": {
+      "id": "cmw0avyc7003k01mm8luz5ccu",
+      "name": "Trailhead Event Center",
+      "city": "Post Falls"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/holiday-craft-fair-post-falls-parks-recreation-2026-11-07"
+  },
+  {
+    "id": "cmw0avydw004601mmd6swb4nb",
+    "title": "Holiday Bazaar (Cheney United Methodist Church)",
+    "slug": "holiday-bazaar-cheney-united-methodist-church-2026-11-07",
+    "status": "PENDING",
+    "startDate": "2026-11-07T17:00:00.000Z",
+    "endDate": "2026-11-07T22:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv18001301mm14iovyka",
+      "name": "Cheney United Methodist Church",
+      "city": "Cheney"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/holiday-bazaar-cheney-united-methodist-church-2026-11-07"
+  },
+  {
+    "id": "cmw0avyef004a01mmdyd9zheg",
+    "title": "Holiday Bazaar (Trinity Lutheran Church)",
+    "slug": "holiday-bazaar-trinity-lutheran-church-2026-11-07",
+    "status": "DRAFT",
+    "startDate": "2026-11-07T16:00:00.000Z",
+    "endDate": "2026-11-07T22:00:00.000Z",
+    "venue": {
+      "id": "cmw0avycg003q01mm7n8rzxpm",
+      "name": "Trinity Lutheran Church",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/holiday-bazaar-trinity-lutheran-church-2026-11-07"
+  },
+  {
+    "id": "cmvv9iv33001p01mmeooskwyq",
+    "title": "11th Annual Rebel Junk Holiday Market",
+    "slug": "11th-annual-rebel-junk-holiday-market-2026-11-06",
+    "status": "PENDING",
+    "startDate": "2026-11-07T02:00:00.000Z",
+    "endDate": "2026-11-08T00:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv10000t01mmezyemuxe",
+      "name": "Kootenai County Fairgrounds",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/11th-annual-rebel-junk-holiday-market-2026-11-06"
+  },
+  {
+    "id": "cmw0avyd4004201mmpuy67drf",
+    "title": "Rebel Junk Holiday Market",
+    "slug": "rebel-junk-holiday-market-2026-11-06",
+    "status": "PENDING",
+    "startDate": "2026-11-07T01:30:00.000Z",
+    "endDate": "2026-11-08T00:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv10000t01mmezyemuxe",
+      "name": "Kootenai County Fairgrounds",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/rebel-junk-holiday-market-2026-11-06"
+  },
+  {
+    "id": "cmvv9iv3w001u01mmeh5jr2kh",
+    "title": "Yuletide Holiday Marketplace",
+    "slug": "yuletide-holiday-marketplace",
+    "status": "PUBLISHED",
+    "startDate": "2026-11-06T18:00:00.000Z",
+    "endDate": "2026-11-07T04:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv17001101mmbrn97r1y",
+      "name": "Spokane Art School",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/yuletide-holiday-marketplace"
+  },
+  {
+    "id": "cmvv9iv4u002101mmpyoqg7dk",
+    "title": "Spokane Farmers' Market",
+    "slug": "spokane-farmers-market-2026-10-31",
+    "status": "PENDING",
+    "startDate": "2026-10-31T15:00:00.000Z",
+    "endDate": "2026-10-31T19:00:00.000Z",
+    "venue": {
+      "id": "cmvv9iv0z000s01mmfkt84gfs",
+      "name": "Coeur d'Alene Park",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/spokane-farmers-market-2026-10-31"
+  },
+  {
+    "id": "cmnikxyj6002101mhdyze6arm",
+    "title": "Custer's Fall Antique & Vintage Show",
+    "slug": "custers-fall-vintage",
+    "status": "PUBLISHED",
+    "startDate": "2026-10-10T17:00:00.000Z",
+    "endDate": "2026-10-11T23:00:00.000Z",
+    "venue": {
+      "id": "cmnikxyiz002001mhzsbcxvq6",
+      "name": "Spokane County Fair and Expo Center",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/custers-fall-vintage"
+  },
+  {
+    "id": "cmnikowfs000o01mhq8r6ghzo",
+    "title": "Mt. Spokane High School Bands Artisan Craft & Food Fair 2026",
+    "slug": "mt-spokane-high-school-bands-artisan-craft-food-fair-2026",
+    "status": "PUBLISHED",
+    "startDate": "2026-10-10T16:00:00.000Z",
+    "endDate": "2026-10-12T00:00:00.000Z",
+    "venue": {
+      "id": "cmnikowfk000n01mhuogc1gmy",
+      "name": "Mt. Spokane High School",
+      "city": "Mead"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/mt-spokane-high-school-bands-artisan-craft-food-fair-2026"
+  },
+  {
+    "id": "cmnikxv5k001l01mhx5sjc0iq",
+    "title": "South Perry Street Fair",
+    "slug": "south-perry-street-fair",
+    "status": "PUBLISHED",
+    "startDate": "2026-09-26T17:00:00.000Z",
+    "endDate": "2026-09-27T02:00:00.000Z",
+    "venue": {
+      "id": "cmnikxv59001k01mh9geizcv9",
+      "name": "9th and Perry",
+      "city": "Spokane"
+    },
+    "market": {
+      "id": "cmmadebhc000f01o4uplmmiy5",
+      "name": "South Perry Street Fair"
+    },
+    "url": "https://spokane.markets/events/south-perry-street-fair"
+  },
+  {
+    "id": "cmniksq1m001501mh3pf0xrus",
+    "title": "Liberty Lake Fall Festival",
+    "slug": "liberty-lake-fall-festival",
+    "status": "PUBLISHED",
+    "startDate": "2026-09-13T16:00:00.000Z",
+    "endDate": "2026-09-13T23:00:00.000Z",
+    "venue": {
+      "id": "cmniksq1f001401mha6m4x186",
+      "name": "Liberty Lake Town Square Park",
+      "city": "Liberty Lake"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/liberty-lake-fall-festival"
+  },
+  {
+    "id": "cmnikxzpd002701mh9frkpu5u",
+    "title": "33 Artists Fall Market",
+    "slug": "33-artists-fall-market",
+    "status": "PUBLISHED",
+    "startDate": "2026-09-12T18:00:00.000Z",
+    "endDate": "2026-09-13T00:00:00.000Z",
+    "venue": {
+      "id": "cmnikxzp7002601mh8sd2y7ni",
+      "name": "Uprise Brewing Co.",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/33-artists-fall-market"
+  },
+  {
+    "id": "cmr1nmt9c000101muolubkoaq",
+    "title": "Arbor Crest Art & Glass Show",
+    "slug": "arbor-crest-art-glass-show",
+    "status": "PUBLISHED",
+    "startDate": "2026-08-22T18:00:00.000Z",
+    "endDate": "2026-08-24T00:00:00.000Z",
+    "venue": {
+      "id": "cmr1nmt8r000001mu659nf47i",
+      "name": "Arbor Crest Wine Cellars",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/arbor-crest-art-glass-show"
+  },
+  {
+    "id": "cmndmnhb5001a01o6z9imw1tp",
+    "title": "Fun in the Sun @ Audubon Park",
+    "slug": "fun-in-the-sun-audubon-park",
+    "status": "PUBLISHED",
+    "startDate": "2026-08-15T17:00:00.000Z",
+    "endDate": "2026-08-15T23:00:00.000Z",
+    "venue": {
+      "id": "cmndmnh9u001901o6igsd9z40",
+      "name": "Audubon Park",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/fun-in-the-sun-audubon-park"
+  },
+  {
+    "id": "cmmpg24cl000601rym4m9pvom",
+    "title": "Taste of Coeur D Alene 2026",
+    "slug": "taste-of-cda-2026",
+    "status": "PUBLISHED",
+    "startDate": "2026-07-31T19:00:00.000Z",
+    "endDate": "2026-08-03T00:00:00.000Z",
+    "venue": {
+      "id": "cmmpcy3oi000101ohincvzq5k",
+      "name": "Coeur d’Alene Downtown Assoc.",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/taste-of-cda-2026"
+  },
+  {
+    "id": "cmnik73e2000101mhkpdbmbfg",
+    "title": "Art on the Green",
+    "slug": "art-on-the-green",
+    "status": "PUBLISHED",
+    "startDate": "2026-07-31T18:00:00.000Z",
+    "endDate": "2026-08-02T23:00:00.000Z",
+    "venue": {
+      "id": "cmnik73da000001mh7cw9tj7e",
+      "name": "North Idaho College",
+      "city": "Coeur d' Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/art-on-the-green"
+  },
+  {
+    "id": "cmmpcy3ou000201ohahk8f07b",
+    "title": "Downtown Coeur d’Alene Street Fair",
+    "slug": "cda-street-fair",
+    "status": "PUBLISHED",
+    "startDate": "2026-07-31T17:00:00.000Z",
+    "endDate": "2026-08-03T00:00:00.000Z",
+    "venue": {
+      "id": "cmmpcy3oi000101ohincvzq5k",
+      "name": "Coeur d’Alene Downtown Assoc.",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/cda-street-fair"
+  },
+  {
+    "id": "cmndzpqzg000501no2wk8dhho",
+    "title": "Jacked Up Big Show Craft Fair & Car Show",
+    "slug": "jacked-up-big-show-craft-fair-car-show",
+    "status": "PUBLISHED",
+    "startDate": "2026-07-18T18:00:00.000Z",
+    "endDate": "2026-07-19T02:00:00.000Z",
+    "venue": {
+      "id": "cmndzpqx2000401norpngb68h",
+      "name": "Harmon Park/Hillyard Skate Park",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/jacked-up-big-show-craft-fair-car-show"
+  },
+  {
+    "id": "cmniksl0v000u01mhc57al6pn",
+    "title": "Post Falls Festival",
+    "slug": "post-falls-festival",
+    "status": "PUBLISHED",
+    "startDate": "2026-07-10T18:00:00.000Z",
+    "endDate": "2026-07-12T23:00:00.000Z",
+    "venue": {
+      "id": "cmniksl0j000t01mhixuzmn4r",
+      "name": "Q'emiln Park",
+      "city": "Post Falles"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/post-falls-festival"
+  },
+  {
+    "id": "cmp4f0brw001z01te1dspj58t",
+    "title": "Sprague Farmers Market",
+    "slug": "sprague-farmers-market",
+    "status": "PUBLISHED",
+    "startDate": "2026-06-14T16:00:00.000Z",
+    "endDate": "2026-08-23T22:00:00.000Z",
+    "venue": {
+      "id": "cmp4f0brs001y01te3g6y7e6g",
+      "name": "G's Kitchen",
+      "city": "Sprague"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/sprague-farmers-market"
+  },
+  {
+    "id": "cmmjdb0qe000101t72zpwlz6k",
+    "title": "Emerson-Garfield Farmers Market ",
+    "slug": "emerson-garfield-farmers-market",
+    "status": "PUBLISHED",
+    "startDate": "2026-06-05T22:00:00.000Z",
+    "endDate": "2026-09-26T02:00:00.000Z",
+    "venue": {
+      "id": "cmmjdb0pm000001t78gdrjmve",
+      "name": "Emerson Park",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/emerson-garfield-farmers-market"
+  },
+  {
+    "id": "cmo1v4jnw005d01njvd6gwxqc",
+    "title": "5th Street Farmers Market",
+    "slug": "5th-street-farmers-market",
+    "status": "PUBLISHED",
+    "startDate": "2026-05-27T23:00:00.000Z",
+    "endDate": "2026-09-03T02:00:00.000Z",
+    "venue": {
+      "id": "cmo1v4jnp005c01nj0rvqmx0r",
+      "name": "Couer D'Alene Business District",
+      "city": "Coeur d'Alene"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/5th-street-farmers-market"
+  },
+  {
+    "id": "cmr1nn2j1000701mukgi13nva",
+    "title": "Millwood Farmers Market",
+    "slug": "millwood-farmers-market",
+    "status": "PENDING",
+    "startDate": "2026-05-27T22:00:00.000Z",
+    "endDate": "2026-10-15T02:00:00.000Z",
+    "venue": {
+      "id": "cmr1nn2ix000601muvmo9bm58",
+      "name": "Millwood Community Presbyterian Church",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/millwood-farmers-market"
+  },
+  {
+    "id": "cmonrguy7000901tepyvuquvt",
+    "title": "Thrive to Survive",
+    "slug": "thrive-to-survive",
+    "status": "PUBLISHED",
+    "startDate": "2026-05-23T01:00:00.000Z",
+    "endDate": "2026-05-26T03:00:00.000Z",
+    "venue": {
+      "id": "cmonrguy0000801tejizpjf5a",
+      "name": "Thrive to Survive",
+      "city": "Addy"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/thrive-to-survive"
+  },
+  {
+    "id": "cmmgx4g30000001qiv8mdgqmj",
+    "title": "Kendall Yards Night Market",
+    "slug": "kynm",
+    "status": "PUBLISHED",
+    "startDate": "2026-05-21T00:00:00.000Z",
+    "endDate": "2026-09-17T03:30:00.000Z",
+    "venue": {
+      "id": "cmm8tr84a000n3oqrsw33gszq",
+      "name": "Kendall Yards",
+      "city": "Spokane"
+    },
+    "market": {
+      "id": "cmmacl70l000m3pmwhwiekmut",
+      "name": "Kendall Yards Night Market"
+    },
+    "url": "https://spokane.markets/events/kynm"
+  },
+  {
+    "id": "cmp4m21we000201rybq6t9sbl",
+    "title": "Spokane Lilac Marketplace 2026",
+    "slug": "lilac-marketplace",
+    "status": "PUBLISHED",
+    "startDate": "2026-05-16T18:00:00.000Z",
+    "endDate": "2026-05-17T05:00:00.000Z",
+    "venue": {
+      "id": "cmp4m21vt000101rymme62oxp",
+      "name": "Howard Street Downtown Spokane",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/lilac-marketplace"
+  },
+  {
+    "id": "cmmitxupn000501qh5e9qm3ba",
+    "title": "Fairwood Farmers Market",
+    "slug": "fairwood-farmers-market",
+    "status": "PUBLISHED",
+    "startDate": "2026-05-12T22:00:00.000Z",
+    "endDate": "2026-05-13T02:00:00.000Z",
+    "venue": {
+      "id": "cmmitu3md000401qhuscbvu2l",
+      "name": "Fairwood Farmers Market",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/fairwood-farmers-market"
+  },
+  {
+    "id": "cmniksow8001101mh56i6sqmz",
+    "title": "Spring on the Bluff Mother's Day Festival",
+    "slug": "spring-on-the-bluff-mothers-day-festival",
+    "status": "PUBLISHED",
+    "startDate": "2026-05-10T17:00:00.000Z",
+    "endDate": "2026-05-11T00:00:00.000Z",
+    "venue": {
+      "id": "cmniksow3001001mh8ppufmv6",
+      "name": "The Farmhouse on Greenbluff",
+      "city": "Colbert"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/spring-on-the-bluff-mothers-day-festival"
+  },
+  {
+    "id": "cmndmsyni001h01o66r4lktwt",
+    "title": "Airway Heights Summer Market",
+    "slug": "airway-heights-summer-market",
+    "status": "PUBLISHED",
+    "startDate": "2026-05-09T17:00:00.000Z",
+    "endDate": "2026-09-12T21:00:00.000Z",
+    "venue": {
+      "id": "cmndmsynb001g01o68b47zfd4",
+      "name": "Airway Heights Baptist Church",
+      "city": "Airway Heights"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/airway-heights-summer-market"
+  },
+  {
+    "id": "cmpaqwq9k003301pfwnwqjueh",
+    "title": "Outdoor Market Season at The Scale House Market",
+    "slug": "outdoor-market-season-at-the-scale-house-market",
+    "status": "PUBLISHED",
+    "startDate": "2026-05-09T17:00:00.000Z",
+    "endDate": "2026-10-11T21:00:00.000Z",
+    "venue": {
+      "id": "cmpaqwq90003201pf5hy36n5k",
+      "name": "The Scale House Market",
+      "city": "Spokane Valley"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/outdoor-market-season-at-the-scale-house-market"
+  },
+  {
+    "id": "cmmjdfh6l000k01t7ylx7iuj9",
+    "title": "Spokane Garden Expo",
+    "slug": "spokane-garden-expo",
+    "status": "PUBLISHED",
+    "startDate": "2026-05-09T15:00:00.000Z",
+    "endDate": "2026-05-10T00:00:00.000Z",
+    "venue": {
+      "id": "cmmjdfh6d000j01t7oixtbgxl",
+      "name": "Spokane Community College",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/spokane-garden-expo"
+  },
+  {
+    "id": "cmonuw3xl001801tecjfqlta1",
+    "title": "Spokane Night Market & Street Fair",
+    "slug": "spokane-night-market",
+    "status": "PUBLISHED",
+    "startDate": "2026-05-09T00:00:00.000Z",
+    "endDate": "2026-09-12T04:00:00.000Z",
+    "venue": {
+      "id": "cmmadcu86000901o4ams9l7e2",
+      "name": "University District Gateway Bridge Area",
+      "city": "Spokane"
+    },
+    "market": {
+      "id": "cmmadebh6000e01o4l7r4xv8t",
+      "name": "Spokane Night Market & Street Fair"
+    },
+    "url": "https://spokane.markets/events/spokane-night-market"
+  },
+  {
+    "id": "cmnwaqkfz000a01njilpkh27n",
+    "title": "Lilac City Vendor Fair",
+    "slug": "lilac-city-vendor-fair",
+    "status": "PUBLISHED",
+    "startDate": "2026-05-01T18:00:00.000Z",
+    "endDate": "2026-08-30T23:00:00.000Z",
+    "venue": {
+      "id": "cmnwaqkel000901nj0d4vgj97",
+      "name": "The Northtown Mall (Outdoors)",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/lilac-city-vendor-fair"
+  },
+  {
+    "id": "cmndzqb16000e01nol5nlpabk",
+    "title": "Spring Fantasy Market - Presented by Page 42",
+    "slug": "spring-fantasy-market-page-42",
+    "status": "PUBLISHED",
+    "startDate": "2026-04-18T19:00:00.000Z",
+    "endDate": "2026-04-19T00:00:00.000Z",
+    "venue": {
+      "id": "cmndzqb11000d01nouj2809aj",
+      "name": "Page 42 Bookstore",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/spring-fantasy-market-page-42"
+  },
+  {
+    "id": "cmnqfiuxj000901mgabahatuq",
+    "title": "University High School Spring Craft Fair",
+    "slug": "uhs-spring-craft-fair",
+    "status": "PUBLISHED",
+    "startDate": "2026-04-18T16:00:00.000Z",
+    "endDate": "2026-04-19T22:00:00.000Z",
+    "venue": {
+      "id": "cmnqfiuwf000801mg73sbuvwl",
+      "name": "University High School",
+      "city": "Spokane Valley"
+    },
+    "market": {
+      "id": "cmmadebhv000m01o4qjf3rism",
+      "name": "University High School Spring Craft Fair"
+    },
+    "url": "https://spokane.markets/events/uhs-spring-craft-fair"
+  },
+  {
+    "id": "cmonsbqhn000u01te3k6z60ix",
+    "title": "Scale House Seasonal Open-Air Market",
+    "slug": "scale-house-seasonal-open-air-market",
+    "status": "PENDING",
+    "startDate": "2026-04-15T15:00:00.000Z",
+    "endDate": "2026-04-15T21:00:00.000Z",
+    "venue": {
+      "id": "cmonsbqhg000t01te8l06mv74",
+      "name": "The Scale House Market at the Quarry",
+      "city": "Spokane Valley"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/scale-house-seasonal-open-air-market"
+  },
+  {
+    "id": "cmmpf9zp1000101ryqjapy27i",
+    "title": "Outdoor Spring Market by Veronica's Thrift",
+    "slug": "outdoor-spring-market-by-veronicas-thrift",
+    "status": "PUBLISHED",
+    "startDate": "2026-04-11T17:00:00.000Z",
+    "endDate": "2026-04-12T00:00:00.000Z",
+    "venue": {
+      "id": "cmmpf9zo8000001ryyb5szgf7",
+      "name": "Veronica's Thrift",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/outdoor-spring-market-by-veronicas-thrift"
+  },
+  {
+    "id": "cmmitjfv7000201qhpw2rlo3z",
+    "title": "Spring Market @ Riverfront Park",
+    "slug": "spring-market-rf-iccu",
+    "status": "PUBLISHED",
+    "startDate": "2026-04-08T19:00:00.000Z",
+    "endDate": "2026-04-09T01:00:00.000Z",
+    "venue": {
+      "id": "cmm8tr83w000k3oqr2rh58wbp",
+      "name": "Riverfront Park",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/spring-market-rf-iccu"
+  },
+  {
+    "id": "cmne5iiks000201rri4kqwrb3",
+    "title": "It’s Not Your Grandma‘s Craft Fair",
+    "slug": "its-not-your-grandmas-craft-fair",
+    "status": "PUBLISHED",
+    "startDate": "2026-04-04T19:00:00.000Z",
+    "endDate": "2026-04-05T03:00:00.000Z",
+    "venue": {
+      "id": "cmne5iijx000101rrjqsg5ecc",
+      "name": "The Guardian",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/its-not-your-grandmas-craft-fair"
+  },
+  {
+    "id": "cmmmp1cfq000101pm1t6lr965",
+    "title": "Shadle Park - Spring '26 Craft Show",
+    "slug": "sp-spring-craft",
+    "status": "PUBLISHED",
+    "startDate": "2026-03-27T16:00:00.000Z",
+    "endDate": "2026-03-28T22:00:00.000Z",
+    "venue": {
+      "id": "cmmmp1ceo000001pm7muteqb4",
+      "name": "Shadle Park High School",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/sp-spring-craft"
+  },
+  {
+    "id": "cmmiu23wk000701qh84d3q1zx",
+    "title": "CVHS Spring Arts & Crafts Fair",
+    "slug": "cvhs-spring-fair",
+    "status": "PUBLISHED",
+    "startDate": "2026-03-14T16:00:00.000Z",
+    "endDate": "2026-03-14T23:00:00.000Z",
+    "venue": {
+      "id": "cmmadcu7u000401o4zzqk12dm",
+      "name": "Central Valley High School",
+      "city": "Spokane Valley"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/cvhs-spring-fair"
+  },
+  {
+    "id": "cmmjdn89m000m01t7825ckyw8",
+    "title": "Medical Lake Farmers Market",
+    "slug": "medical-lake-farmers-market",
+    "status": "PUBLISHED",
+    "startDate": "2026-02-21T17:00:00.000Z",
+    "endDate": "2026-10-31T20:00:00.000Z",
+    "venue": {
+      "id": "cmmjdq3d2000z01t7io20npmk",
+      "name": "Medical Lake Market",
+      "city": "Spokane"
+    },
+    "market": null,
+    "url": "https://spokane.markets/events/medical-lake-farmers-market"
+  }
+]

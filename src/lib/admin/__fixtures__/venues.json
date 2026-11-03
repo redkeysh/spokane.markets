@@ -1,0 +1,1502 @@
+[
+  {
+    "id": "cmnikxv59001k01mh9geizcv9",
+    "name": "9th and Perry",
+    "address": "1000 South Perry Street",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99202",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmndmsynb001g01o68b47zfd4",
+    "name": "Airway Heights Baptist Church",
+    "address": "12322 West Sunset Highway",
+    "city": "Airway Heights",
+    "state": "WA",
+    "zip": "99001",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmr1nmt8r000001mu659nf47i",
+    "name": "Arbor Crest Wine Cellars",
+    "address": "4705a North Fruit Hill Road",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99217",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv1m001g01mm4jr7tpln",
+    "name": "Argonne Rd & Dalton Ave (Millwood)",
+    "address": "N Argonne Rd & E Dalton Ave",
+    "city": "Millwood",
+    "state": "WA",
+    "zip": "99212",
+    "neighborhood": "spokane-valley",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmw0avycl003x01mmjshu88az",
+    "name": "Athol Community Center",
+    "address": "30355 N 3rd St",
+    "city": "Athol",
+    "state": "ID",
+    "zip": "83801",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmndmnh9u001901o6igsd9z40",
+    "name": "Audubon Park",
+    "address": "3405 North Milton Street",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99205",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmw0avyci003t01mm9gf2z67a",
+    "name": "Bestland Senior Living",
+    "address": "606 E Best Ave",
+    "city": "Coeur d'Alene",
+    "state": "ID",
+    "zip": "83814",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmw0avycl003y01mmtuwo57gh",
+    "name": "Blanchard Community Center",
+    "address": "685 Rusho Ln",
+    "city": "Blanchard",
+    "state": "ID",
+    "zip": "83804",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmw0avych003r01mml169ez25",
+    "name": "Brookdale Coeur d'Alene",
+    "address": "205 E Anton Ave",
+    "city": "Coeur d'Alene",
+    "state": "ID",
+    "zip": "83815",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmmadcu81000701o4mauzdecz",
+    "name": "CenterPlace Regional Event Center",
+    "address": "2426 N Discovery Pl",
+    "city": "Spokane Valley",
+    "state": "WA",
+    "zip": "99216",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 6,
+      "markets": 1
+    }
+  },
+  {
+    "id": "cmmadcu7u000401o4zzqk12dm",
+    "name": "Central Valley High School",
+    "address": "821 S Sullivan Rd",
+    "city": "Spokane Valley",
+    "state": "WA",
+    "zip": "99037",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 2,
+      "markets": 1
+    }
+  },
+  {
+    "id": "cmvv9iv1d001b01mmg9czk9n4",
+    "name": "Cheney High School",
+    "address": "460 N 6th St",
+    "city": "Cheney",
+    "state": "WA",
+    "zip": "99004",
+    "neighborhood": "cheney",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 2,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv18001301mm14iovyka",
+    "name": "Cheney United Methodist Church",
+    "address": "204 4th St",
+    "city": "Cheney",
+    "state": "WA",
+    "zip": "99004",
+    "neighborhood": "cheney",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 2,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv0z000s01mmfkt84gfs",
+    "name": "Coeur d'Alene Park",
+    "address": "W 2nd Ave & N Chestnut St",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99201",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 4,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmmpcy3oi000101ohincvzq5k",
+    "name": "Coeur d’Alene Downtown Assoc.",
+    "address": "105 North 1st Street",
+    "city": "Coeur d'Alene",
+    "state": "ID",
+    "zip": "83814",
+    "neighborhood": "cda",
+    "parkingNotes": null,
+    "deletedAt": "2026-05-01T05:13:00.121Z",
+    "_count": {
+      "events": 2,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmw0avyck003w01mmx3w5giua",
+    "name": "Community Presbyterian Church",
+    "address": "417 N William St",
+    "city": "Post Falls",
+    "state": "ID",
+    "zip": "83854",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmm8tr840000l3oqrqd4mzq70",
+    "name": "Convention Center",
+    "address": "334 W Spokane Falls Blvd",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99201",
+    "neighborhood": "downtown",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 0,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmo1v4jnp005c01nj0rvqmx0r",
+    "name": "Couer D'Alene Business District",
+    "address": "5th and Front Sreet",
+    "city": "Coeur d'Alene",
+    "state": "Idaho",
+    "zip": "83814",
+    "neighborhood": "cda",
+    "parkingNotes": null,
+    "deletedAt": "2026-05-01T05:12:43.841Z",
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv1m001f01mmj6yr0h57",
+    "name": "Downtown Chewelah (Main Ave)",
+    "address": "Main Ave & 3rd St",
+    "city": "Chewelah",
+    "state": "WA",
+    "zip": "99109",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmw0avyce003m01mmv7izebbe",
+    "name": "Emerge",
+    "address": "119 N 2nd St",
+    "city": "Coeur d'Alene",
+    "state": "ID",
+    "zip": "83814",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmmjdb0pm000001t78gdrjmve",
+    "name": "Emerson Park",
+    "address": "1116 West Alice Avenue",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99205",
+    "neighborhood": "emerson-garfield",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmmitu3md000401qhuscbvu2l",
+    "name": "Fairwood Farmers Market",
+    "address": "319 W Hastings Rd",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99218",
+    "neighborhood": "north-spokane",
+    "parkingNotes": "\n\nWhere can I park for the Fairwood Farmers Market?\nParking is available WEST of the  market area (the Calvary Church parking lots by Physical Therapy & Associates)\n\n Please follow posted signage and any directions from market staff or volunteers to ensure safe and respectful parking for neighbors and businesses.\n\nIs there accessible parking available?\nYes. Accessible parking spaces are available nearby. If you need assistance, please ask a market volunteer or staff member.",
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmp4f0brs001y01te3g6y7e6g",
+    "name": "G's Kitchen",
+    "address": "106 East 1st Street",
+    "city": "Sprague",
+    "state": "WA",
+    "zip": "99032",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv13000x01mm4fj8vrhu",
+    "name": "Gesa Pavilion at Riverfront Park",
+    "address": "574 N Howard St",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99201",
+    "neighborhood": "downtown",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmndzpqx2000401norpngb68h",
+    "name": "Harmon Park/Hillyard Skate Park",
+    "address": "6018 North Regal Street",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99208",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv19001501mmd3cy7v5r",
+    "name": "Hillyard Senior Center",
+    "address": "4001 N Cook St",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99207",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 2,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmp4m21vt000101rymme62oxp",
+    "name": "Howard Street Downtown Spokane",
+    "address": "200 N Howard St",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99201",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmmadcu7r000301o4xzlr4qv6",
+    "name": "John R. Rogers High School",
+    "address": "1622 E Wellesley Ave",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99207",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 0,
+      "markets": 1
+    }
+  },
+  {
+    "id": "cmm8tr84a000n3oqrsw33gszq",
+    "name": "Kendall Yards",
+    "address": "1335 W Summit Pkwy",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99201",
+    "neighborhood": "kendall-yards",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 2
+    }
+  },
+  {
+    "id": "cmw0avy9x003301mmswzuhaco",
+    "name": "Kendall Yards (Summit Parkway)",
+    "address": "1335 W Summit Pkwy",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99201",
+    "neighborhood": "kendall-yards",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 6,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv10000t01mmezyemuxe",
+    "name": "Kootenai County Fairgrounds",
+    "address": "4056 N Government Way",
+    "city": "Coeur d'Alene",
+    "state": "ID",
+    "zip": "83815",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 13,
+      "markets": 1
+    }
+  },
+  {
+    "id": "cmw0avycj003u01mmdze85luo",
+    "name": "Lake City Center",
+    "address": "1916 Lakewood Dr",
+    "city": "Coeur d'Alene",
+    "state": "ID",
+    "zip": "83814",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmniksq1f001401mha6m4x186",
+    "name": "Liberty Lake Town Square Park",
+    "address": "1421 North Meadowwood Lane",
+    "city": "Liberty Lake",
+    "state": "WA",
+    "zip": "99019",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmmadcu8b000b01o4hh4lcww7",
+    "name": "Main Ave & Post St (Downtown Spokane)",
+    "address": "Main Ave & Post St",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99201",
+    "neighborhood": "downtown",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 0,
+      "markets": 1
+    }
+  },
+  {
+    "id": "cmnikxxnr001u01mhlzjlgtt4",
+    "name": "Mead High School",
+    "address": "302 W Hastings RD",
+    "city": "Spokane",
+    "state": "Wa",
+    "zip": "99218",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmmjdq3d2000z01t7io20npmk",
+    "name": "Medical Lake Market",
+    "address": "Lake St & Lefevre St",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99022",
+    "neighborhood": "cheney",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmr1nn2ix000601muvmo9bm58",
+    "name": "Millwood Community Presbyterian Church",
+    "address": "3223 North Marguerite Road",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99212",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv18001201mmplgtl8g5",
+    "name": "Millwood Community Presbyterian Church",
+    "address": "3223 N Marguerite Rd",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99212",
+    "neighborhood": "spokane-valley",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 0,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmm8tr84k000p3oqrrzh0teb7",
+    "name": "Mirabeau Point Park",
+    "address": "13500 E Mirabeau Pkwy",
+    "city": "Spokane Valley",
+    "state": "WA",
+    "zip": "99216",
+    "neighborhood": "spokane-valley",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 0,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv13000w01mmd9tkjto7",
+    "name": "Mistequa Casino Hotel",
+    "address": "2545 Smith Rd",
+    "city": "Chewelah",
+    "state": "WA",
+    "zip": "99109",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmw0avybz003i01mm6ez4v44h",
+    "name": "Mistequa Casino Hotel Event Center",
+    "address": "2545 Smith Rd",
+    "city": "Chewelah",
+    "state": "WA",
+    "zip": "99109",
+    "neighborhood": null,
+    "parkingNotes": "Free parking per organizer; Moccasin Express shuttle mentioned.",
+    "deletedAt": null,
+    "_count": {
+      "events": 0,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmnikowfk000n01mhuogc1gmy",
+    "name": "Mt. Spokane High School",
+    "address": "6015 East Mount Spokane Park Drive",
+    "city": "Mead",
+    "state": "WA",
+    "zip": "99021",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv1l001e01mm0pdr0axo",
+    "name": "New Moon Art Gallery",
+    "address": "1326 E Sprague Ave",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99202",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmnik73da000001mh7cw9tj7e",
+    "name": "North Idaho College",
+    "address": "495 N College Drive",
+    "city": "Coeur d' Alene",
+    "state": "Idaho",
+    "zip": "83814",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmmadcu7w000501o4zzspkdrh",
+    "name": "Northwest Museum of Arts and Culture",
+    "address": "2316 W 1st Ave",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99201",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 0,
+      "markets": 1
+    }
+  },
+  {
+    "id": "cmndzqb11000d01nouj2809aj",
+    "name": "Page 42 Bookstore",
+    "address": "3010 North Crestline Street",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99207",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmmadcu79000001o46mvju3wt",
+    "name": "Parkade",
+    "address": "511 W Main Ave",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99201",
+    "neighborhood": "downtown",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 0,
+      "markets": 1
+    }
+  },
+  {
+    "id": "cmvv9iv1a001701mm057trkwu",
+    "name": "Pilgrim Lutheran Church",
+    "address": "2733 W Northwest Blvd",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99205",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv11000u01mmxp9ldi9b",
+    "name": "Post Falls City Hall",
+    "address": "408 N Spokane St",
+    "city": "Post Falls",
+    "state": "ID",
+    "zip": "83854",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmw0avycd003l01mmf1g7tmnl",
+    "name": "Post Falls City Hall Plaza",
+    "address": "408 N Spokane St",
+    "city": "Post Falls",
+    "state": "ID",
+    "zip": "83854",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 0,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmw0avycj003v01mmbctg2u3r",
+    "name": "Post Falls Public Market",
+    "address": "415 E 3rd Ave",
+    "city": "Post Falls",
+    "state": "ID",
+    "zip": "83854",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 4,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmniksl0j000t01mhixuzmn4r",
+    "name": "Q'emiln Park",
+    "address": "12201 W Parkway Dr",
+    "city": "Post Falles",
+    "state": "ID",
+    "zip": "83854",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv12000v01mmmxjqgkfo",
+    "name": "Q'emiln Trailhead Event Center",
+    "address": "12361 W Parkway Dr",
+    "city": "Post Falls",
+    "state": "ID",
+    "zip": "83854",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 2,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv1e001d01mmrn66qseh",
+    "name": "Rathdrum Lions Club",
+    "address": "16114 N Meyer Rd",
+    "city": "Rathdrum",
+    "state": "ID",
+    "zip": "83858",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 5,
+      "markets": 1
+    }
+  },
+  {
+    "id": "cmnikinsa000e01mhnguty40r",
+    "name": "Ridgeline High School",
+    "address": "20150 E. Country Vista Drive",
+    "city": "Liberty Lake",
+    "state": "WA",
+    "zip": "99019",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv15000y01mme6raxk88",
+    "name": "River Park Square",
+    "address": "808 W Main Ave",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99201",
+    "neighborhood": "downtown",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 2,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmm8tr83w000k3oqr2rh58wbp",
+    "name": "Riverfront Park",
+    "address": "507 N Howard St",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99201",
+    "neighborhood": "downtown",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 1
+    }
+  },
+  {
+    "id": "cmonsbs9z000y01telwbsa6t4",
+    "name": "Rogers High School",
+    "address": "1622 E Wellesley",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99223",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv0r000r01mmpq4b1jhj",
+    "name": "Scale House Market",
+    "address": "4422 E 8th Ave",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99212",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmmmp1ceo000001pm7muteqb4",
+    "name": "Shadle Park High School",
+    "address": "4327 North Ash Street",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99205",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmnikxwu0001o01mh4va4xema",
+    "name": "Shadle Park High School",
+    "address": "4327 N Ash",
+    "city": "Spokane",
+    "state": "Wa",
+    "zip": "99205",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmw0clzuk000001temhd347ii",
+    "name": "Shriners Event Center",
+    "address": "7217 W WESTBOW BLVD",
+    "city": "SPOKANE",
+    "state": "WA",
+    "zip": "99224",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmw0avycf003o01mmpopvs5pi",
+    "name": "Silver Lake Mall",
+    "address": "200 W Hanley Ave",
+    "city": "Coeur d'Alene",
+    "state": "ID",
+    "zip": "83815",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 8,
+      "markets": 1
+    }
+  },
+  {
+    "id": "cmm8tr846000m3oqrxx2qnrt5",
+    "name": "South Perry District",
+    "address": "1000 S Perry St",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99202",
+    "neighborhood": "south-hill",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 0,
+      "markets": 1
+    }
+  },
+  {
+    "id": "cmmadcu7y000601o4bkme2fse",
+    "name": "South Perry District",
+    "address": "S Perry St between E 9th Ave & E 12th Ave",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99202",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 0,
+      "markets": 1
+    }
+  },
+  {
+    "id": "cmw0avyci003s01mm3ti8n5r5",
+    "name": "Spirit Lake Community Center",
+    "address": "32564 N 4th Ave",
+    "city": "Spirit Lake",
+    "state": "ID",
+    "zip": "83869",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv17001101mmbrn97r1y",
+    "name": "Spokane Art School",
+    "address": "503 E 2nd Ave",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99202",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv1b001801mmzsgco9as",
+    "name": "Spokane Art Supply",
+    "address": "1303 N Monroe St",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99201",
+    "neighborhood": "garland",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmmjdfh6d000j01t7oixtbgxl",
+    "name": "Spokane Community College",
+    "address": "1810 North Greene Street",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99217",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv16001001mmv82essmy",
+    "name": "Spokane Community College",
+    "address": "1810 N Greene St",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99217",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 0,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmw0avyal003801mmo9agxk14",
+    "name": "Spokane Community College, The Lair",
+    "address": "1810 N Greene St",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99217",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 2,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv1c001a01mm6uysr6ym",
+    "name": "Spokane Convention Center",
+    "address": "334 W Spokane Falls Blvd",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99201",
+    "neighborhood": "downtown",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 5,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmmadcu7p000201o4ame6xj2h",
+    "name": "Spokane County Fair & Expo Center",
+    "address": "404 N Havana St",
+    "city": "Spokane Valley",
+    "state": "WA",
+    "zip": "99216",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 6,
+      "markets": 2
+    }
+  },
+  {
+    "id": "cmndzqacw000801nohq0j502a",
+    "name": "Spokane County Fair and Expo Center",
+    "address": "404 N Havana St Suit 1",
+    "city": "Spokane",
+    "state": "Wa",
+    "zip": "99201",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmnikxyiz002001mhzsbcxvq6",
+    "name": "Spokane County Fair and Expo Center",
+    "address": "404 North Havana Street",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99202",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmw0avya6003501mmgtcjpjmd",
+    "name": "Spokane Pavilion at Riverfront Park",
+    "address": "507 N Howard St",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99201",
+    "neighborhood": "downtown",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 0,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmm8tr84f000o3oqr8rqzg6fv",
+    "name": "Spokane Valley Mall Area",
+    "address": "14700 E Indiana Ave",
+    "city": "Spokane Valley",
+    "state": "WA",
+    "zip": "99216",
+    "neighborhood": "spokane-valley",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 0,
+      "markets": 1
+    }
+  },
+  {
+    "id": "cmvv9iv19001401mmzeabu4h3",
+    "name": "St. Gregorios Malankara Orthodox Syrian Church",
+    "address": "1735 E Bridgeport Ave",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99207",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmw0avyb1003c01mmhinpcih8",
+    "name": "St. Gregorios Malankara Orthodox Syrian Church",
+    "address": "1725 E Bridgeport Ave",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99207",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 0,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv1a001601mmr3cmznnl",
+    "name": "St. Luke Lutheran Church",
+    "address": "9706 N Division St",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99218",
+    "neighborhood": "north-spokane",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmw0avyat003a01mmifn5sgoa",
+    "name": "St. Luke Lutheran Church",
+    "address": "9704 N Division St",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99218",
+    "neighborhood": "north-spokane",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 0,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmw0avyce003n01mme90xbdur",
+    "name": "St. Luke's Episcopal Church",
+    "address": "501 E Wallace Ave",
+    "city": "Coeur d'Alene",
+    "state": "ID",
+    "zip": "83814",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmw0avycg003p01mm4prm9av6",
+    "name": "The Coeur d'Alene Resort",
+    "address": "115 S 2nd St",
+    "city": "Coeur d'Alene",
+    "state": "ID",
+    "zip": "83814",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmniksow3001001mh8ppufmv6",
+    "name": "The Farmhouse on Greenbluff",
+    "address": "8515 East Green Bluff Road",
+    "city": "Colbert",
+    "state": "WA",
+    "zip": "99005",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv1c001901mmzdhezymr",
+    "name": "The General Store",
+    "address": "2424 N Division St",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99207",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmne5iijx000101rrjqsg5ecc",
+    "name": "The Guardian",
+    "address": "1403 North Washington Street",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99201",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmnwaqkel000901nj0d4vgj97",
+    "name": "The Northtown Mall (Outdoors)",
+    "address": "4750 North Division Street",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99207",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmpaqwq90003201pf5hy36n5k",
+    "name": "The Scale House Market",
+    "address": "4422 East 8th Avenue",
+    "city": "Spokane Valley",
+    "state": "WA",
+    "zip": "99212",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmonsbqhg000t01te8l06mv74",
+    "name": "The Scale House Market at the Quarry",
+    "address": "4422 East 8th Avenue",
+    "city": "Spokane Valley",
+    "state": "WA",
+    "zip": "99212",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv15000z01mmsht74nfu",
+    "name": "The Woman's Club of Spokane",
+    "address": "1428 W 9th Ave",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99204",
+    "neighborhood": "south-hill",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 2,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmonrguy0000801tejizpjf5a",
+    "name": "Thrive to Survive",
+    "address": "1716 Swiss Valley Road",
+    "city": "Addy",
+    "state": "WA",
+    "zip": "99101",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmmadcu7l000101o4v8pvkl0z",
+    "name": "Trackside Studio Ceramic Art Gallery",
+    "address": "115 S Adams St",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99201",
+    "neighborhood": "downtown",
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 0,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmw0avyc7003k01mm8luz5ccu",
+    "name": "Trailhead Event Center",
+    "address": "12361 W Parkway Dr",
+    "city": "Post Falls",
+    "state": "ID",
+    "zip": "83854",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmw0avycg003q01mm7n8rzxpm",
+    "name": "Trinity Lutheran Church",
+    "address": "812 N 5th St",
+    "city": "Coeur d'Alene",
+    "state": "ID",
+    "zip": "83814",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmmadcu86000901o4ams9l7e2",
+    "name": "University District Gateway Bridge Area",
+    "address": "508 E Riverside Ave",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99202",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 1
+    }
+  },
+  {
+    "id": "cmmadcu89000a01o4hrtxofpg",
+    "name": "University High School",
+    "address": "12420 E 32nd Ave",
+    "city": "Spokane Valley",
+    "state": "WA",
+    "zip": "99216",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": "2026-05-02T04:49:17.211Z",
+    "_count": {
+      "events": 0,
+      "markets": 1
+    }
+  },
+  {
+    "id": "cmnqfiuwf000801mg73sbuvwl",
+    "name": "University High School",
+    "address": "12420 East 32nd Avenue",
+    "city": "Spokane Valley",
+    "state": "WA",
+    "zip": "99206",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmnikxzp7002601mh8sd2y7ni",
+    "name": "Uprise Brewing Co.",
+    "address": "617 N Ash St",
+    "city": "Spokane",
+    "state": "Wa",
+    "zip": "99201",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmmpf9zo8000001ryyb5szgf7",
+    "name": "Veronica's Thrift",
+    "address": "1828 West Northwest Boulevard",
+    "city": "Spokane",
+    "state": "WA",
+    "zip": "99205",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  },
+  {
+    "id": "cmvv9iv1o001h01mm2giblpjo",
+    "name": "WaFd Bank Parking Lot (Newport)",
+    "address": "3rd St & Union Ave",
+    "city": "Newport",
+    "state": "WA",
+    "zip": "99156",
+    "neighborhood": null,
+    "parkingNotes": null,
+    "deletedAt": null,
+    "_count": {
+      "events": 1,
+      "markets": 0
+    }
+  }
+]

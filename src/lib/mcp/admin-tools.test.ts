@@ -50,7 +50,7 @@ vi.mock("@/lib/db", () => ({
     tag: { findMany: mocks.tagFindMany },
     feature: { findMany: mocks.featureFindMany },
     $transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
-      fn({ event: { update: mocks.txEventUpdate }, $queryRaw: mocks.txQueryRaw }),
+      fn({ event: { update: mocks.txEventUpdate }, $queryRaw: mocks.txQueryRaw, auditLog: { create: vi.fn() } }),
   },
 }));
 vi.mock("@/lib/events/slug", async (importOriginal) => ({
@@ -134,6 +134,7 @@ function submissionRow(overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.lookupVenue.mockResolvedValue({ status: "new", coords: { lat: 47.65, lng: -117.42 } });
+  mocks.venueFindMany.mockResolvedValue([]);
 });
 
 describe("tool gating", () => {
@@ -203,6 +204,24 @@ describe("update_event", () => {
       expect(mocks.eventFindFirst).not.toHaveBeenCalled();
     }
   );
+
+  it("refuses an archived venue before changing anything", async () => {
+    mocks.eventFindFirst.mockResolvedValue({
+      id: "e1",
+      title: "Market",
+      slug: "market",
+      status: "PENDING",
+      submittedById: null,
+      tags: [],
+      features: [],
+      scheduleDays: [],
+      submittedBy: null,
+    });
+    mocks.venueFindFirst.mockResolvedValue(null);
+    const result = await callTool("update_event", { id: "e1", venueId: "v-archived" });
+    expect(result).toEqual({ isError: true, text: "That venue does not exist or is archived." });
+    expect(mocks.logAudit).not.toHaveBeenCalled();
+  });
 
   it("rejects a non-http website URL", async () => {
     const result = await callTool("update_event", { id: "e1", websiteUrl: "ftp://example.com" });
@@ -382,7 +401,29 @@ describe("venueOutcome", () => {
   });
 
   it("shows where a new venue would go", async () => {
-    await expect(outcome()).resolves.toMatchObject({ outcome: "new", lat: 47.65, lng: -117.42 });
+    await expect(outcome()).resolves.toMatchObject({ outcome: "new", lat: 47.65, lng: -117.42, nearest: null });
+  });
+
+  it("names the nearest active venue to a new one", async () => {
+    mocks.venueFindMany.mockResolvedValue([
+      { id: "far", name: "Far Hall", address: "9 Far Rd", lat: 47.66, lng: -117.42 },
+      { id: "near", name: "Scale House Market", address: "4422 E 8th Ave", lat: 47.6503, lng: -117.42 },
+    ]);
+    await expect(outcome()).resolves.toMatchObject({
+      outcome: "new",
+      nearest: { venueId: "near", name: "Scale House Market", meters: 33 },
+    });
+  });
+
+  it("lists what an incomplete address lacks", async () => {
+    mocks.submissionFindUnique.mockResolvedValue(submissionRow({ venueZip: " ", venueState: null }));
+    const result = await callTool("get_submission", { id: "sub-1" });
+    if (result.isError) throw new Error(result.text);
+    expect((result.data as { venueOutcome: unknown }).venueOutcome).toMatchObject({
+      outcome: "incomplete",
+      missing: ["state", "ZIP"],
+    });
+    expect(mocks.lookupVenue).not.toHaveBeenCalled();
   });
 
   it("warns when no geocoder can place the address", async () => {

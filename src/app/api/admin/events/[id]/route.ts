@@ -10,15 +10,83 @@ import {
 import { parseDateOnlyToUTCNoon, parseDateTimeInTimezone } from "@/lib/utils";
 import { notifySubmitterOfStatusChange } from "@/lib/events/status-notifications";
 import { eventSlugProblem, lockEventForSlugChange, recordEventSlugChange } from "@/lib/events/slug";
-import { revalidatePath } from "next/cache";
+import { logAudit } from "@/lib/audit";
+import { revalidateAdmin } from "@/lib/admin/revalidate";
 import { NextResponse } from "next/server";
+
+const AUDITED_FIELDS = [
+  "title",
+  "slug",
+  "description",
+  "startDate",
+  "endDate",
+  "venueId",
+  "marketId",
+  "imageUrl",
+  "showImageInList",
+  "imageFocalX",
+  "imageFocalY",
+  "status",
+  "websiteUrl",
+  "facebookUrl",
+  "instagramUrl",
+  "complianceFlagged",
+  "complianceNotes",
+] as const;
+
+type ScheduleDayRow = { date: Date; startTime: string; endTime: string; allDay: boolean };
+
+function auditable(value: unknown): unknown {
+  return value instanceof Date ? value.toISOString() : value;
+}
+
+function scheduleForAudit(days: ScheduleDayRow[]) {
+  return days
+    .map((d) => ({ date: d.date.toISOString().slice(0, 10), startTime: d.startTime, endTime: d.endTime, allDay: d.allDay }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** The fields that differ between two versions of an event, as previousValue and newValue. */
+function eventChanges(
+  before: Record<string, unknown> & { tags: { id: string }[]; features: { id: string }[]; scheduleDays: ScheduleDayRow[] },
+  after: Record<string, unknown> & { tags: { id: string }[]; features: { id: string }[]; scheduleDays: ScheduleDayRow[] }
+) {
+  const previousValue: Record<string, unknown> = {};
+  const newValue: Record<string, unknown> = {};
+  for (const key of AUDITED_FIELDS) {
+    const was = auditable(before[key]);
+    const now = auditable(after[key]);
+    if (was !== now) {
+      previousValue[key] = was;
+      newValue[key] = now;
+    }
+  }
+  const lists = {
+    tagIds: [before.tags.map((t) => t.id).sort(), after.tags.map((t) => t.id).sort()],
+    featureIds: [before.features.map((f) => f.id).sort(), after.features.map((f) => f.id).sort()],
+    scheduleDays: [scheduleForAudit(before.scheduleDays), scheduleForAudit(after.scheduleDays)],
+  };
+  for (const [key, [was, now]] of Object.entries(lists)) {
+    if (JSON.stringify(was) !== JSON.stringify(now)) {
+      previousValue[key] = was;
+      newValue[key] = now;
+    }
+  }
+  return { previousValue, newValue };
+}
+
+const AUDIT_INCLUDE = {
+  tags: { select: { id: true } },
+  features: { select: { id: true } },
+  scheduleDays: { select: { date: true, startTime: true, endTime: true, allDay: true } },
+} as const;
 
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { error } = await requireApiAdminPermission("admin.listings.manage");
+    const { session, error } = await requireApiAdminPermission("admin.listings.manage");
     if (error) return error;
 
     const { id } = await params;
@@ -90,7 +158,7 @@ export async function PUT(
 
     const existing = await db.event.findFirst({
       where: { id, deletedAt: null },
-      select: { status: true, submittedById: true, title: true, slug: true },
+      include: AUDIT_INCLUDE,
     });
     if (!existing) {
       return apiError("Event not found or archived", 404);
@@ -162,12 +230,19 @@ export async function PUT(
       });
     }
 
-    revalidatePath("/events");
-    revalidatePath("/events/calendar");
-    revalidatePath("/events/map");
-    revalidatePath("/");
-    revalidatePath(`/events/${event.slug}`);
-    if (slugChanged) revalidatePath(`/events/${existing.slug}`);
+    const saved = await db.event.findUnique({ where: { id }, include: AUDIT_INCLUDE });
+    if (saved) {
+      const { previousValue, newValue } = eventChanges(existing, saved);
+      if (Object.keys(newValue).length > 0) {
+        await logAudit(session.user.id, "UPDATE_EVENT", "EVENT", id, {
+          previousValue,
+          newValue,
+          details: { title: saved.title, at: saved.updatedAt.toISOString() },
+        });
+      }
+    }
+
+    revalidateAdmin({ eventSlugs: [existing.slug, event.slug] });
 
     if (existing) {
       await notifySubmitterOfStatusChange({

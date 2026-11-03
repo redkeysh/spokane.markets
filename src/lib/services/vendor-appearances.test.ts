@@ -84,6 +84,7 @@ function mockEvent(
     complianceFlagged: false,
     complianceNotes: null,
     submittedById: null,
+    duplicateOfId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     deletedAt: null,

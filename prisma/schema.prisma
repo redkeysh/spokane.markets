@@ -594,6 +594,11 @@ model Event {
   moderationNotes ListingModerationNote[] @relation("EventModerationNotes")
   marketingRenders MarketingRender[]     @relation("MarketingRenderEvent")
 
+  /// Set when this event was archived as a duplicate of another event.
+  duplicateOfId String?
+  duplicateOf   Event?  @relation("EventDuplicates", fields: [duplicateOfId], references: [id], onDelete: SetNull)
+  duplicates    Event[] @relation("EventDuplicates")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
@@ -604,6 +609,7 @@ model Event {
   @@index([marketId])
   @@index([submittedById])
   @@index([deletedAt])
+  @@index([duplicateOfId])
   @@map("events")
 }
 
@@ -617,6 +623,23 @@ model EventSlugRedirect {
 
   @@index([eventId])
   @@map("event_slug_redirects")
+}
+
+/// Admin decisions that are remembered: a snoozed decision, or two events or places judged the same or different.
+model AdminMemo {
+  id          String    @id @default(cuid())
+  /// "later" | "not-same-event" | "not-same-place" | "same-place"
+  kind        String
+  /// A decision key, or two ids sorted and joined with "|".
+  key         String
+  /// Only for "later": when the decision comes back.
+  until       DateTime?
+  createdById String
+  createdAt   DateTime  @default(now())
+
+  @@unique([kind, key])
+  @@index([kind])
+  @@map("admin_memos")
 }
 
 model EventScheduleDay {

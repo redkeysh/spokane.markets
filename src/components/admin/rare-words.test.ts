@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { importReport } from "./data-import-report";
+import { importReport, skippedDuplicatesSentence } from "./data-import-report";
 import { RENDER_STATUS_ORDER, RENDER_STATUS_WORDS, renderSubject, scaleWord } from "./marketing/words";
 import { groupPromotions, promotionPhase } from "./promotion-words";
 import { ROLE_ORDER, ROLE_WORDS, STATUS_ORDER, STATUS_WORDS, userCounts } from "./user-words";
@@ -77,6 +77,13 @@ describe("import report", () => {
 
   it("says when nothing was added", () => {
     expect(importReport({ venuesCreated: 0, marketsCreated: 0, eventsCreated: 0, errors: [] }).made).toBe("Nothing was added.");
+  });
+
+  it("counts the rows skipped as duplicates already decided", () => {
+    const row = { row: 3, title: "Rebel Junk Holiday Market", keptTitle: "11th Annual Rebel Junk Holiday Market" };
+    expect(skippedDuplicatesSentence({ skippedDuplicates: [row, row, row] })).toBe("Skipped 3 you already decided as duplicates.");
+    expect(skippedDuplicatesSentence({ skippedDuplicates: [row] })).toBe("Skipped 1 you already decided as a duplicate.");
+    expect(skippedDuplicatesSentence({})).toBeNull();
   });
 });
 

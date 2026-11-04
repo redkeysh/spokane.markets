@@ -6,8 +6,17 @@ export type ImportReportInput = {
   marketsCreated: number;
   eventsCreated: number;
   eventsNeedingSchedule?: { row: number; title: string; slug: string }[];
+  /** Rows left out because the owner already archived the same event as a duplicate. */
+  skippedDuplicates?: { row: number; title: string; keptTitle: string | null }[];
   errors: string[];
 };
+
+/** "Skipped 3 you already decided as duplicates.", or null when none was skipped. */
+export function skippedDuplicatesSentence(result: Pick<ImportReportInput, "skippedDuplicates">): string | null {
+  const n = result.skippedDuplicates?.length ?? 0;
+  if (n === 0) return null;
+  return `Skipped ${n} you already decided as ${n === 1 ? "a duplicate" : "duplicates"}.`;
+}
 
 /** The import result as sentences, in the order the owner reads them. */
 export function importReport(result: ImportReportInput): {

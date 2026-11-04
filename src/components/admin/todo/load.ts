@@ -287,7 +287,15 @@ function toTodoEvent(
     today: string;
     duplicateVenueIds: ReadonlySet<string>;
     cohorts: ReturnType<typeof importCohorts>;
-    names: Map<string, { tags: { id: string; name: string }[]; features: { id: string; name: string }[] }>;
+    names: Map<
+      string,
+      {
+        tags: { id: string; name: string }[];
+        features: { id: string; name: string }[];
+        vendorApplicationState: string | null;
+        feeModelVendor: string | null;
+      }
+    >;
   }
 ): TodoEvent {
   const all = eventLocalDates(e);
@@ -332,6 +340,8 @@ function toTodoEvent(
     tags: names?.tags ?? [],
     features: names?.features ?? [],
     marketName: e.marketName,
+    vendorApplicationState: names?.vendorApplicationState ?? null,
+    feeModelVendor: names?.feeModelVendor ?? null,
     origin: origin.label,
     notifies: e.submittedBy?.alertsOn ? e.submittedBy.name : null,
     blocking: ready.blocking.filter((i) => i.flag !== "not-waiting"),
@@ -371,7 +381,13 @@ export async function loadTodoData(actorId: string, now: Date = new Date()): Pro
     ids.length
       ? db.event.findMany({
           where: { id: { in: ids } },
-          select: { id: true, tags: { select: { id: true, name: true } }, features: { select: { id: true, name: true } } },
+          select: {
+            id: true,
+            tags: { select: { id: true, name: true } },
+            features: { select: { id: true, name: true } },
+            vendorApplicationState: true,
+            feeModelVendor: true,
+          },
         })
       : [],
     keptOffByLane(today, saturdays),
@@ -386,7 +402,12 @@ export async function loadTodoData(actorId: string, now: Date = new Date()): Pro
     today,
     duplicateVenueIds,
     cohorts: importCohorts(input.importRows ?? input.events),
-    names: new Map(names.map((n) => [n.id, { tags: n.tags, features: n.features }])),
+    names: new Map(
+      names.map((n) => [
+        n.id,
+        { tags: n.tags, features: n.features, vendorApplicationState: n.vendorApplicationState, feeModelVendor: n.feeModelVendor },
+      ])
+    ),
   };
   const events: Record<string, TodoEvent> = {};
   const liveByLane = new Map<DecisionLane, DecisionEvent[]>();

@@ -43,6 +43,10 @@ const eventEdits = z.strictObject({
     .nullable()
     .optional()
     .refine((v) => !v || v.startsWith("/uploads/") || /^https?:\/\/\S+$/i.test(v), "A picture link starts with https://."),
+  description: z.string().trim().max(20000, "Keep the description under 20,000 characters.").nullable().optional(),
+  details: z
+    .strictObject({ vendorApplicationState: z.enum(["OPEN", "CLOSED"]).optional(), feeModelVendor: z.string().trim().min(1).max(500).optional() })
+    .optional(),
 });
 
 const reason = z.string().trim().min(1, "Choose a reason.").max(500);

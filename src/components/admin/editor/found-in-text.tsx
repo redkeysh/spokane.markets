@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { findFacts, type DescriptionFact } from "@/lib/events/description-facts";
+import { findFacts, parseMonthDay, type DescriptionFact } from "@/lib/events/description-facts";
 import { useEditorForm } from "./form-context";
 import { makeDay, type EditorValues } from "./model";
 
@@ -15,18 +15,36 @@ function removeSentence(description: string, sentence: string): string {
     .trim();
 }
 
-/** Turns what description-facts found into suggestions; each changes held values only when clicked. */
+/** A deadline written without a year ("Dec 1"), in the event's year, or the year before when that falls after the event. */
+function deadlineDate(text: string, dates: { first: string; last: string }): string | null {
+  const year = Number(dates.first.slice(0, 4));
+  if (!year) return null;
+  const date = parseMonthDay(text, year);
+  return date && date > dates.last ? parseMonthDay(text, year - 1) : date;
+}
+
+/**
+ * Turns what description-facts found into suggestions; each changes held values only when
+ * clicked. With `current`, a suggestion the held values already carry is left out; with `dates`
+ * (the event's first and last dates), a deadline without a year gets one.
+ */
 export function suggestionsFor(
   facts: DescriptionFact[],
-  ctx: { mode: string; features: { id: string; name: string; slug: string }[] }
+  ctx: {
+    mode: string;
+    features: { id: string; name: string; slug: string }[];
+    current?: Pick<EditorValues, "featureIds" | "details">;
+    dates?: { first: string; last: string } | null;
+  }
 ): Suggestion[] {
   const freeFeature = ctx.features.find((f) => f.slug === "free-admission" || /free admission/i.test(f.name));
+  const details = ctx.current?.details;
   const out: Suggestion[] = [];
   facts.forEach((fact, i) => {
     const key = `${fact.kind}-${i}`;
     switch (fact.kind) {
       case "free-admission":
-        if (freeFeature) {
+        if (freeFeature && !ctx.current?.featureIds.includes(freeFeature.id)) {
           out.push({
             key,
             label: `Free admission: add ${freeFeature.name}`,
@@ -37,26 +55,29 @@ export function suggestionsFor(
       case "admission-price":
         out.push({ key, label: `Admission: ${fact.text}`, note: true });
         break;
-      case "vendor-applications":
-        if (ctx.mode !== "submission") {
+      case "vendor-applications": {
+        const state = fact.state === "open" ? "OPEN" : "CLOSED";
+        if (ctx.mode !== "submission" && details?.vendorApplicationState !== state) {
           out.push({
             key,
             label: `Vendor applications: ${fact.state}`,
-            apply: (v) => ({ details: { ...v.details, vendorApplicationState: fact.state === "open" ? "OPEN" : "CLOSED" } }),
+            apply: (v) => ({ details: { ...v.details, vendorApplicationState: state } }),
           });
         }
         break;
+      }
       case "booth-fee":
-        if (ctx.mode !== "submission") {
+        if (ctx.mode !== "submission" && details?.feeModelVendor?.trim() !== fact.text) {
           out.push({ key, label: `Booth fee: ${fact.text}`, apply: (v) => ({ details: { ...v.details, feeModelVendor: fact.text } }) });
         }
         break;
-      case "application-deadline":
-        if (ctx.mode !== "submission" && fact.date) {
-          const date = fact.date;
+      case "application-deadline": {
+        const date = fact.date ?? (ctx.dates ? deadlineDate(fact.text, ctx.dates) : null);
+        if (ctx.mode !== "submission" && date && details?.vendorApplicationDeadline !== date) {
           out.push({ key, label: `Applications close: ${fact.text}`, apply: (v) => ({ details: { ...v.details, vendorApplicationDeadline: date } }) });
         }
         break;
+      }
       case "importer-note":
         out.push({
           key,
@@ -85,9 +106,17 @@ export function suggestionsFor(
  * never write on their own. Renders nothing when it finds nothing.
  */
 export function FoundInText() {
-  const { values, update, mode, options, readOnly } = useEditorForm();
+  const { values, update, mode, options, context, readOnly } = useEditorForm();
   const facts = React.useMemo(() => findFacts(values.description), [values.description]);
-  const suggestions = suggestionsFor(facts, { mode, features: options.features });
+  const days = values.days.map((d) => d.date).filter(Boolean).sort();
+  const first = days[0] ?? context.stretch?.startDate;
+  const last = days[days.length - 1] ?? context.stretch?.endDate;
+  const suggestions = suggestionsFor(facts, {
+    mode,
+    features: options.features,
+    current: values,
+    dates: first && last ? { first, last } : null,
+  });
   if (suggestions.length === 0) return null;
   return (
     <div className="flex flex-wrap items-start gap-x-3 gap-y-2">

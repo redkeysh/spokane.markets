@@ -189,6 +189,32 @@ describe("suggestionsFor", () => {
     expect(chips[3].note).toBe(true);
   });
 
+  it("leaves out what the held values already carry", () => {
+    const facts = [
+      { kind: "free-admission", text: "Free admission" },
+      { kind: "vendor-applications", state: "open", text: "Vendor applications open" },
+      { kind: "booth-fee", text: "$50 per day" },
+    ] as const;
+    const current = values({ featureIds: ["f1"] });
+    current.details = { ...current.details, vendorApplicationState: "OPEN", feeModelVendor: "$50 per day" };
+    expect(suggestionsFor([...facts], { mode: "event", features: options.features, current })).toEqual([]);
+    expect(suggestionsFor([...facts], { mode: "event", features: options.features, current: values() }).map((c) => c.label)).toEqual([
+      "Free admission: add Free Admission",
+      "Vendor applications: open",
+      "Booth fee: $50 per day",
+    ]);
+  });
+
+  it("gives a deadline without a year the year before the event's last date", () => {
+    const deadline = [{ kind: "application-deadline", date: null, text: "Dec 1" }] as const;
+    const december = suggestionsFor([...deadline], { mode: "event", features: [], dates: { first: "2026-12-05", last: "2026-12-06" } });
+    expect(december.map((c) => c.label)).toEqual(["Applications close: Dec 1"]);
+    expect(december[0].apply!(values())?.details?.vendorApplicationDeadline).toBe("2026-12-01");
+    const january = suggestionsFor([...deadline], { mode: "event", features: [], dates: { first: "2027-01-09", last: "2027-01-09" } });
+    expect(january[0].apply!(values())?.details?.vendorApplicationDeadline).toBe("2026-12-01");
+    expect(suggestionsFor([...deadline], { mode: "event", features: [] })).toEqual([]);
+  });
+
   it("leaves out vendor chips for a submission", () => {
     const chips = suggestionsFor([{ kind: "vendor-applications", state: "closed", text: "closed" }], { mode: "submission", features: [] });
     expect(chips).toEqual([]);

@@ -237,6 +237,16 @@ export function cursorAfterDecision(items: PileItem[], cursor: string, decidedKe
   return (previous?.lane === current.lane ? previous.id : null) ?? next?.id ?? previous?.id ?? null;
 }
 
+/**
+ * The decision a kept decision's events moved to once its key is gone (a series linked to a
+ * market is filed under the market): undefined while `from` is still on the pile, null when no
+ * decision settles any of `eventIds`.
+ */
+export function followedDecision(decisions: Decision[], from: string, eventIds: ReadonlySet<string>): Decision | null | undefined {
+  if (decisions.some((d) => d.key === from)) return undefined;
+  return decisions.find((d) => d.settles.some((id) => eventIds.has(id))) ?? null;
+}
+
 /** "this weekend", "next weekend", "the weekend of Nov 21", "later", "already happened". */
 export function laneWord(lane: DecisionLane, lanes: TodoLane[]): string {
   if (lane === "public") return "from the public";

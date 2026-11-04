@@ -6,6 +6,8 @@ import { FallbackDecision } from "./kinds/fallback-decision";
 import { LeftoverDecision } from "./kinds/leftover-decision";
 import { LooksWrongDecision } from "./kinds/looks-wrong-decision";
 import { PlaceDecision } from "./kinds/place-decision";
+import { PublicDecision } from "./kinds/public-decision";
+import { SeriesDecision } from "./kinds/series-decision";
 import { SingleDecision } from "./kinds/single-decision";
 import { SubmissionDecision } from "./kinds/submission-decision";
 import { TwinDecision } from "./kinds/twin-decision";
@@ -59,11 +61,18 @@ export const DECISION_PANES: Partial<Record<DecisionKind, ComponentType<Decision
   submission: SubmissionDecision,
   twins: TwinDecision,
   "maybe-twins": TwinDecision,
+  series: SeriesDecision,
   "place-duplicates": PlacePane,
   "zip-neighborhood": PlacePane,
   spelling: PlacePane,
   "archived-in-use": PlacePane,
   "unused-places": PlacePane,
+  review: PublicDecision,
+  photo: PublicDecision,
+  report: PublicDecision,
+  application: PublicDecision,
+  message: PublicDecision,
+  "market-verification": PublicDecision,
 };
 
 export function paneFor(kind: DecisionKind): ComponentType<DecisionPaneProps> {

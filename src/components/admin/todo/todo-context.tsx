@@ -61,6 +61,24 @@ export type TodoApi = {
   rememberUndo: (decisionId: string) => void;
   /** For panes whose own actions settle the decision: takes it off the pile and moves the cursor on. */
   settle: (decision: Decision) => void;
+  /**
+   * Runs a pane's own server action the way the built-in actions run: busy state, a toast with
+   * Undo, the live region, the rail filling for `live`, and the move to the next decision unless
+   * `keep` (or `hide: false`) says the decision stays. With `follow`, a kept decision whose key
+   * is gone after the refresh hands the cursor to the decision that settles any of those events.
+   */
+  run: (
+    decision: Decision,
+    call: () => Promise<TodoActionResult>,
+    describe: (result: Extract<TodoActionResult, { ok: true }>) => {
+      text: string;
+      spoken?: string;
+      live?: string[];
+      keep?: boolean;
+      follow?: string[];
+    },
+    options?: { hide?: boolean }
+  ) => Promise<boolean>;
 
   setDirty: (entry: DirtyEntry | null) => void;
   /** Set while moving away waits on "Save changes first?". */

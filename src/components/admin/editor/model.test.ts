@@ -300,7 +300,7 @@ describe("backTarget", () => {
       label: "Back to Venues",
     });
     expect(backTarget({ from: "vendors", back: "/admin/vendors/new", mode: "event" }).label).toBe("Back to Vendors");
-    expect(backTarget({ from: "inbox", mode: "submission" })).toEqual({ href: "/admin/submissions", label: "Back to Sent from the site" });
+    expect(backTarget({ from: "inbox", mode: "submission" })).toEqual({ href: "/admin/inbox?type=submissions", label: "Back to From the public" });
   });
 
   it("ignores a back address outside the admin", () => {

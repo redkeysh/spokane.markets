@@ -1,4 +1,5 @@
 import { REJECT_REASONS as REASONS } from "@/lib/admin/reject-reasons";
+import { publicItemHref } from "@/lib/admin/inbox/model";
 import type { Decision, TodoEvent } from "./types";
 import { listAnd } from "./brief-model";
 
@@ -26,16 +27,20 @@ export function decisionEvents(decision: Decision, events: Record<string, TodoEv
   return decision.rows.filter((r) => r.type === "event").map((r) => events[r.id]).filter((e): e is TodoEvent => !!e);
 }
 
-/** The full editor for a decision's first row, with the way back to this decision. */
+/**
+ * The full editor for a decision's first row, with the way back to this decision. A series opens
+ * its first date with "Apply changes to all dates" chosen.
+ */
 export function editorHref(decision: Decision, rowId?: string): string | null {
   const row = rowId ? decision.rows.find((r) => r.id === rowId) : decision.rows[0];
   if (!row) return null;
   const back = `from=todo&d=${encodeURIComponent(decision.key)}`;
-  if (row.type === "event") return `/admin/events/${row.id}?${back}`;
+  if (row.type === "event") return `/admin/events/${row.id}?${back}${decision.kind === "series" && !rowId ? "&apply=all" : ""}`;
   if (row.type === "submission") return `/admin/submissions/${row.id}?${back}`;
   if (row.type === "venue") return `/admin/venues/${row.id}`;
   if (row.type === "market") return `/admin/markets/${row.id}`;
-  return null;
+  const inbox = publicItemHref(row.type, row.id);
+  return inbox ? `${inbox}&${back}` : null;
 }
 
 const LACKS: { flag: string; all: string; one: string; some: (n: number) => string }[] = [

@@ -65,6 +65,14 @@ const ACTION_MESSAGES: Record<string, (entry: AuditEntry) => string> = {
   ASSIGN_REPORT: () => "assigned a report",
   UNASSIGN_REPORT: () => "unassigned a report",
   UPDATE_REPORT_INTERNAL_NOTES: () => "updated report internal notes",
+  UPDATE_REPORT_TRIAGE: () => "changed a report's triage details",
+  APPROVE_APPLICATION: () => "approved an application",
+  REJECT_APPLICATION: () => "rejected an application",
+  REQUEST_APPLICATION_INFO: () => "asked an applicant for more information",
+  MARK_APPLICATION_DUPLICATE: () => "marked an application as a duplicate",
+  UPDATE_APPLICATION_NOTES: () => "updated an application's notes",
+  UPDATE_CONTACT_MESSAGE_STATUS: (e) =>
+    statusOf(e) === "ARCHIVED" ? "archived a message" : statusOf(e) === "PENDING" ? "marked a message as unread" : "marked a message as read",
   UPDATE_USER_ROLE: (e) => {
     const role = (e.metadata as { newRole?: string })?.newRole;
     return role ? `changed user role to ${role}` : "updated user role";
@@ -81,11 +89,13 @@ const TARGET_HREFS: Record<string, string> = {
   VENDOR_PROFILE: "/admin/vendors",
   USER: "/admin/users",
   SUBMISSION: "/admin/submissions",
-  REVIEW: "/admin/reviews",
-  PHOTO: "/admin/photos",
+  REVIEW: "/admin/inbox?type=reviews",
+  PHOTO: "/admin/inbox?type=photos",
+  APPLICATION: "/admin/inbox?type=applications",
+  CONTACT_MESSAGE: "/admin/inbox?type=messages",
   CLAIM: "/admin/queues",
   VENDOR_CLAIM: "/admin/queues",
-  REPORT: "/admin/reports",
+  REPORT: "/admin/inbox?type=reports",
   SITE_STATE: "/admin/site#maintenance",
   SITE_CONFIG: "/admin/site",
   API_TOKEN: "/admin/api-tokens",

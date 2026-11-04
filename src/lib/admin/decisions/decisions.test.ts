@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/db", () => ({ db: {} }));
 
-import { coreTitle } from "@/lib/events/normalize-title";
 import { looksLikeTradeShow } from "@/lib/events/trade-shows";
 import { pairKey } from "@/lib/events/twins";
 import { snapshotDecisionInput, snapshotIdByTitle, SNAPSHOT_NOW } from "../__fixtures__/snapshot";
@@ -32,35 +31,8 @@ function withPictures(input: DecisionInput): DecisionInput {
   };
 }
 
-/** A series rule for the test: same market, or the same core title at one place group, on two or more dates. */
-const stubSeries: DecisionKindDefinition = {
-  kind: "series",
-  claimsEvents: true,
-  find: (ctx) => {
-    const groups = new Map<string, DecisionEvent[]>();
-    for (const e of ctx.unclaimedWaiting()) {
-      if (ctx.ended(e)) continue;
-      const key = e.marketId ? `market:${e.marketId}` : `${coreTitle(e.title)}@${ctx.placeGroups.get(e.venue.id) ?? e.venue.id}`;
-      groups.set(key, [...(groups.get(key) ?? []), e]);
-    }
-    return [...groups]
-      .filter(([, list]) => list.length >= 2)
-      .map(([key, list]): Decision => {
-        const sorted = [...list].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
-        return {
-          key: `series:${key}`,
-          kind: "series",
-          lane: ctx.laneOf(sorted[0]),
-          title: `${sorted[0].marketName ?? sorted[0].title}, ${sorted.length} dates`,
-          rows: sorted.map((e) => ctx.row(e)),
-          settles: sorted.map((e) => e.id),
-          primary: { label: `Publish ${sorted.length} dates`, action: "publish" },
-          firstDate: ctx.upcomingDates(sorted[0])[0],
-        };
-      });
-  },
-};
-const WITH_SERIES = DECISION_KINDS.map((k) => (k.kind === "series" ? stubSeries : k));
+/** The kinds without series detection, so series dates fall to the ready batch. */
+const WITHOUT_SERIES: DecisionKindDefinition[] = DECISION_KINDS.map((k) => (k.kind === "series" ? { ...k, find: () => [] } : k));
 
 const titleOf = (input: DecisionInput) => {
   const map = new Map(input.events.map((e) => [e.id, e.title]));
@@ -74,18 +46,40 @@ describe("decisions on the 2026-11-03 snapshot, after the schedule-day backfill"
   const nov7 = result.decisions.filter((d) => d.lane === "week:2026-11-07");
   const readyNov7 = nov7.find((d) => d.kind === "ready")!;
 
-  it("puts 10 events in the Nov 7 ready batch before series detection: the 8 plus two series dates", () => {
-    expect(readyNov7.key).toBe("ready:2026-11-07");
-    expect(titles(readyNov7).sort()).toEqual([...READY_EIGHT, ...SERIES_DATES_ON_NOV_7].sort());
-    expect(readyNov7.title).toBe("Publish the 10 ready");
-    expect(readyNov7.primary).toEqual({ label: "Publish the 10 ready", action: "publish", notifies: [] });
+  it("puts 10 events in the Nov 7 ready batch without series detection: the 8 plus two series dates", () => {
+    const batch = buildDecisions(input, WITHOUT_SERIES).decisions.find((d) => d.key === "ready:2026-11-07")!;
+    expect(titles(batch).sort()).toEqual([...READY_EIGHT, ...SERIES_DATES_ON_NOV_7].sort());
+    expect(batch.title).toBe("Publish the 10 ready");
   });
 
-  it("puts exactly the 8 in the batch once series are detected", () => {
-    const withSeries = buildDecisions(input, WITH_SERIES);
-    const batch = withSeries.decisions.find((d) => d.key === "ready:2026-11-07")!;
-    expect(titles(batch).sort()).toEqual([...READY_EIGHT].sort());
-    expect(batch.detail).toBe("8 events, no pictures");
+  it("puts exactly the 8 in the Nov 7 ready batch once series take their dates", () => {
+    expect(readyNov7.key).toBe("ready:2026-11-07");
+    expect(titles(readyNov7).sort()).toEqual([...READY_EIGHT].sort());
+    expect(readyNov7.title).toBe("Publish the 8 ready");
+    expect(readyNov7.detail).toBe("8 events, no pictures");
+    expect(readyNov7.primary).toEqual({ label: "Publish the 8 ready", action: "publish", notifies: [] });
+  });
+
+  it("files the series, with the two that start on Nov 7 named as the pile shows them", () => {
+    const series = result.decisions.filter((d) => d.kind === "series");
+    expect(series.map((d) => [d.title, d.lane])).toEqual([
+      ["Rathdrum Craft and Farmers Market, 5 dates", "week:2026-11-07"],
+      ["Spokane Farmers' Market, 3 dates", "week:2026-11-07"],
+      ["Community Market at Silver Lake, 4 dates", "week:2026-11-14"],
+      ["Kendall Yards Christmas Market, 6 dates", "week:2026-11-28"],
+      ["A Very Merry Market, 4 dates", "week:2026-11-28"],
+      ["German Christmas Market (Post Falls Public Market), 4 dates", "week:2026-11-28"],
+      ["Cabin Fever Indoor Market, 2 dates", "later"],
+    ]);
+    const farmers = series.find((d) => d.title.startsWith("Spokane Farmers"))!;
+    expect(titles(farmers)).toEqual(["Spokane Farmers' Market", "Spokane Farmers' Market", "Spokane Farmers' Market"]);
+    expect(farmers.detail).toBe("Coeur d'Alene Park, Sat Nov 7 to Sat Nov 21");
+    expect(farmers.primary).toEqual({ label: "Publish 3 dates", action: "publish", notifies: [] });
+    const kendall = series.find((d) => d.title.startsWith("Kendall"))!;
+    expect(kendall.key).toBe("series:market:cmmacl70l000m3pmwhwiekmut");
+    expect(kendall.settles).toHaveLength(6);
+    const merry = series.find((d) => d.title.startsWith("A Very Merry"))!;
+    expect(merry.detail).toBe("Silver Lake Mall, Fri Nov 27 to Sun Dec 20");
   });
 
   it("keeps every twin and trade show out of every ready batch", () => {
@@ -132,8 +126,8 @@ describe("decisions on the 2026-11-03 snapshot, after the schedule-day backfill"
     expect(wrong[0].lane).toBe("week:2026-11-07");
   });
 
-  it("orders the Nov 7 lane as the pile shows it, once series are detected", () => {
-    const lane = buildDecisions(input, WITH_SERIES).decisions.filter((d) => d.lane === "week:2026-11-07");
+  it("orders the Nov 7 lane as the pile shows it", () => {
+    const lane = nov7;
     expect(lane.map((d) => d.kind)).toEqual([
       "ready",
       "twins",
@@ -151,7 +145,7 @@ describe("decisions on the 2026-11-03 snapshot, after the schedule-day backfill"
 
   it("puts each waiting row in at most one event decision", () => {
     const counts = new Map<string, number>();
-    for (const d of buildDecisions(input, WITH_SERIES).decisions) {
+    for (const d of result.decisions) {
       if (d.kind === "looks-wrong") continue;
       for (const id of d.settles) counts.set(id, (counts.get(id) ?? 0) + 1);
     }
@@ -194,8 +188,9 @@ describe("decisions on the raw snapshot, before the backfill", () => {
     const titles = titleOf(input);
     const result = buildDecisions(input);
     const batch = result.decisions.find((d) => d.key === "ready:2026-11-07")!;
-    expect(titles(batch)).toHaveLength(8);
+    expect(titles(batch)).toHaveLength(6);
     expect(titles(batch)).not.toContain("Mistequa Casino Hotel Holiday Marketplace");
+    expect(titles(batch).filter((t) => SERIES_DATES_ON_NOV_7.includes(t))).toEqual([]);
     const mistequa = result.decisions.find((d) => d.key === `single:${snapshotIdByTitle("Mistequa Casino Hotel Holiday Marketplace")}`)!;
     expect(mistequa.detail).toBe("Runs 2 days with no daily hours.");
     expect(mistequa.rows[0].flags).toContain("multi-day-no-hours");

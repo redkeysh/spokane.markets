@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { GroupHeading } from "@/components/admin/kit/list";
 import type { Area } from "@/lib/admin/regions";
 import { isWeekLane, laneFact, type PileItem, type PileSection } from "./pile-model";
@@ -52,7 +53,21 @@ export function Lane({
 
   if (!section.open) {
     const item = section.items[0];
-    if (!item) return <p className="px-4 py-2.5 text-sm text-ash">{quietLine(section)}</p>;
+    if (!item) {
+      return (
+        <p className="px-4 py-2.5 text-sm text-ash">
+          {quietLine(section)}
+          {lane.lane === "public" && (
+            <>
+              {". "}
+              <Link href="/admin/inbox" className="rounded-sm text-lilac underline-offset-2 hover:underline">
+                See everything sent
+              </Link>
+            </>
+          )}
+        </p>
+      );
+    }
     return (
       <ul role="list">
         <li>

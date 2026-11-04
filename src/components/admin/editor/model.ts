@@ -609,7 +609,7 @@ export function backTarget(params: {
       return { href: query ? `/admin/events?${query}` : "/admin/events", label: "Back to Events" };
     }
     case "inbox":
-      return { href: back ?? "/admin/submissions", label: "Back to Sent from the site" };
+      return { href: back ?? "/admin/inbox?type=submissions", label: "Back to From the public" };
     case "markets":
       return { href: back ?? "/admin/markets", label: "Back to Markets" };
     case "venues":

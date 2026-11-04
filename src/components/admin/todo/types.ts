@@ -46,6 +46,9 @@ export type TodoEvent = {
   tags: { id: string; name: string }[];
   features: { id: string; name: string }[];
   marketName: string | null;
+  /** The vendor settings the description's chips can set, as stored. */
+  vendorApplicationState: string | null;
+  feeModelVendor: string | null;
   /** "Import of Oct 30 (47 events)", "Sent from the site", "Added by hand". */
   origin: string;
   /** The submitter a publish or rejection tells, when alerts are on. */

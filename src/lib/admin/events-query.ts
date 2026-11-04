@@ -9,7 +9,7 @@ import {
   scheduleProblems,
   type ScheduleDayRow,
 } from "@/lib/events/readiness";
-import { findSeries, type Series } from "@/lib/events/series";
+import { findSeries, type Series } from "@/lib/events/series-rules";
 import { looksLikeTradeShow } from "@/lib/events/trade-shows";
 import { findTwins, placeGroupIndex } from "@/lib/events/twins";
 import { findDuplicateGroups, type DuplicateMemos, type VenueLike } from "@/lib/venues/match";

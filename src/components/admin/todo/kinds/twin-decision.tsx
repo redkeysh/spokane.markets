@@ -10,6 +10,7 @@ import { compareRows, decisionEvents, editorHref, fixedCopy, suggestReason, take
 import type { DecisionPaneProps } from "../kind-registry";
 import { useDecisionKeys, useTodo } from "../todo-context";
 import type { TodoEvent } from "../types";
+import { CombineView } from "./combine-view";
 
 const STATUS: Record<string, MarkStatus> = { PUBLISHED: "PUBLISHED", PENDING: "PENDING", DRAFT: "DRAFT" };
 
@@ -118,7 +119,7 @@ function CompareStack({ events, rows, hrefs }: { events: TodoEvent[]; rows: Comp
  * Same event twice (or more): the copies side by side, rows that differ marked. 1 or 2 keeps that
  * copy and publishes it, Shift with the number keeps it without publishing; the others are
  * archived as its duplicates so the next import skips them. With a live copy, P keeps the live
- * one. D remembers they are different events.
+ * one. C picks field by field (combine-view.tsx). D remembers they are different events.
  */
 export function TwinDecision({ decision, position }: DecisionPaneProps) {
   const api = useTodo();
@@ -129,6 +130,7 @@ export function TwinDecision({ decision, position }: DecisionPaneProps) {
   const suggested = fixed ?? events.find((e) => e.id === decision.suggestedKeepId) ?? events[0];
   const settles = new Set(decision.settles);
   const [take, setTake] = React.useState(true);
+  const [combine, setCombine] = React.useState(false);
   const busy = api.busy === decision.key;
   const anyBusy = api.busy !== null;
   const takeId = React.useId();
@@ -157,15 +159,34 @@ export function TwinDecision({ decision, position }: DecisionPaneProps) {
       else keep(suggested, true);
     },
     d: () => void api.different(decision),
+    c: () => setCombine(true),
   };
   events.slice(0, 9).forEach((e, i) => {
     bindings[String(i + 1)] = () => keep(e, true);
     bindings[`shift+${i + 1}`] = () => keep(e, false);
   });
-  useDecisionKeys(bindings);
+  useDecisionKeys(combine ? {} : bindings);
 
   if (events.length < 2 || !suggested) {
     return <DecisionHeader title={decision.title} meta={position} context="One of these copies changed since the page loaded." />;
+  }
+
+  const context = `${events[0].dateRange}, ${events[0].venue.name}${events[0].venue.city ? `, ${events[0].venue.city}` : ""}`;
+  if (combine) {
+    return (
+      <article aria-labelledby="todo-decision-title">
+        <DecisionHeader title={maybe ? "Maybe the same event?" : "Same event twice?"} meta={position} context={context} />
+        <CombineView
+          decision={decision}
+          events={events}
+          keepId={suggested.id}
+          onBack={() => {
+            setCombine(false);
+            requestAnimationFrame(() => document.getElementById("todo-decision-title")?.focus());
+          }}
+        />
+      </article>
+    );
   }
 
   const rows = compareRows(events);
@@ -173,7 +194,6 @@ export function TwinDecision({ decision, position }: DecisionPaneProps) {
   const others = events.filter((e) => e.id !== suggested.id);
   const names = takeFromOthers(suggested, others);
   const number = (e: TodoEvent) => events.indexOf(e) + 1;
-  const first = events[0];
   const placesDiffer = new Set(events.map((e) => e.venue.id)).size > 1;
 
   const actions: ActionSpec[] = fixed
@@ -197,6 +217,7 @@ export function TwinDecision({ decision, position }: DecisionPaneProps) {
         busy: busy && e.id === suggested.id,
         busyLabel: "Publishing",
       }));
+  actions.push({ label: "Pick field by field", keys: "C", onClick: () => setCombine(true), disabled: anyBusy });
   actions.push({ label: "Different events", keys: "D", onClick: () => void api.different(decision), disabled: anyBusy });
   if (later) actions.push(later);
 
@@ -213,7 +234,7 @@ export function TwinDecision({ decision, position }: DecisionPaneProps) {
       <DecisionHeader
         title={maybe ? "Maybe the same event?" : "Same event twice?"}
         meta={position}
-        context={`${first.dateRange}, ${first.venue.name}${first.venue.city ? `, ${first.venue.city}` : ""}${placesDiffer ? ", at two places listed separately" : ""}`}
+        context={`${context}${placesDiffer ? ", at two places listed separately" : ""}`}
       />
       <CompareTable events={events} rows={rows} hrefs={hrefs} />
       <CompareStack events={events} rows={rows} hrefs={hrefs} />

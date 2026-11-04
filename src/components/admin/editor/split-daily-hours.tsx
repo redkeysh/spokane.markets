@@ -29,7 +29,8 @@ export function SplitDailyHours({
   onSplit: (days: EditorDay[]) => void;
   readOnly: boolean;
 }) {
-  const stated = React.useMemo(() => findFacts(description).flatMap((f) => (f.kind === "hours" ? f.days : [])), [description]);
+  const year = Number(stretch.startDate.slice(0, 4)) || undefined;
+  const stated = React.useMemo(() => findFacts(description, { year }).flatMap((f) => (f.kind === "hours" ? f.days : [])), [description, year]);
   const proposal = proposeDailyHours(stretch, stated);
   return (
     <div className="space-y-2">

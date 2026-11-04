@@ -12,6 +12,9 @@ export type HeldEdits = {
   featureIds?: string[];
   scheduleDays?: HeldDay[];
   imageUrl?: string;
+  description?: string;
+  /** Vendor settings found in the description; each one that differs from the event counts as a change. */
+  details?: { vendorApplicationState?: "OPEN" | "CLOSED"; feeModelVendor?: string };
 };
 
 /** What the server action accepts: only the fields that changed. */
@@ -22,10 +25,13 @@ export type EventEditsInput = {
   featureIds?: string[];
   scheduleDays?: { date: string; allDay: boolean; startTime?: string; endTime?: string }[];
   imageUrl?: string | null;
+  description?: string | null;
+  details?: { vendorApplicationState?: "OPEN" | "CLOSED"; feeModelVendor?: string };
 };
 
 /** The parts of an event the held edits are compared with. */
-export type EditableEvent = Pick<TodoEvent, "title" | "venue" | "tags" | "features" | "scheduleDays" | "imageUrl">;
+export type EditableEvent = Pick<TodoEvent, "title" | "venue" | "tags" | "features" | "scheduleDays" | "imageUrl"> &
+  Partial<Pick<TodoEvent, "description" | "vendorApplicationState" | "feeModelVendor">>;
 
 const ALL_DAY_START = "00:00";
 const ALL_DAY_END = "23:59";
@@ -104,12 +110,22 @@ function changedFields(event: EditableEvent, edits: HeldEdits): EventEditsInput 
   if (edits.imageUrl !== undefined && edits.imageUrl.trim() !== (event.imageUrl ?? "").trim()) {
     changed.imageUrl = edits.imageUrl.trim() || null;
   }
+  if (edits.description !== undefined && edits.description.trim() !== (event.description ?? "").trim()) {
+    changed.description = edits.description.trim() || null;
+  }
+  const details: NonNullable<EventEditsInput["details"]> = {};
+  const state = edits.details?.vendorApplicationState;
+  if (state && state !== (event.vendorApplicationState ?? null)) details.vendorApplicationState = state;
+  const fee = edits.details?.feeModelVendor?.trim();
+  if (fee && fee !== (event.feeModelVendor ?? "").trim()) details.feeModelVendor = fee;
+  if (Object.keys(details).length > 0) changed.details = details;
   return changed;
 }
 
-/** How many fields the held edits change ("2 unsaved changes"). */
+/** How many fields the held edits change ("2 unsaved changes"); each vendor setting counts as one. */
 export function changeCount(event: EditableEvent, edits: HeldEdits): number {
-  return Object.keys(changedFields(event, edits)).length;
+  const { details, ...rest } = changedFields(event, edits);
+  return Object.keys(rest).length + Object.keys(details ?? {}).length;
 }
 
 /** The changed fields for the server, or null when nothing changed. */

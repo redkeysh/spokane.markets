@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { findDuplicateGroups } from "@/lib/venues/match";
 import { pacificDate, startOfPacificDay } from "./format";
 import { getPlaceMemos } from "./memo";
-import { getModerationPendingCount } from "./queues";
+import { countPublicWaiting } from "./inbox/public-items";
 import { getWeekendRail } from "./weekends";
 
 /**
@@ -30,7 +30,7 @@ export type NavSignals = { todo: NavSignal; markets: NavSignal; venues: NavSigna
 export type NavSignalCounts = {
   /** Pending and Draft stalls in this week's rail column. */
   weekendWaiting: number;
-  /** Submissions, reviews, photos, reports and applications waiting. */
+  /** Submissions, reviews, photos, reports, applications, unread messages and markets awaiting verification. */
   publicWaiting: number;
   duplicateGroups: number;
   /** Archived places that upcoming events or active markets still use (archivedPlaceInUse). */
@@ -76,7 +76,7 @@ export const getNavSignals = cache(async (): Promise<NavSignals> => {
   const now = new Date();
   const [rail, publicWaiting, activeVenues, archivedInUse, marketsAwaitingVerification, placeMemos] = await Promise.all([
     getWeekendRail(now),
-    getModerationPendingCount(),
+    countPublicWaiting(),
     db.venue.findMany({
       where: { deletedAt: null },
       select: { id: true, name: true, address: true, city: true, zip: true, lat: true, lng: true },

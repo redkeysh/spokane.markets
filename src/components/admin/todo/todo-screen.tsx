@@ -38,6 +38,7 @@ import {
   decisionItemId,
   defaultLane,
   enterLane,
+  followedDecision,
   laneFromParams,
   moveCursor,
   stepWeek,
@@ -407,11 +408,32 @@ export function TodoScreen({ data }: { data: TodoData }) {
     [requestFocus]
   );
 
+  /**
+   * A kept decision whose key changes when the refresh lands (a series linked to a market): once
+   * its key is gone, the cursor moves to the decision that settles any of its events.
+   */
+  const followRef = React.useRef<{ from: string; eventIds: ReadonlySet<string>; pile: typeof pile } | null>(null);
+  const followTo = React.useCallback(
+    (current: typeof pile, from: string, eventIds: ReadonlySet<string>): boolean => {
+      const to = followedDecision(current.decisions, from, eventIds);
+      if (to === undefined) return false;
+      if (to) applyMove({ openLane: to.lane, cursor: decisionItemId(to.key) }, { focus: true });
+      return true;
+    },
+    [applyMove]
+  );
+  React.useLayoutEffect(() => {
+    const follow = followRef.current;
+    if (!follow || follow.pile === pile) return;
+    followRef.current = null;
+    followTo(pile, follow.from, follow.eventIds);
+  }, [pile, followTo]);
+
   const run = React.useCallback(
     async (
       decision: Decision,
       call: () => Promise<TodoActionResult>,
-      describe: (result: Ok) => { text: string; spoken?: string; live?: string[]; keep?: boolean },
+      describe: (result: Ok) => { text: string; spoken?: string; live?: string[]; keep?: boolean; follow?: string[] },
       options: { hide?: boolean } = {}
     ): Promise<boolean> => {
       if (busyRef.current) return false;
@@ -425,13 +447,16 @@ export function TodoScreen({ data }: { data: TodoData }) {
           announce(result.error);
           return false;
         }
-        const { text, spoken, live, keep } = describe(result);
+        const { text, spoken, live, keep, follow } = describe(result);
         const hide = options.hide !== false && !keep;
         if (live?.length) markLive(live);
         if (hide) {
           setHidden((prev) => new Set(prev).add(decision.key));
           dirtyRef.current = null;
           setPendingLeave(null);
+        } else if (follow?.length) {
+          const eventIds = new Set(follow);
+          followRef.current = followTo(pileRef.current, decision.key, eventIds) ? null : { from: decision.key, eventIds, pile: pileRef.current };
         }
         showDone(text, result.decisionId);
         announce(spoken ?? text);
@@ -446,7 +471,7 @@ export function TodoScreen({ data }: { data: TodoData }) {
         setBusy(null);
       }
     },
-    [announce, landOn, markLive, showDone]
+    [announce, followTo, landOn, markLive, showDone]
   );
 
   const weekOf = React.useCallback(
@@ -575,6 +600,7 @@ export function TodoScreen({ data }: { data: TodoData }) {
       setHidden((prev) => new Set(prev).add(decision.key));
       if (next) landOn(next);
     },
+    run,
     setDirty,
     pendingLeave: pendingLeave
       ? {

@@ -8,7 +8,7 @@ import { AdminButton } from "@/components/admin/kit/button";
 import { Section } from "@/components/admin/kit/field";
 import { FormError } from "@/components/admin/rare/controls";
 import { useAnnounce } from "@/components/admin/shell/live-region";
-import { importReport, type ImportReportInput } from "./data-import-report";
+import { importReport, skippedDuplicatesSentence, type ImportReportInput } from "./data-import-report";
 
 type Format = "json" | "csv";
 
@@ -18,6 +18,7 @@ const FORMATS: { value: Format; label: string; help: string }[] = [
 ];
 
 const MAX_ERRORS_SHOWN = 5;
+const MAX_SKIPPED_SHOWN = 10;
 
 /** Import from a file, and export a backup of every event, market and place. */
 export function DataImportExport() {
@@ -83,6 +84,7 @@ export function DataImportExport() {
   }
 
   const report = importResult ? importReport(importResult) : null;
+  const skipped = importResult ? skippedDuplicatesSentence(importResult) : null;
 
   return (
     <div className="space-y-10">
@@ -131,6 +133,22 @@ export function DataImportExport() {
         {report && importResult && (
           <div className="max-w-[72ch] space-y-2 border-t border-seam pt-4 font-text text-sm text-basalt" role="status">
             <p className="tabular-nums">{report.made}</p>
+            {skipped && (
+              <div>
+                <p className="tabular-nums">{skipped}</p>
+                <ul role="list" className="mt-1 space-y-0.5 text-ash">
+                  {importResult.skippedDuplicates?.slice(0, MAX_SKIPPED_SHOWN).map((e) => (
+                    <li key={`${e.row}-${e.title}`}>
+                      {e.title}, row <span className="tabular-nums">{e.row}</span>
+                      {e.keptTitle ? `, kept as ${e.keptTitle}` : ""}
+                    </li>
+                  ))}
+                  {(importResult.skippedDuplicates?.length ?? 0) > MAX_SKIPPED_SHOWN && (
+                    <li className="tabular-nums">And {importResult.skippedDuplicates!.length - MAX_SKIPPED_SHOWN} more.</li>
+                  )}
+                </ul>
+              </div>
+            )}
             {report.removed && <p className="text-ash">{report.removed}</p>}
             {report.needsHours && (
               <div>

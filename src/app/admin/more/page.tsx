@@ -80,29 +80,10 @@ const DIRECTORY: DirectoryGroup[] = [
     heading: "From the public",
     items: [
       {
-        label: "Sent from the site",
-        href: "/admin/submissions",
-        sentence: "Events people sent in, waiting or decided.",
-      },
-      {
-        label: "Reviews",
-        href: "/admin/reviews",
-        sentence: "What people wrote about events and markets.",
-      },
-      {
-        label: "Photos",
-        href: "/admin/photos",
-        sentence: "Pictures people added to events and markets.",
-      },
-      {
-        label: "Reports",
-        href: "/admin/reports",
-        sentence: "Problems people flagged on a listing.",
-      },
-      {
-        label: "Applications",
-        href: "/admin/applications",
-        sentence: "Answers sent through the application forms.",
+        label: "Everything from the public",
+        href: "/admin/inbox",
+        sentence:
+          "Events sent in, reviews, photos, reports, applications, messages and vendor survey answers, waiting or decided.",
       },
     ],
   },

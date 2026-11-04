@@ -15,6 +15,9 @@ import { eventScheduleDaySchema, venueSchema } from "@/lib/validations";
 import { findMatchingVenue } from "@/lib/venues/resolve";
 import { RESERVED_EVENT_SLUGS } from "@/lib/events/slug-rules";
 import { slugRedirectTarget } from "@/lib/events/slug";
+import { coreTitle } from "@/lib/events/normalize-title";
+import { loadPlaceGroups } from "@/lib/markets/queries";
+import { pacificDate } from "./format";
 
 const EVENT_IMPORT_STATUSES = [
   "DRAFT",
@@ -99,8 +102,41 @@ export type ImportResult = {
    * lists until someone sets their days.
    */
   eventsNeedingSchedule: { row: number; title: string; slug: string }[];
+  /**
+   * Event rows left out because the owner already archived the same event as
+   * a duplicate (same core title, Pacific start date and place group).
+   * `keptTitle` is the event that was kept instead.
+   */
+  skippedDuplicates: { row: number; title: string; keptTitle: string | null }[];
   errors: string[];
 };
+
+type DecidedDuplicates = {
+  /** Venue id to duplicate group id. */
+  groups: ReadonlyMap<string, string>;
+  /** "<core title>|<Pacific date>|<place group>" to the title of the event kept instead. */
+  keys: Map<string, string | null>;
+};
+
+function duplicateKey(title: string, startDate: Date, venueId: string, groups: ReadonlyMap<string, string>): string {
+  return `${coreTitle(title)}|${pacificDate(startDate)}|${groups.get(venueId) ?? venueId}`;
+}
+
+/**
+ * The events the owner archived as duplicates of another (Same event twice?), keyed so an import
+ * row for the same event can be recognized. Null when there are none, so nothing more is read.
+ */
+async function loadDecidedDuplicates(): Promise<DecidedDuplicates | null> {
+  const archived = await db.event.findMany({
+    where: { deletedAt: { not: null }, duplicateOfId: { not: null } },
+    select: { title: true, startDate: true, venueId: true, duplicateOf: { select: { title: true } } },
+  });
+  if (archived.length === 0) return null;
+  const groups = await loadPlaceGroups();
+  const keys = new Map<string, string | null>();
+  for (const event of archived) keys.set(duplicateKey(event.title, event.startDate, event.venueId, groups), event.duplicateOf?.title ?? null);
+  return { groups, keys };
+}
 
 /** Longest span, in Pacific calendar days, that schedule days are derived for. */
 export const MAX_DERIVED_SCHEDULE_DAYS = 7;
@@ -248,6 +284,7 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
     marketsCreated: 0,
     eventsCreated: 0,
     eventsNeedingSchedule: [],
+    skippedDuplicates: [],
     errors: [],
   };
 
@@ -441,6 +478,7 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
 
   // 3. Import events
   if (payload.events?.length) {
+    let decided: Promise<DecidedDuplicates | null> | null = null;
     for (let i = 0; i < payload.events.length; i++) {
       try {
         const row = payload.events[i];
@@ -522,6 +560,16 @@ export async function importData(payload: ImportPayload): Promise<ImportResult> 
           result.errors.push(
             `Event ${i + 1} (${row.title}): invalid status "${row.status}"`
           );
+          continue;
+        }
+        decided ??= loadDecidedDuplicates().catch((e) => {
+          result.errors.push(`Earlier duplicate decisions could not be read, so none were skipped: ${e instanceof Error ? e.message : String(e)}`);
+          return null;
+        });
+        const duplicates = await decided;
+        const key = duplicates ? duplicateKey(row.title, startDate, venueId, duplicates.groups) : null;
+        if (duplicates && key && duplicates.keys.has(key)) {
+          result.skippedDuplicates.push({ row: i + 1, title: row.title, keptTitle: duplicates.keys.get(key) ?? null });
           continue;
         }
         // Create tags/features, the event, and its schedule days in one

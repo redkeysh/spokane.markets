@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   marketFindMany: vi.fn(),
   marketCreate: vi.fn(),
   eventCreate: vi.fn(),
+  eventFindMany: vi.fn(),
+  loadPlaceGroups: vi.fn(),
   scheduleDayCreateMany: vi.fn(),
   findMatchingVenue: vi.fn(),
 }));
@@ -16,6 +18,7 @@ vi.mock("@/lib/db", () => ({
   db: {
     venue: { findMany: mocks.venueFindMany, create: mocks.venueCreate, deleteMany: mocks.venueDeleteMany },
     market: { findMany: mocks.marketFindMany, create: mocks.marketCreate },
+    event: { findMany: mocks.eventFindMany },
     $transaction: (fn: (tx: unknown) => unknown) =>
       fn({
         event: { create: mocks.eventCreate },
@@ -28,6 +31,7 @@ vi.mock("@/lib/db", () => ({
 vi.mock("@/lib/neighborhoods", () => ({ getNeighborhoodSlugSet: async () => new Set<string>() }));
 vi.mock("@/lib/venues/resolve", () => ({ findMatchingVenue: mocks.findMatchingVenue }));
 vi.mock("@/lib/events/slug", () => ({ slugRedirectTarget: mocks.slugRedirectTarget }));
+vi.mock("@/lib/markets/queries", () => ({ loadPlaceGroups: mocks.loadPlaceGroups }));
 
 import { deriveScheduleDays, importData, type ImportPayload } from "./data-import";
 
@@ -56,6 +60,8 @@ beforeEach(() => {
   referencedVenueIds = new Set();
   mocks.venueFindMany.mockResolvedValue([]);
   mocks.marketFindMany.mockResolvedValue([]);
+  mocks.eventFindMany.mockResolvedValue([]);
+  mocks.loadPlaceGroups.mockResolvedValue(new Map());
   mocks.findMatchingVenue.mockResolvedValue(null);
   mocks.venueCreate.mockImplementation(async ({ data }: { data: { name: string } }) => ({
     id: `venue-${data.name}`,
@@ -323,5 +329,70 @@ describe("importData schedule days", () => {
     expect(result.errors[0]).toContain("spans more than 7 days");
     expect(mocks.scheduleDayCreateMany).not.toHaveBeenCalled();
     expect(eventData().startDate.toISOString()).toBe("2026-12-01T18:00:00.000Z");
+  });
+});
+
+describe("importData with twins the owner already decided", () => {
+  const decided = (title: string, startDate: string, venueId: string, keptTitle: string | null = "Rebel Junk Holiday Market") => ({
+    title,
+    startDate: new Date(startDate),
+    venueId,
+    duplicateOf: keptTitle ? { title: keptTitle } : null,
+  });
+
+  beforeEach(() => {
+    mocks.venueFindMany.mockResolvedValue([
+      { id: "fairgrounds", name: "Kootenai County Fairgrounds" },
+      { id: "fairgrounds-2", name: "Fairgrounds Jacklin Building" },
+    ]);
+    mocks.loadPlaceGroups.mockResolvedValue(new Map([["fairgrounds-2", "fairgrounds"]]));
+  });
+
+  const row = (title: string, venueSlug: string, startDate = "2026-11-07T18:00:00Z") => ({
+    title,
+    startDate,
+    endDate: new Date(new Date(startDate).getTime() + 6 * 3600_000).toISOString(),
+    venueSlug,
+  });
+
+  it("skips a row matching an archived duplicate by core title, date and place group, and reports it", async () => {
+    mocks.eventFindMany.mockResolvedValue([decided("11th Annual Rebel Junk Holiday Market", "2026-11-07T17:00:00Z", "fairgrounds")]);
+    const result = await importData({
+      events: [row("11th Annual Rebel Junk Holiday Market 2026", "fairgrounds-jacklin-building"), row("CardCon", "kootenai-county-fairgrounds")],
+    });
+    expect(result.skippedDuplicates).toEqual([{ row: 1, title: "11th Annual Rebel Junk Holiday Market 2026", keptTitle: "Rebel Junk Holiday Market" }]);
+    expect(result.eventsCreated).toBe(1);
+    expect(result.errors).toEqual([]);
+    expect(mocks.eventCreate).toHaveBeenCalledTimes(1);
+    expect(mocks.eventFindMany).toHaveBeenCalledWith(expect.objectContaining({ where: { deletedAt: { not: null }, duplicateOfId: { not: null } } }));
+  });
+
+  it("imports the same title on another date or at another place", async () => {
+    mocks.eventFindMany.mockResolvedValue([decided("Rebel Junk Holiday Market", "2026-11-07T17:00:00Z", "fairgrounds")]);
+    mocks.venueFindMany.mockResolvedValue([
+      { id: "fairgrounds", name: "Kootenai County Fairgrounds" },
+      { id: "hall", name: "Hall" },
+    ]);
+    const result = await importData({
+      events: [row("Rebel Junk Holiday Market", "kootenai-county-fairgrounds", "2026-11-14T18:00:00Z"), row("Rebel Junk Holiday Market", "hall")],
+    });
+    expect(result.skippedDuplicates).toEqual([]);
+    expect(result.eventsCreated).toBe(2);
+  });
+
+  it("reads no places when no event was ever archived as a duplicate", async () => {
+    const result = await importData({ events: [row("Rebel Junk Holiday Market", "kootenai-county-fairgrounds")] });
+    expect(result).toMatchObject({ eventsCreated: 1, skippedDuplicates: [] });
+    expect(mocks.eventFindMany).toHaveBeenCalledTimes(1);
+    expect(mocks.loadPlaceGroups).not.toHaveBeenCalled();
+  });
+
+  it("imports every row and says so when the earlier decisions cannot be read", async () => {
+    mocks.eventFindMany.mockRejectedValue(new Error("connection lost"));
+    const result = await importData({
+      events: [row("Rebel Junk Holiday Market", "kootenai-county-fairgrounds"), row("CardCon", "kootenai-county-fairgrounds")],
+    });
+    expect(result.eventsCreated).toBe(2);
+    expect(result.errors).toEqual(["Earlier duplicate decisions could not be read, so none were skipped: connection lost"]);
   });
 });

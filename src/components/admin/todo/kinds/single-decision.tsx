@@ -12,7 +12,6 @@ import {
   daysOf,
   editsPayload,
   heldDaysProblem,
-  splitIntoDailyHours,
   titleProblem,
   type HeldDay,
   type HeldEdits,
@@ -21,6 +20,8 @@ import { HoursEditor, PictureInput } from "../hours-editor";
 import type { DecisionPaneProps } from "../kind-registry";
 import { useDecisionKeys, useDirty, useTodo } from "../todo-context";
 import type { TodoEvent } from "../types";
+import { AboutWithFacts } from "./facts-line";
+import { proposeHours, type FactDetails } from "./facts-model";
 
 const HOUR_FLAGS = new Set(["multi-day-no-hours", "closes-before-opens", "opens-at-midnight"]);
 const PLACE_FLAGS = new Set(["place-incomplete", "place-archived"]);
@@ -47,6 +48,8 @@ export function useEventEdits(event: TodoEvent | undefined) {
   const [featureIds, setFeatureIds] = React.useState<string[] | null>(null);
   const [days, setDays] = React.useState<HeldDay[] | null>(null);
   const [picture, setPicture] = React.useState<string | null>(null);
+  const [description, setDescription] = React.useState<string | null>(null);
+  const [details, setDetails] = React.useState<FactDetails>({});
   const edits: HeldEdits = {
     title: title ?? undefined,
     venueId: venueId ?? undefined,
@@ -54,6 +57,8 @@ export function useEventEdits(event: TodoEvent | undefined) {
     featureIds: featureIds ?? undefined,
     scheduleDays: days ?? undefined,
     imageUrl: picture ?? undefined,
+    description: description ?? undefined,
+    details,
   };
   return {
     title,
@@ -68,6 +73,10 @@ export function useEventEdits(event: TodoEvent | undefined) {
     setDays,
     picture,
     setPicture,
+    description,
+    setDescription,
+    details,
+    setDetails,
     count: event ? changeCount(event, edits) : 0,
     payload: event ? editsPayload(event, edits) : null,
     reset: () => {
@@ -77,6 +86,8 @@ export function useEventEdits(event: TodoEvent | undefined) {
       setFeatureIds(null);
       setDays(null);
       setPicture(null);
+      setDescription(null);
+      setDetails({});
     },
   };
 }
@@ -162,16 +173,17 @@ export function SingleDecision({ decision, position }: DecisionPaneProps) {
   }
 
   const hoursFlag = event.blocking.find((b) => HOUR_FLAGS.has(b.flag));
+  const proposal = proposeHours(event, held.description ?? event.description);
   const whenAction = held.days ? (
     <RowButton onClick={() => held.setDays(null)}>Keep the old hours</RowButton>
   ) : hoursFlag?.flag === "multi-day-no-hours" ? (
-    <AdminButton size="sm" onClick={() => held.setDays(splitIntoDailyHours(event))}>
+    <AdminButton size="sm" onClick={() => held.setDays(proposal.days)}>
       Split into daily hours
     </AdminButton>
   ) : (
     <RowButton
       variant={hoursFlag ? "outline" : "quiet"}
-      onClick={() => held.setDays(daysOf(event).length ? daysOf(event) : splitIntoDailyHours(event))}
+      onClick={() => held.setDays(daysOf(event).length ? daysOf(event) : proposal.days)}
     >
       {hoursFlag ? "Fix hours" : "Change hours"}
     </RowButton>
@@ -258,9 +270,31 @@ export function SingleDecision({ decision, position }: DecisionPaneProps) {
               days={held.days}
               onChange={held.setDays}
               now={api.now}
-              note={hoursFlag?.flag === "multi-day-no-hours" && !event.scheduleDays.length ? "Proposed from its start and end. Check them before saving." : undefined}
+              note={
+                hoursFlag?.flag === "multi-day-no-hours" && !event.scheduleDays.length
+                  ? proposal.stated
+                    ? "Proposed from the hours the description gives. Check them before saving."
+                    : "Proposed from its start and end. Check them before saving."
+                  : undefined
+              }
             />
           ) : undefined,
+          about: (
+            <AboutWithFacts
+              event={event}
+              features={features}
+              held={{
+                description: held.description,
+                setDescription: held.setDescription,
+                featureIds: held.featureIds,
+                setFeatureIds: held.setFeatureIds,
+                details: held.details,
+                setDetails: held.setDetails,
+                days: held.days,
+                setDays: held.setDays,
+              }}
+            />
+          ),
           where: held.venueId !== null ? <PlacePicker value={held.venueId} options={places} onChange={held.setVenueId} /> : undefined,
           tags: held.tagIds !== null ? <NamesPicker label="Tags" value={held.tagIds} options={tags} onChange={held.setTagIds} /> : undefined,
           has:

@@ -1,6 +1,7 @@
 import type { Readiness, ReadinessFlag, ReadinessVenue, ScheduleDayRow } from "@/lib/events/readiness";
 import type { TwinPair } from "@/lib/events/twins";
 import type { Area } from "../regions";
+import type { PublicDecisionItems } from "../inbox/public-items";
 
 export type DecisionKind =
   | "ready"
@@ -84,6 +85,10 @@ export type Decision = {
   primary: { label: string; action: DecisionAction; notifies?: string[] };
   /** For ordering inside a lane. */
   firstDate?: string;
+  /** When the public sent it (ISO); From the public is ordered oldest first. */
+  sentAt?: string;
+  /** Higher comes first in From the public: 2 for a critical report, 1 for a high one. */
+  urgency?: number;
   /** For twins: the id to keep (a live or otherwise decided copy, else the fullest listing). */
   suggestedKeepId?: string;
 };
@@ -155,6 +160,8 @@ export type DecisionInput = {
   memos: DecisionMemo[];
   /** The neighborhood list; place decisions for ZIPs without a neighborhood are filed only when it is given. */
   neighborhoods?: { slug: string; label: string; isActive: boolean }[];
+  /** Reviews, photos, reports, applications, messages and markets waiting on the owner. */
+  publicItems?: PublicDecisionItems;
 };
 
 export type DecisionContext = {

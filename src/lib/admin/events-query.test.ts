@@ -297,7 +297,9 @@ describe("buildEventsList on the 2026-11-03 snapshot", () => {
       input.events.filter((e) => e.title === title).map((e) => e.id)
     );
     expect(ids.length).toBe(6);
-    const series: Series[] = [{ key: "series:kendall", name: "Kendall Yards Christmas Market", eventIds: ids, marketId: null, suggestMarket: false }];
+    const series: Series[] = [
+      { key: "series:kendall", name: "Kendall Yards Christmas Market", eventIds: ids, marketId: null, marketName: null, suggestMarket: false, suggestedMarket: null, venueId: "kendall", dates: [] },
+    ];
     const result = buildEventsList({ ...input, series }, parseEventsListParams({ week: "2026-11-28" }));
     const item = result.groups[0].items.find((i) => i.type === "series");
     expect(item?.type).toBe("series");

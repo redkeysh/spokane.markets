@@ -105,7 +105,7 @@ export function EventFields({
   actions = {},
 }: {
   event: TodoEvent;
-  slots?: Partial<Record<"when" | "where" | "tags" | "has" | "picture", React.ReactNode>>;
+  slots?: Partial<Record<"when" | "where" | "about" | "tags" | "has" | "picture", React.ReactNode>>;
   actions?: Partial<Record<"when" | "where" | "tags" | "has" | "picture", React.ReactNode>>;
 }) {
   return (
@@ -125,8 +125,12 @@ export function EventFields({
         {slots.where && <div className="mt-2">{slots.where}</div>}
       </Field>
       <Field label="About">
-        <About text={event.description} />
-        {event.importerNote && <span className="mt-1 block text-xs text-ash">Reads like an importer note.</span>}
+        {slots.about ?? (
+          <>
+            <About text={event.description} />
+            {event.importerNote && <span className="mt-1 block text-xs text-ash">Reads like an importer note.</span>}
+          </>
+        )}
       </Field>
       <Field label="Tags" action={actions.tags}>
         {slots.tags ?? <Names names={event.tags.map((t) => t.name)} />}

@@ -17,6 +17,7 @@ import {
   decisionItemId,
   defaultLane,
   enterLane,
+  followedDecision,
   laneFromParams,
   laneItemId,
   moveCursor,
@@ -70,6 +71,8 @@ function todoEvent(id: string, overrides: Partial<TodoEvent> = {}): TodoEvent {
     tags: [],
     features: [],
     marketName: null,
+    vendorApplicationState: null,
+    feeModelVendor: null,
     origin: "Import of Oct 30 (47 events)",
     notifies: null,
     blocking: [],
@@ -200,6 +203,16 @@ describe("the pile", () => {
     expect(enterLane(pileInput, baseState, "gone", "first")).toBe(decisionItemId("gone"));
     expect(laneItemId("gone")).toBe("lane:gone");
   });
+
+  it("follows a series to the decision its dates are filed under once its key is gone", () => {
+    const cabin = result.decisions.find((d) => d.title.startsWith("Cabin Fever"))!;
+    const ids = new Set(cabin.settles);
+    expect(followedDecision(result.decisions, cabin.key, ids)).toBeUndefined();
+    const linked: Decision = { ...cabin, key: "series:market:kootenai", title: "Kootenai County Farmers' Market, 3 dates", settles: ["other", ...cabin.settles] };
+    const after = [...result.decisions.filter((d) => d.key !== cabin.key), linked];
+    expect(followedDecision(after, cabin.key, ids)).toBe(linked);
+    expect(followedDecision(after.filter((d) => d !== linked), cabin.key, ids)).toBeNull();
+  });
 });
 
 describe("the weekend brief", () => {
@@ -212,16 +225,18 @@ describe("the weekend brief", () => {
     expect(brief.lines.map((l) => l.text)).toEqual([
       "Saturday is four days away. 1 of 22 is live.",
       "Nothing is live yet in Spokane Valley, North Idaho or farther out.",
-      "10 are ready to publish.",
+      "8 are ready to publish.",
       "5 pairs look like the same event.",
+      "2 series start here: Rathdrum Craft and Farmers Market and Spokane Farmers' Market.",
       "CardCon may not be a market, and 16 more like it later in the season.",
       "Yuletide Holiday Marketplace is live on Friday with no picture.",
     ]);
-    expect(brief.lines[2].action).toEqual({ kind: "publish-ready", decisionKey: "ready:2026-11-07", label: "Publish the 10 ready" });
+    expect(brief.lines[2].action).toEqual({ kind: "publish-ready", decisionKey: "ready:2026-11-07", label: "Publish the 8 ready" });
     expect(brief.lines[3].action).toMatchObject({ kind: "goto", label: "Start with Rebel Junk" });
-    expect(brief.lines[4].action).toMatchObject({ kind: "goto", decisionKey: "trade-shows", label: "Review the 17" });
-    expect(brief.lines[5].action).toMatchObject({ kind: "goto", label: "Add a picture" });
-    expect(brief.footer).toBe(`${result.decisions.filter((d) => d.lane === NOV7).length} decisions settle the 21 waiting here.`);
+    expect(brief.lines[4].action).toMatchObject({ kind: "goto", decisionKey: "series:market:cmvv9iv1q001i01mmql2udwe3", label: "Open the first" });
+    expect(brief.lines[5].action).toMatchObject({ kind: "goto", decisionKey: "trade-shows", label: "Review the 17" });
+    expect(brief.lines[6].action).toMatchObject({ kind: "goto", label: "Add a picture" });
+    expect(brief.footer).toBe("10 decisions settle the 21 waiting here.");
     expect(brief.done).toBe(false);
   });
 

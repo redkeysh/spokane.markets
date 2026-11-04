@@ -7,6 +7,7 @@ import { addDays, dateColumnToIso, formatWeekendSpan, pacificDate, saturdayOf, s
 import { localDayName } from "../local-days";
 import { AREAS, areaOf } from "../regions";
 import { RAIL_WEEKS, submissionDays } from "../weekends";
+import { loadPublicDecisionItems, publicItemCount } from "../inbox/public-items";
 import * as application from "./kinds/application";
 import * as approvedUnpublished from "./kinds/approved-unpublished";
 import * as archivedInUse from "./kinds/archived-in-use";
@@ -186,9 +187,12 @@ function sortDecisions(ctx: DecisionContext, decisions: Decision[]): Decision[] 
     return first ? (ctx.eventById.get(first.id)?.startDate.getTime() ?? 0) : 0;
   };
   const isGroup = (d: Decision) => d.rows.length > 1;
+  const fromPublic = (a: Decision, b: Decision) =>
+    a.lane === "public" && b.lane === "public" ? (b.urgency ?? 0) - (a.urgency ?? 0) || (a.sentAt ?? "").localeCompare(b.sentAt ?? "") : 0;
   return [...decisions].sort(
     (a, b) =>
       laneRank(a.lane, ctx.saturdays) - laneRank(b.lane, ctx.saturdays) ||
+      fromPublic(a, b) ||
       Number(isGroup(b)) - Number(isGroup(a)) ||
       (isGroup(a)
         ? inLane(b) - inLane(a) ||
@@ -267,7 +271,7 @@ function laneSummaries(ctx: DecisionContext, decisions: Decision[]): LaneSummary
       s.origins.set(origin.source, o);
     }
   }
-  stats.get("public")!.waiting = ctx.input.submissions.length;
+  stats.get("public")!.waiting = ctx.input.submissions.length + publicItemCount(ctx.input.publicItems);
 
   return lanes.map((lane) => {
     const s = stats.get(lane)!;
@@ -325,7 +329,7 @@ export function buildDecisions(input: DecisionInput, registry: DecisionKindDefin
 /** Reads the rows decisions are made from: a handful of queries, no per-row reads. */
 export async function loadDecisionInput(now: Date): Promise<DecisionInput> {
   const startOfToday = startOfPacificDay(pacificDate(now));
-  const [events, importRows, venues, submissions, memos, neighborhoods] = await Promise.all([
+  const [events, importRows, venues, submissions, memos, neighborhoods, publicItems] = await Promise.all([
     db.event.findMany({
       where: {
         deletedAt: null,
@@ -395,6 +399,7 @@ export async function loadDecisionInput(now: Date): Promise<DecisionInput> {
       select: { kind: true, key: true, until: true },
     }),
     db.neighborhood.findMany({ select: { slug: true, label: true, isActive: true } }),
+    loadPublicDecisionItems(),
   ]);
 
   // Exact email match: approveSubmissionWithEvent finds the account it notifies the same way.
@@ -452,6 +457,7 @@ export async function loadDecisionInput(now: Date): Promise<DecisionInput> {
     venues: venues.map(({ _count, ...v }) => ({ ...v, uses: { events: _count.events, markets: _count.markets } })),
     memos,
     neighborhoods,
+    publicItems,
   };
 }
 

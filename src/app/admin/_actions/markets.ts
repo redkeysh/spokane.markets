@@ -3,6 +3,7 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireAdminAction } from "@/lib/admin/auth-action";
+import { decisionDetails } from "@/lib/admin/decision-details";
 import { formatDay, pacificDate } from "@/lib/admin/format";
 import { revalidateAdmin } from "@/lib/admin/revalidate";
 import { newDecisionId, undoDecision } from "@/lib/admin/undo";
@@ -268,6 +269,8 @@ const VERIFICATION_WORDS = { VERIFIED: "verified", PENDING: "waiting for verific
 export async function setMarketVerification(input: {
   marketId: string;
   status: "UNVERIFIED" | "PENDING" | "VERIFIED";
+  /** Groups the change into a To do decision, which Undo can reverse. */
+  decision?: { decisionId: string; decisionKey?: string };
 }): Promise<MarketActionResult> {
   const session = await requireAdminAction();
   try {
@@ -305,7 +308,7 @@ export async function setMarketVerification(input: {
           metadata: {
             previousValue: { verificationStatus: market.verificationStatus },
             newValue: { verificationStatus: input.status },
-            details: { title: market.name, at: at.toISOString() },
+            details: { ...decisionDetails(input.decision ?? {}), title: market.name, at: at.toISOString() },
           } as Prisma.InputJsonValue,
         },
       }),
@@ -331,7 +334,11 @@ export async function setMarketVerification(input: {
     }
     revalidateAdmin({ marketSlugs: [market.slug] });
     const toldText = told ? ` ${count(told, "person was", "people were")} told.` : "";
-    return { ok: true, message: `${market.name} is now ${VERIFICATION_WORDS[input.status]}.${toldText}` };
+    return {
+      ok: true,
+      message: `${market.name} is now ${VERIFICATION_WORDS[input.status]}.${toldText}`,
+      ...(input.decision ? { decisionId: input.decision.decisionId } : {}),
+    };
   } catch (err) {
     return failure(err);
   }

@@ -141,7 +141,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
             </Fact>
             <Fact term="Reviews">
               {user._count.reviews > 0 ? (
-                <Link href={`/admin/reviews?user=${user.id}`} className={LINK}>
+                <Link href={`/admin/inbox?type=reviews&user=${user.id}`} className={LINK}>
                   {user._count.reviews === 1 ? "1 review" : `${user._count.reviews} reviews`}
                 </Link>
               ) : (
@@ -149,7 +149,13 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
               )}
             </Fact>
             <Fact term="Photos">
-              {user._count.photos > 0 ? (user._count.photos === 1 ? "1 photo" : `${user._count.photos} photos`) : "None"}
+              {user._count.photos > 0 ? (
+                <Link href={`/admin/inbox?type=photos&user=${user.id}`} className={LINK}>
+                  {user._count.photos === 1 ? "1 photo" : `${user._count.photos} photos`}
+                </Link>
+              ) : (
+                "None"
+              )}
             </Fact>
             <Fact term="Newsletter">{subscriber ? "Subscribed" : "Not subscribed"}</Fact>
           </dl>
@@ -188,7 +194,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
               })}
             </ul>
             {user._count.reviews > REVIEW_PREVIEW_LIMIT && (
-              <Link href={`/admin/reviews?user=${user.id}`} className={`inline-flex min-h-6 items-center text-sm ${LINK}`}>
+              <Link href={`/admin/inbox?type=reviews&user=${user.id}`} className={`inline-flex min-h-6 items-center text-sm ${LINK}`}>
                 All {user._count.reviews} reviews
               </Link>
             )}

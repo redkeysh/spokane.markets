@@ -16,6 +16,7 @@ export function find(ctx: DecisionContext): Decision[] {
         detail: `Sent by ${submission.submitterName}`,
         rows: [{ type: "submission" as const, id: submission.id, title: submission.title, status: "PENDING", firstDate }],
         settles: [],
+        sentAt: submission.createdAt.toISOString(),
         primary: { label: publishLabel("Publish", notifies), action: "publish-submission" as const, notifies },
         firstDate,
       };

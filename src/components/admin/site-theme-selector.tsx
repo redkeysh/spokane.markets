@@ -1,85 +1,89 @@
 "use client";
 
+import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
+import { AdminButton } from "@/components/admin/kit/button";
+import { PublicIsland } from "@/components/admin/kit/public-island";
+import { FormError } from "@/components/admin/site/inputs";
+import { useUnsavedSection } from "@/components/admin/site/unsaved";
+import { saveSitePalette } from "@/app/admin/_actions/site";
+import { SITE_PALETTES } from "@/lib/site/settings-input";
 import type { SiteTheme } from "@/lib/site-theme";
+import { cn } from "@/lib/utils";
+import { settle } from "@/lib/admin/settle";
 
-const THEME_OPTIONS: { value: SiteTheme; label: string }[] = [
-  { value: "cedar", label: "Cedar & Harvest (current default)" },
-  { value: "evergreen", label: "Evergreen Mist" },
-  { value: "paper", label: "Paper Forest" },
-  { value: "clay", label: "Soft Clay" },
-];
-
-interface SiteThemeSelectorProps {
-  currentTheme: SiteTheme;
-}
-
-export function SiteThemeSelector({ currentTheme }: SiteThemeSelectorProps) {
+/** The public site's palette: one choice of four, each with its ground, green and accent shown. */
+export function SiteThemeSelector({ currentTheme }: { currentTheme: SiteTheme }) {
   const router = useRouter();
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = React.useState(currentTheme);
+  const [choice, setChoice] = React.useState(currentTheme);
+  const [error, setError] = React.useState<string | null>(null);
+  const [pending, startTransition] = React.useTransition();
+  const dirty = choice !== saved;
+  useUnsavedSection("palette", "Color palette", dirty);
 
-  async function handleChange(theme: SiteTheme) {
-    if (theme === currentTheme) return;
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     setError(null);
-    setSaving(true);
-    try {
-      const res = await fetch("/api/admin/site-config/theme", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ theme }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? "Failed to save");
+    startTransition(async () => {
+      const result = await settle(saveSitePalette(choice));
+      if (!result.ok) {
+        setError(result.error);
+        return;
       }
+      setSaved(choice);
+      toast.success(`The public site now uses ${SITE_PALETTES.find((p) => p.value === choice)?.label ?? "the new palette"}.`);
       router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
-    } finally {
-      setSaving(false);
-    }
-  }
+    });
+  };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Color palette</CardTitle>
-        <CardDescription>
-          Choose the main site color palette. Changes apply to the public-facing site (homepage, events, markets, etc.).
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {error && (
-          <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</p>
-        )}
-        <div className="grid gap-3 sm:grid-cols-2">
-          {THEME_OPTIONS.map((opt) => (
-            <label
-              key={opt.value}
-              className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors ${
-                currentTheme === opt.value
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:bg-muted/50"
-              } ${saving ? "pointer-events-none opacity-70" : ""}`}
-            >
-              <input
-                type="radio"
-                name="site-theme"
-                value={opt.value}
-                checked={currentTheme === opt.value}
-                onChange={() => handleChange(opt.value)}
-                disabled={saving}
-                className="h-4 w-4 border-border text-primary focus:ring-primary"
-              />
-              <span className="font-medium">{opt.label}</span>
-            </label>
-          ))}
+    <form onSubmit={onSubmit} className="space-y-4">
+      <fieldset>
+        <legend className="sr-only">Color palette of the public site</legend>
+        <div className="divide-y divide-seam border-y border-seam">
+          {SITE_PALETTES.map((option) => {
+            const id = `palette-${option.value}`;
+            return (
+              <label
+                key={option.value}
+                htmlFor={id}
+                className={cn(
+                  "flex cursor-pointer items-center gap-3 px-3 py-2.5",
+                  choice === option.value ? "bg-lilac-tint" : "hover:bg-hover"
+                )}
+              >
+                <input
+                  id={id}
+                  type="radio"
+                  name="site-palette"
+                  value={option.value}
+                  checked={choice === option.value}
+                  onChange={() => setChoice(option.value)}
+                  className="size-4 shrink-0 accent-basalt"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-basalt">
+                    {option.label}
+                    {option.value === saved && <span className="font-normal text-ash"> (in use)</span>}
+                  </span>
+                  <span className="block text-xs text-ash">{option.description}</span>
+                </span>
+                <PublicIsland palette={option.value} className="flex shrink-0 gap-1 rounded-sm border border-seam p-1">
+                  <span aria-hidden="true" className="size-4 rounded-[2px] border border-border bg-background" />
+                  <span aria-hidden="true" className="size-4 rounded-[2px] bg-primary" />
+                  <span aria-hidden="true" className="size-4 rounded-[2px] bg-accent" />
+                </PublicIsland>
+              </label>
+            );
+          })}
         </div>
-        {saving && <p className="text-sm text-muted-foreground">Saving…</p>}
-      </CardContent>
-    </Card>
+      </fieldset>
+      <FormError>{error}</FormError>
+      <AdminButton type="submit" variant={dirty ? "ink" : "outline"} disabled={!dirty} busy={pending} busyLabel="Saving">
+        Save
+      </AdminButton>
+    </form>
   );
 }

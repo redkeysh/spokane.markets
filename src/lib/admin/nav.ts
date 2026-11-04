@@ -17,11 +17,12 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   { key: "markets", label: "Markets", href: "/admin/markets", signal: "markets" },
   { key: "venues", label: "Venues", href: "/admin/venues", signal: "venues" },
   { key: "vendors", label: "Vendors", href: "/admin/vendors" },
-  { key: "site", label: "Site", href: "/admin/settings" },
+  { key: "site", label: "Site", href: "/admin/site" },
+  { key: "more", label: "More", href: "/admin/more" },
 ];
 
-/** The phone bottom bar. On phones, Vendors, Site and the color mode are reached through Jump. */
-export const PHONE_NAV_KEYS: readonly AdminNavKey[] = ["todo", "events", "venues", "markets"];
+/** The phone bottom bar. On phones, Vendors, Site and the color mode live on More. */
+export const PHONE_NAV_KEYS: readonly AdminNavKey[] = ["todo", "events", "venues", "markets", "more"];
 
 /** Longest prefix wins; anything else under /admin belongs to More. */
 const SECTION_PREFIXES: ReadonlyArray<readonly [string, AdminNavKey]> = [
@@ -60,6 +61,13 @@ export function activeNavKey(pathname: string): AdminNavKey | null {
     }
   }
   return best?.key ?? "more";
+}
+
+/** The bottom bar item to highlight on phones, where screens without an item of their own live under More. */
+export function phoneNavKey(pathname: string): AdminNavKey | null {
+  const key = activeNavKey(pathname);
+  if (key === null || PHONE_NAV_KEYS.includes(key)) return key;
+  return "more";
 }
 
 /** The full rail sits on To do only; every other admin screen gets the slim rail. */

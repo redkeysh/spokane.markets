@@ -1,32 +1,24 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { getApiErrorMessage } from "@/lib/api-client";
+import { AdminButton } from "@/components/admin/kit/button";
+import { AdminDialog } from "@/components/admin/kit/dialog";
+import { FormError } from "@/components/admin/rare/controls";
 
 interface UserDeleteButtonProps {
   userId: string;
   userName: string | null;
   userEmail: string;
   isCurrentUser: boolean;
+  /** Where to go once the account is gone. */
+  afterDelete?: string;
 }
 
-export function UserDeleteButton({
-  userId,
-  userName,
-  userEmail,
-  isCurrentUser,
-}: UserDeleteButtonProps) {
+/** Deletes an account for good, after a confirmation. Nobody can delete their own account here. */
+export function UserDeleteButton({ userId, userName, userEmail, isCurrentUser, afterDelete }: UserDeleteButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -41,10 +33,12 @@ export function UserDeleteButton({
       const res = await fetch(`/api/admin/users/${userId}`, { method: "DELETE" });
       if (res.ok) {
         setOpen(false);
+        toast.success(`Deleted the account of ${displayName}.`);
+        if (afterDelete) router.push(afterDelete);
         router.refresh();
       } else {
-        const body = await res.json();
-        setError(getApiErrorMessage(body, "Failed to delete user"));
+        const body = await res.json().catch(() => ({}));
+        setError(getApiErrorMessage(body, "Could not delete the account."));
       }
     } finally {
       setDeleting(false);
@@ -57,37 +51,30 @@ export function UserDeleteButton({
 
   return (
     <>
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label={`Delete ${displayName}`}
-        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-        onClick={() => setOpen(true)}
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete user</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete {displayName}? This will remove their
-              account and all associated data. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          {error && (
-            <p className="px-6 text-sm text-destructive">{error}</p>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)} disabled={deleting}>
+      <AdminButton variant="danger-outline" onClick={() => setOpen(true)} aria-haspopup="dialog">
+        Delete account
+      </AdminButton>
+      <AdminDialog
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (!next) setError(null);
+        }}
+        title={`Delete the account of ${displayName}?`}
+        description="Their account and everything tied to it is removed. This cannot be undone."
+        footer={
+          <>
+            <AdminButton variant="outline" onClick={() => setOpen(false)} disabled={deleting}>
               Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? "Deleting…" : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AdminButton>
+            <AdminButton variant="danger" onClick={handleDelete} busy={deleting} busyLabel="Deleting">
+              Delete account
+            </AdminButton>
+          </>
+        }
+      >
+        <FormError>{error}</FormError>
+      </AdminDialog>
     </>
   );
 }

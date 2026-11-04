@@ -189,11 +189,19 @@ export function submissionDays(submission: {
   return [{ date: submission.eventDate, startTime: submission.allDay ? null : submission.eventTime || null }];
 }
 
-const loadRailInput = cache(async (today: string): Promise<RailInput> => {
-  const startOfToday = startOfPacificDay(today);
+/**
+ * The rows the rail counts: listed events still running on or after `from` (and starting before
+ * `before`, when given), and every pending submission.
+ */
+export async function loadRailRows(from: string, before?: string): Promise<RailInput> {
   const [events, submissions] = await Promise.all([
     db.event.findMany({
-      where: { deletedAt: null, status: { in: ["PUBLISHED", "PENDING", "DRAFT"] }, endDate: { gte: startOfToday } },
+      where: {
+        deletedAt: null,
+        status: { in: ["PUBLISHED", "PENDING", "DRAFT"] },
+        ...(before ? { startDate: { lt: startOfPacificDay(before) } } : {}),
+        endDate: { gte: startOfPacificDay(from) },
+      },
       select: {
         id: true,
         title: true,
@@ -215,7 +223,9 @@ const loadRailInput = cache(async (today: string): Promise<RailInput> => {
     })),
     submissions: submissions.map((s) => ({ id: s.id, title: s.eventTitle, days: submissionDays(s) })),
   };
-});
+}
+
+const loadRailInput = cache((today: string) => loadRailRows(today));
 
 /** The weekend rail for the admin layout. The database read is shared by every caller in one request. */
 export async function getWeekendRail(now: Date = new Date()): Promise<WeekendRail> {

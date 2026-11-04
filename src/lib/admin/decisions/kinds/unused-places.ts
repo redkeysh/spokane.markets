@@ -1,6 +1,7 @@
-import type { Decision } from "../types";
+import { unusedPlaceDecisions } from "@/lib/venues/place-decisions";
+import type { Decision, DecisionContext } from "../types";
 
-/** Places no event or market uses. Returns no decisions. */
-export function find(): Decision[] {
-  return [];
+/** Active places no event or market uses, as one decision. */
+export function find(ctx: DecisionContext): Decision[] {
+  return unusedPlaceDecisions(ctx);
 }

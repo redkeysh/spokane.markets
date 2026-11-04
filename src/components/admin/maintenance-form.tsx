@@ -2,20 +2,38 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2 } from "lucide-react";
-import { cn, formatForDateTimeLocal } from "@/lib/utils";
+import { Plus, X } from "lucide-react";
+import { toast } from "sonner";
 import type { MaintenanceMode } from "@prisma/client";
+import { AdminButton } from "@/components/admin/kit/button";
+import { AdminDialog } from "@/components/admin/kit/dialog";
+import { Field } from "@/components/admin/kit/field";
+import { Tooltip } from "@/components/admin/kit/tooltip";
+import { FormError, TextArea, TextInput } from "@/components/admin/site/inputs";
+import { useUnsavedSection } from "@/components/admin/site/unsaved";
+import { saveMaintenance } from "@/app/admin/_actions/site";
+import { settle } from "@/lib/admin/settle";
+import { DEFAULT_MAINTENANCE_TITLE, MAINTENANCE_MODES, withoutBlankLinks } from "@/lib/site/settings-input";
+import { cn, formatForDateTimeLocal } from "@/lib/utils";
 
-interface MaintenanceLink {
-  label: string;
-  url: string;
+type MaintenanceLink = { label: string; url: string };
+
+type Draft = {
+  mode: MaintenanceMode;
+  messageTitle: string;
+  messageBody: string;
+  links: MaintenanceLink[];
+  eta: string;
+};
+
+function sameDraft(a: Draft, b: Draft) {
+  return JSON.stringify(a) === JSON.stringify(b);
 }
 
-interface MaintenanceFormProps {
+/** Maintenance mode and the page people see while it is on. Closing the site asks first. */
+export function MaintenanceForm({
+  initialState,
+}: {
   initialState: {
     mode: MaintenanceMode;
     messageTitle: string;
@@ -23,197 +41,202 @@ interface MaintenanceFormProps {
     links: MaintenanceLink[];
     eta: Date | null;
   };
-}
-
-const MODE_LABELS: Record<MaintenanceMode, string> = {
-  OFF: "Off (normal site)",
-  MAINTENANCE_ADMIN_ONLY: "Maintenance — Admins only",
-  MAINTENANCE_PRIVILEGED: "Maintenance — Admins + Vendors + Organizers",
-};
-
-export function MaintenanceForm({ initialState }: MaintenanceFormProps) {
+}) {
   const router = useRouter();
-  const [mode, setMode] = React.useState<MaintenanceMode>(initialState.mode);
-  const [messageTitle, setMessageTitle] = React.useState(
-    initialState.messageTitle
-  );
-  const [messageBody, setMessageBody] = React.useState(
-    initialState.messageBody ?? ""
-  );
-  const [links, setLinks] = React.useState<MaintenanceLink[]>(
-    initialState.links?.length ? [...initialState.links] : []
-  );
-  const [eta, setEta] = React.useState(
-    initialState.eta ? formatForDateTimeLocal(new Date(initialState.eta)) : ""
-  );
-  const [saving, setSaving] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [success, setSuccess] = React.useState(false);
+  const [saved, setSaved] = React.useState<Draft>(() => ({
+    mode: initialState.mode,
+    messageTitle: initialState.messageTitle,
+    messageBody: initialState.messageBody ?? "",
+    links: initialState.links.map((l) => ({ ...l })),
+    eta: initialState.eta ? formatForDateTimeLocal(new Date(initialState.eta)) : "",
+  }));
+  const [draft, setDraft] = React.useState(saved);
+  const [errors, setErrors] = React.useState<Record<string, string>>({});
+  const [formError, setFormError] = React.useState<string | null>(null);
+  const [confirming, setConfirming] = React.useState(false);
+  const [pending, startTransition] = React.useTransition();
+  const linkList = React.useRef<HTMLUListElement>(null);
+  const addLinkButton = React.useRef<HTMLButtonElement>(null);
+  const focusAfterRemove = React.useRef<number | null>(null);
+  const dirty = !sameDraft(draft, saved);
+  useUnsavedSection("maintenance", "Maintenance", dirty);
+  const closing = draft.mode !== "OFF" && saved.mode === "OFF";
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setSuccess(false);
-    setSaving(true);
-    try {
-      const payload = {
-        mode,
-        messageTitle,
-        messageBody: messageBody.trim() || null,
-        links: links.filter((l) => l.label.trim() && l.url.trim()),
-        eta: eta || null,
-      };
-      const res = await fetch("/api/admin/site-config/maintenance", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        let errMsg = `Save failed (${res.status})`;
-        try {
-          const data = JSON.parse(text);
-          if (typeof data?.error === "string") errMsg = data.error;
-          else if (data?.error?.message) errMsg = data.error.message;
-        } catch {
-          if (text) errMsg = text.slice(0, 200);
-        }
-        throw new Error(errMsg);
+  const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }));
+  const setLink = (index: number, patch: Partial<MaintenanceLink>) =>
+    set(
+      "links",
+      draft.links.map((l, i) => (i === index ? { ...l, ...patch } : l))
+    );
+
+  React.useEffect(() => {
+    const index = focusAfterRemove.current;
+    if (index === null) return;
+    focusAfterRemove.current = null;
+    const removes = linkList.current?.querySelectorAll<HTMLButtonElement>("[data-link-remove]");
+    (removes?.[index] ?? addLinkButton.current)?.focus();
+  }, [draft.links.length]);
+
+  const removeLink = (index: number) => {
+    focusAfterRemove.current = index;
+    set(
+      "links",
+      draft.links.filter((_, j) => j !== index)
+    );
+  };
+
+  /** Blank link rows are dropped before saving, so error keys like links.1.url match the rows shown. */
+  const save = () => {
+    setFormError(null);
+    const next = { ...draft, links: withoutBlankLinks(draft.links) };
+    setDraft(next);
+    startTransition(async () => {
+      const result = await settle(saveMaintenance(next));
+      setConfirming(false);
+      if (!result.ok) {
+        setErrors(result.fieldErrors ?? {});
+        setFormError(result.error);
+        return;
       }
+      setErrors({});
+      setSaved(next);
+      toast.success(next.mode === "OFF" ? "Maintenance is off. The site is open to everyone." : "Maintenance is on.");
       router.refresh();
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 2500);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
-    } finally {
-      setSaving(false);
-    }
-  }
+    });
+  };
+
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (closing) setConfirming(true);
+    else save();
+  };
+
+  const chosen = MAINTENANCE_MODES.find((m) => m.value === draft.mode);
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="max-w-xl space-y-6 rounded-lg border border-border bg-card p-6"
-    >
-      <div className="space-y-2">
-        <Label htmlFor="maintenance-mode">Mode</Label>
-        <select
-          id="maintenance-mode"
-          value={mode}
-          onChange={(e) => setMode(e.target.value as MaintenanceMode)}
-          className={cn(
-            "flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-          )}
-        >
-          {(Object.keys(MODE_LABELS) as MaintenanceMode[]).map((m) => (
-            <option key={m} value={m}>
-              {MODE_LABELS[m]}
-            </option>
-          ))}
-        </select>
-        <p className="text-sm text-muted-foreground">
-          {mode === "OFF" && "Site is fully accessible."}
-          {mode === "MAINTENANCE_ADMIN_ONLY" &&
-            "Only admins can access. Everyone else sees the maintenance page."}
-          {mode === "MAINTENANCE_PRIVILEGED" &&
-            "Admins, vendors, and organizers can access. Others see the maintenance page."}
-        </p>
-      </div>
+    <form onSubmit={onSubmit} noValidate className="space-y-4">
+      <fieldset>
+        <legend className="text-sm font-medium text-basalt">Who can use the site</legend>
+        <div className="mt-1.5 divide-y divide-seam border-y border-seam">
+          {MAINTENANCE_MODES.map((option) => {
+            const id = `maintenance-${option.value}`;
+            return (
+              <label
+                key={option.value}
+                htmlFor={id}
+                className={cn("flex cursor-pointer items-start gap-3 px-3 py-2.5", draft.mode === option.value ? "bg-lilac-tint" : "hover:bg-hover")}
+              >
+                <input
+                  id={id}
+                  type="radio"
+                  name="maintenance-mode"
+                  value={option.value}
+                  checked={draft.mode === option.value}
+                  onChange={() => set("mode", option.value)}
+                  className="mt-0.5 size-4 shrink-0 accent-basalt"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium text-basalt">
+                    {option.label}
+                    {option.value === saved.mode && <span className="font-normal text-ash"> (now)</span>}
+                  </span>
+                  <span className="block text-xs text-ash">{option.description}</span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
 
-      <div className="space-y-2">
-        <Label htmlFor="maintenance-title">Message title</Label>
-        <Input
-          id="maintenance-title"
-          value={messageTitle}
-          onChange={(e) => setMessageTitle(e.target.value)}
-          placeholder="We'll be right back"
-          className="font-semibold"
-        />
-      </div>
+      <Field id="maintenance-title" label="Heading of the maintenance page" error={errors.messageTitle}>
+        <TextInput value={draft.messageTitle} onChange={(e) => set("messageTitle", e.target.value)} placeholder={DEFAULT_MAINTENANCE_TITLE} />
+      </Field>
+      <Field
+        id="maintenance-body"
+        label="Message"
+        help="Markdown works: links as [text](address), lists, bold, and a line starting with > for a note."
+        error={errors.messageBody}
+      >
+        <TextArea value={draft.messageBody} onChange={(e) => set("messageBody", e.target.value)} rows={4} long />
+      </Field>
 
-      <div className="space-y-2">
-        <Label htmlFor="maintenance-body">Message body</Label>
-        <Textarea
-          id="maintenance-body"
-          value={messageBody}
-          onChange={(e) => setMessageBody(e.target.value)}
-          placeholder="We're working on something great. Check back soon! Use Markdown: links [text](url), lists, blockquotes (>) for notes."
-          rows={5}
-          className="resize-y"
-        />
-        <p className="text-xs text-muted-foreground">
-          Markdown supported: links, lists, bold. Use <code className="rounded bg-muted px-1">&gt; **Note:**</code> for info callouts.
-        </p>
-      </div>
-
-      <div className="space-y-2">
-        <Label>CTA links (optional)</Label>
-        <p className="text-xs text-muted-foreground">
-          Prominent buttons/links shown below the message.
-        </p>
-        <div className="space-y-2">
-          {links.map((link, i) => (
-            <div key={i} className="flex gap-2">
-              <Input
+      <fieldset>
+        <legend className="text-sm font-medium text-basalt">Links on the maintenance page</legend>
+        <p className="mt-0.5 text-xs text-ash">Optional buttons under the message, such as a status page.</p>
+        <ul ref={linkList} className="mt-2 space-y-2">
+          {draft.links.map((link, i) => (
+            <li key={i} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto]">
+              <TextInput
+                aria-label={`Label of link ${i + 1}`}
                 placeholder="Label"
                 value={link.label}
-                onChange={(e) => {
-                  const next = [...links];
-                  next[i] = { ...next[i], label: e.target.value };
-                  setLinks(next);
-                }}
+                onChange={(e) => setLink(i, { label: e.target.value })}
+                aria-invalid={errors[`links.${i}.label`] ? true : undefined}
               />
-              <Input
-                placeholder="URL"
+              <TextInput
+                aria-label={`Link ${i + 1}`}
+                placeholder="/status or https://"
                 value={link.url}
-                onChange={(e) => {
-                  const next = [...links];
-                  next[i] = { ...next[i], url: e.target.value };
-                  setLinks(next);
-                }}
+                onChange={(e) => setLink(i, { url: e.target.value })}
+                aria-invalid={errors[`links.${i}.url`] ? true : undefined}
+                className="max-sm:order-3"
               />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => setLinks(links.filter((_, j) => j !== i))}
-                aria-label="Remove link"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
+              <Tooltip content="Remove link">
+                <AdminButton
+                  variant="quiet"
+                  size="icon"
+                  aria-label={`Remove link ${i + 1}`}
+                  data-link-remove
+                  onClick={() => removeLink(i)}
+                >
+                  <X strokeWidth={1.75} aria-hidden="true" />
+                </AdminButton>
+              </Tooltip>
+            </li>
           ))}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setLinks([...links, { label: "", url: "" }])}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add link
-          </Button>
-        </div>
+        </ul>
+        <AdminButton
+          ref={addLinkButton}
+          variant="quiet"
+          size="sm"
+          className="mt-2"
+          onClick={() => set("links", [...draft.links, { label: "", url: "" }])}
+        >
+          <Plus strokeWidth={1.75} aria-hidden="true" />
+          Add a link
+        </AdminButton>
+      </fieldset>
+
+      <Field id="maintenance-eta" label="Expected back" help="Optional. Pacific time, shown on the maintenance page." error={errors.eta}>
+        <TextInput type="datetime-local" value={draft.eta} onChange={(e) => set("eta", e.target.value)} className="sm:max-w-64" />
+      </Field>
+
+      <FormError>{formError}</FormError>
+      <div className="flex items-center gap-3">
+        <AdminButton type="submit" variant={dirty ? "ink" : "outline"} disabled={!dirty} busy={pending && !confirming} busyLabel="Saving">
+          Save
+        </AdminButton>
+        {dirty && <span className="text-xs text-ash">Unsaved changes</span>}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="maintenance-eta">Estimated return (optional)</Label>
-        <Input
-          id="maintenance-eta"
-          type="datetime-local"
-          value={eta}
-          onChange={(e) => setEta(e.target.value)}
-        />
-      </div>
-
-      {error && <p className="text-sm text-destructive">{error}</p>}
-      {success && (
-        <p className="text-sm font-medium text-primary">Saved</p>
-      )}
-
-      <Button type="submit" disabled={saving}>
-        {saving ? "Saving…" : "Save"}
-      </Button>
+      <AdminDialog
+        open={confirming}
+        onOpenChange={(open) => !pending && setConfirming(open)}
+        title="Close the site?"
+        description={chosen ? `${chosen.label}. ${chosen.description}` : undefined}
+        footer={
+          <>
+            <AdminButton variant="outline" onClick={() => setConfirming(false)} disabled={pending} data-autofocus>
+              Keep it open
+            </AdminButton>
+            <AdminButton variant="danger" onClick={save} busy={pending} busyLabel="Closing">
+              Close the site
+            </AdminButton>
+          </>
+        }
+      >
+        <p className="text-sm text-basalt">It happens as soon as you confirm. Come back here and choose Off to open it again.</p>
+      </AdminDialog>
     </form>
   );
 }

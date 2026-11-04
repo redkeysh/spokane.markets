@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
-import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { PageHeader } from "@/components/admin/kit/page-header";
 import { FormsEditorClient } from "./forms-editor-client";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { title: "Application forms" };
 
 export default async function AdminApplicationFormsPage() {
   await requireAdmin();
@@ -24,10 +27,11 @@ export default async function AdminApplicationFormsPage() {
   }));
 
   return (
-    <div className="space-y-6">
-      <AdminPageHeader
-        title="Application Form Fields"
-        description="Configure form fields for Vendor, Market, and Vendor Verification applications."
+    <div className="mx-auto w-full max-w-[1184px] space-y-8">
+      <PageHeader
+        className="max-w-[784px]"
+        title="Application forms"
+        description="The questions people answer when they apply as a vendor, ask to list a market, or ask to be a verified vendor."
       />
       <FormsEditorClient initialForms={serialized} />
     </div>

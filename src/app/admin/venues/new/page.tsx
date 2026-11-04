@@ -1,24 +1,38 @@
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth-utils";
-import { VenueForm } from "@/components/admin/venue-form";
-import { getNeighborhoodOptions } from "@/lib/neighborhoods";
-import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { loadNeighborhoods } from "@/lib/venues/place-data";
+import { PlacePage, type PlacePageData } from "@/components/admin/venues/place-page";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewVenuePage() {
-  await requireAdmin();
-  const neighborhoods = await getNeighborhoodOptions();
+export const metadata: Metadata = { title: "New place" };
 
-  return (
-    <div className="max-w-[1600px] space-y-6">
-      <AdminPageHeader
-        title="Create Venue"
-        breadcrumbs={[
-          { label: "Venues", href: "/admin/venues" },
-          { label: "New venue" },
-        ]}
-      />
-      <VenueForm neighborhoods={neighborhoods} />
-    </div>
-  );
+export default async function NewPlaceRoute({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  await requireAdmin();
+  const params = await searchParams;
+  const text = (key: string) => (typeof params[key] === "string" ? (params[key] as string).slice(0, 300) : "");
+  const neighborhoods = await loadNeighborhoods();
+  const data: PlacePageData = {
+    id: null,
+    form: {
+      name: text("name"),
+      address: text("address"),
+      city: text("city") || "Spokane",
+      state: text("state") || "WA",
+      zip: text("zip"),
+      lat: null,
+      lng: null,
+      neighborhood: "",
+      parkingNotes: "",
+    },
+    archived: false,
+    updatedAt: null,
+    uses: { events: 0, markets: 0 },
+    upcoming: [],
+    past: [],
+    markets: [],
+    lookAlikes: [],
+    history: [],
+  };
+  return <PlacePage data={data} neighborhoods={neighborhoods} now={new Date().toISOString()} />;
 }

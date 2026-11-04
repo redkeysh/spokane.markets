@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ auditFindMany: vi.fn(), eventFindMany: vi.fn() }));
+const mocks = vi.hoisted(() => ({ auditFindMany: vi.fn(), eventFindMany: vi.fn(), userFindMany: vi.fn() }));
 
 vi.mock("@/lib/db", () => ({
   db: {
     auditLog: { findMany: mocks.auditFindMany },
     event: { findMany: mocks.eventFindMany },
+    user: { findMany: mocks.userFindMany },
     submission: { findMany: vi.fn() },
     market: { findMany: vi.fn() },
     venue: { findMany: vi.fn() },
@@ -13,7 +14,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 import { decisionSentence, getDoneToday } from "./done-today";
-import { describeAuditEntry, getHistory, type HistoryAuditRow } from "./history";
+import { accountNames, describeAuditEntry, getHistory, type HistoryAuditRow } from "./history";
 
 const row = (overrides: Partial<HistoryAuditRow> & { meta?: Record<string, unknown> }): HistoryAuditRow => ({
   id: "r1",
@@ -56,7 +57,7 @@ describe("describeAuditEntry", () => {
     const edit = row({ meta: { previousValue: { title: "A", tagIds: [] }, newValue: { title: "B", tagIds: ["t"] }, details: { title: "B" } } });
     expect(describeAuditEntry(edit, "admin").sentence).toBe("You changed B: title, tags.");
     const merge = row({ action: "MERGE_VENUES", targetType: "VENUE", targetId: "v1", meta: { mergedIds: ["v2"] } });
-    expect(describeAuditEntry(merge, "admin")).toEqual({ sentence: "You merged duplicate venues.", href: "/admin/venues/v1" });
+    expect(describeAuditEntry(merge, "admin")).toEqual({ sentence: "You merged 1 place into another place.", href: "/admin/venues/v1" });
   });
 
   it("words a published submission and links to its event", () => {
@@ -162,6 +163,62 @@ describe("getHistory", () => {
       decisionId: "d1",
       canUndo: true,
       previousValue: { status: "PENDING" },
+      link: { title: "Emerge Holiday Market", href: "/admin/events/e1" },
+      details: [{ label: "Status", before: "Pending", after: "Published" }],
     });
+  });
+
+  it("reads what the History filters let through, below a cursor", async () => {
+    mocks.auditFindMany.mockReset();
+    mocks.auditFindMany.mockResolvedValueOnce([]);
+    const now = new Date("2026-11-03T17:41:00Z");
+    await getHistory({
+      viewerId: "admin",
+      filters: { q: "", what: "merging", who: "you", when: "all" },
+      cursor: { at: "2026-11-03T16:00:00.000Z", id: "r9" },
+      now,
+    });
+    expect(mocks.auditFindMany.mock.calls[0][0].where).toEqual({
+      AND: [
+        {},
+        { AND: [{ action: "MERGE_VENUES" }, { userId: "admin" }] },
+        {
+          OR: [
+            { createdAt: { lt: new Date("2026-11-03T16:00:00.000Z") } },
+            { createdAt: new Date("2026-11-03T16:00:00.000Z"), id: { lt: "r9" } },
+          ],
+        },
+      ],
+    });
+  });
+});
+
+describe("accountNames", () => {
+  beforeEach(() => mocks.userFindMany.mockReset());
+
+  it("looks up each changed account once and names it by name, or email when there is none", async () => {
+    const account = (id: string, targetId: string): HistoryAuditRow => ({
+      ...row({ id }),
+      action: "UPDATE_USER",
+      targetType: "USER",
+      targetId,
+      metadata: { previousValue: { role: "USER" }, newValue: { role: "ORGANIZER" } },
+    });
+    mocks.userFindMany.mockResolvedValueOnce([
+      { id: "u1", name: " Jane Doe ", email: "jane@example.com" },
+      { id: "u2", name: null, email: "sam@example.com" },
+    ]);
+    const names = await accountNames([account("a", "u1"), account("b", "u1"), account("c", "u2"), row({ id: "d" })]);
+    expect(mocks.userFindMany).toHaveBeenCalledTimes(1);
+    expect(mocks.userFindMany.mock.calls[0][0].where).toEqual({ id: { in: ["u1", "u2"] } });
+    expect([...names]).toEqual([
+      ["u1", "Jane Doe"],
+      ["u2", "sam@example.com"],
+    ]);
+  });
+
+  it("asks nothing when no account changed", async () => {
+    expect((await accountNames([row({})])).size).toBe(0);
+    expect(mocks.userFindMany).not.toHaveBeenCalled();
   });
 });

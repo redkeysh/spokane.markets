@@ -36,6 +36,14 @@ const ACTION_MESSAGES: Record<string, (entry: AuditEntry) => string> = {
   RESTORE_MARKET: () => "restored a market",
   SOFT_DELETE_VENDOR: () => "archived a vendor",
   RESTORE_VENDOR: () => "restored a vendor",
+  CREATE_VENDOR: () => "added a vendor",
+  UPDATE_VENDOR: () => "changed a vendor",
+  UPDATE_VENDOR_VERIFICATION: () => "changed a vendor's verification",
+  REQUEST_VENDOR_VERIFICATION: () => "asked for verification",
+  UPDATE_SITE_ANNOUNCEMENT: () => "changed the announcement bar",
+  UPDATE_SITE_THEME: () => "changed the color palette",
+  UPDATE_BANNER: () => "changed a banner",
+  RESET_BANNER: () => "put a banner back to the built-in picture",
   UPDATE_SUBMISSION_STATUS: (e) =>
     statusOf(e) === "APPROVED" ? "approved a submission" : "rejected a submission",
   BULK_UPDATE_SUBMISSION_STATUS: (e) =>
@@ -78,7 +86,8 @@ const TARGET_HREFS: Record<string, string> = {
   CLAIM: "/admin/queues",
   VENDOR_CLAIM: "/admin/queues",
   REPORT: "/admin/reports",
-  SITE_STATE: "/admin/settings",
+  SITE_STATE: "/admin/site#maintenance",
+  SITE_CONFIG: "/admin/site",
   API_TOKEN: "/admin/api-tokens",
 };
 

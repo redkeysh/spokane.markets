@@ -1,12 +1,15 @@
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
-import { Pagination } from "@/components/pagination";
-import { SubscribersPageClient } from "@/components/admin/subscribers-page-client";
 import { getNeighborhoodOptions } from "@/lib/neighborhoods";
 import { parseAdminPagination } from "@/lib/admin/table-query";
-import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { formatFullDate, pacificDate } from "@/lib/admin/format";
+import { SubscribersPageClient } from "@/components/admin/subscribers-page-client";
+import { Pager, pageHref } from "@/components/admin/rare/pager";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { title: "Subscribers" };
 
 export default async function AdminSubscribersPage({
   searchParams,
@@ -27,20 +30,25 @@ export default async function AdminSubscribersPage({
     }),
     getNeighborhoodOptions(),
   ]);
-  const totalPages = Math.ceil(total / limit);
 
   return (
-    <div className="space-y-6">
-      <AdminPageHeader
-        title="Subscribers"
-        description="Newsletter subscribers receive the weekly digest. Add them manually or they sign up via the site."
-      />
+    <div className="mx-auto w-full max-w-[1184px] space-y-5">
       <SubscribersPageClient
-        subscribers={subscribers}
+        subscribers={subscribers.map((s) => ({
+          id: s.id,
+          email: s.email,
+          areas: s.areas,
+          joined: formatFullDate(pacificDate(s.createdAt)),
+        }))}
         neighborhoods={neighborhoods}
-        total={total}
       />
-      <Pagination page={page} totalPages={totalPages} totalItems={total} limit={limit} />
+      <Pager
+        page={page}
+        limit={limit}
+        total={total}
+        noun="subscribers"
+        hrefFor={(p) => pageHref("/admin/subscribers", { limit: params.limit }, p)}
+      />
     </div>
   );
 }

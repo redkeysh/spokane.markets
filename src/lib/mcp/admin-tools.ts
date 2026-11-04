@@ -15,14 +15,12 @@ import { venueOutcome } from "@/lib/submissions/venue-outcome";
 import { logAudit } from "@/lib/audit";
 import { geocodeAddress } from "@/lib/geocode";
 import { assertNeighborhoodSlug, getNeighborhoodOptions } from "@/lib/neighborhoods";
+import { getPlaceMemos } from "@/lib/admin/memo";
 import { findDuplicateGroups } from "@/lib/venues/match";
 import { mergeVenues } from "@/lib/venues/merge";
 import {
   EVENT_SLUG_MAX_LENGTH,
   EVENT_SLUG_PATTERN,
-  eventSlugProblem,
-  lockEventForSlugChange,
-  recordEventSlugChange,
   resolveEventSlugRedirect,
 } from "@/lib/events/slug";
 import { defineTool, ToolError, type McpTool, type ServerInfo } from "./protocol";
@@ -167,7 +165,7 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
         eventsPendingReview,
         upcomingPublishedEvents,
         activeVenues: venues.length,
-        duplicateVenueGroups: findDuplicateGroups(venues).length,
+        duplicateVenueGroups: findDuplicateGroups(venues, await getPlaceMemos()).length,
       };
     },
   }),
@@ -372,7 +370,7 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
         tags: event.tags.map((t) => t.name),
         features: event.features.map((f) => f.name),
         url: `${APP_URL}/events/${event.slug}`,
-        adminUrl: `${APP_URL}/admin/events/${event.id}/edit`,
+        adminUrl: `${APP_URL}/admin/events/${event.id}`,
       };
     },
   }),
@@ -490,7 +488,7 @@ export const ADMIN_TOOLS: McpTool<TokenPrincipal>[] = [
     run: async () => {
       const listings = (v: Awaited<ReturnType<typeof activeVenueRows>>[number]) =>
         v._count.events + v._count.markets;
-      return findDuplicateGroups(await activeVenueRows()).map((group) => {
+      return findDuplicateGroups(await activeVenueRows(), await getPlaceMemos()).map((group) => {
         const sorted = [...group].sort(
           (a, b) => listings(b) - listings(a) || a.createdAt.getTime() - b.createdAt.getTime()
         );

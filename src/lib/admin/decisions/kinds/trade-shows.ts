@@ -1,4 +1,5 @@
 import { looksLikeTradeShow } from "@/lib/events/trade-shows";
+import { REJECT_REASONS } from "@/lib/admin/reject-reasons";
 import type { Decision, DecisionContext } from "../types";
 import { byStart, firstDateOf } from "./shared";
 
@@ -21,7 +22,7 @@ export function find(ctx: DecisionContext): Decision[] {
       detail: count === 1 ? rows[0].title : `${rows[0].title} and ${count - 1} later`,
       rows: rows.map((e) => ctx.row(e)),
       settles: rows.map((e) => e.id),
-      primary: { label: `Reject ${count}${tell}: "Not a market or fair"`, action: "reject", notifies },
+      primary: { label: `Reject ${count}${tell}: "${REJECT_REASONS[0]}"`, action: "reject", notifies },
       firstDate: firstDateOf(ctx, rows),
     },
   ];

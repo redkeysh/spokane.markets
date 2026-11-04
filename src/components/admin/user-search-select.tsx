@@ -74,20 +74,26 @@ export function UserSearchSelect({
     [allowVendorId]
   );
 
-  useEffect(() => {
+  const [seenInitial, setSeenInitial] = useState(initialUser);
+  if (seenInitial !== initialUser) {
+    setSeenInitial(initialUser);
     setQuery("");
+    setResults([]);
+    setOpen(false);
     setSelectedDisplay(initialUser ?? null);
-  }, [initialUser]);
+  }
 
-  useEffect(() => {
-    if (query.trim().length >= 2) {
-      search(query.trim());
+  const changeQuery = (next: string) => {
+    setQuery(next);
+    if (next.trim().length >= 2) {
+      search(next.trim());
       setOpen(true);
     } else {
+      search("");
       setResults([]);
       setOpen(false);
     }
-  }, [query, search]);
+  };
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -121,7 +127,7 @@ export function UserSearchSelect({
   return (
     <div ref={containerRef} className={cn("relative", className)}>
       {value && selectedDisplay ? (
-        <div className="flex items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-2">
+        <div className="flex items-center gap-2 rounded-md border border-seam-strong bg-sheet px-3 py-2">
           <span className="flex-1 truncate text-sm">
             {displayLabel(selectedDisplay)}
           </span>
@@ -142,7 +148,7 @@ export function UserSearchSelect({
           <Input
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => changeQuery(e.target.value)}
             placeholder={placeholder}
             disabled={disabled}
             autoComplete="off"
@@ -150,11 +156,11 @@ export function UserSearchSelect({
           />
           {open && (results.length > 0 || loading) && (
             <ul
-              className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-background py-1 shadow-lg"
+              className="absolute z-50 mt-1 max-h-60 w-full overflow-auto sm-float rounded-lg py-1"
               role="listbox"
             >
               {loading ? (
-                <li className="px-3 py-2 text-sm text-muted-foreground">
+                <li className="px-3 py-2 text-sm text-ash">
                   Searching...
                 </li>
               ) : (
@@ -164,8 +170,8 @@ export function UserSearchSelect({
                     role="option"
                     aria-selected={user.id === value}
                     className={cn(
-                      "cursor-pointer px-3 py-2 text-sm hover:bg-muted",
-                      user.id === value && "bg-muted"
+                      "cursor-pointer px-3 py-2 text-sm hover:bg-hover",
+                      user.id === value && "bg-lilac-tint"
                     )}
                     onMouseDown={(e) => {
                       e.preventDefault();
@@ -180,7 +186,7 @@ export function UserSearchSelect({
           )}
         </>
       )}
-      <p className="mt-1 text-xs text-muted-foreground">
+      <p className="mt-1 text-xs text-ash">
         Link this profile to a user account. Leave empty for unclaimed.
       </p>
     </div>

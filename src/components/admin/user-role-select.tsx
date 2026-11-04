@@ -3,25 +3,31 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { getApiErrorMessage } from "@/lib/api-client";
-import { Select } from "@/components/ui/select";
-import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import type { Role } from "@prisma/client";
-
-const ROLES: { value: Role; label: string }[] = [
-  { value: "USER", label: "User" },
-  { value: "VENDOR", label: "Vendor" },
-  { value: "ORGANIZER", label: "Organizer" },
-  { value: "ADMIN", label: "Admin" },
-];
+import { getApiErrorMessage } from "@/lib/api-client";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { SelectInput } from "@/components/admin/rare/controls";
+import { useAnnounce } from "@/components/admin/shell/live-region";
+import { ROLE_ORDER, ROLE_WORDS } from "@/components/admin/user-words";
 
 interface UserRoleSelectProps {
   userId: string;
   currentRole: Role;
+  id?: string;
+  "aria-describedby"?: string;
+  disabled?: boolean;
 }
 
-export function UserRoleSelect({ userId, currentRole }: UserRoleSelectProps) {
+/** The role of one person. Making someone an admin asks first. */
+export function UserRoleSelect({
+  userId,
+  currentRole,
+  id,
+  "aria-describedby": describedBy,
+  disabled = false,
+}: UserRoleSelectProps) {
   const router = useRouter();
+  const announce = useAnnounce();
   const [confirmRole, setConfirmRole] = useState<Role | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -34,20 +40,20 @@ export function UserRoleSelect({ userId, currentRole }: UserRoleSelectProps) {
     });
     setSaving(false);
     if (res.ok) {
-      toast.success("Role updated.");
-      router.refresh();
+      const message = `Role changed to ${ROLE_WORDS[role].one}.`;
+      toast.success(message);
+      announce(message);
     } else {
       const body = await res.json().catch(() => ({}));
-      toast.error(getApiErrorMessage(body, "Failed to update role."));
-      router.refresh();
+      toast.error(getApiErrorMessage(body, "Could not change the role."));
     }
+    router.refresh();
   }
 
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const role = e.target.value as Role;
     if (role === currentRole) return;
-    // Promotion to ADMIN grants full access, so confirm it first. The select is
-    // controlled by currentRole, so it visually stays put until the change lands.
+    // The select follows currentRole, so it stays put until the change lands.
     if (role === "ADMIN") {
       setConfirmRole(role);
     } else {
@@ -57,20 +63,28 @@ export function UserRoleSelect({ userId, currentRole }: UserRoleSelectProps) {
 
   return (
     <>
-      <Select value={currentRole} onChange={handleChange} disabled={saving} className="w-32">
-        {ROLES.map((r) => (
-          <option key={r.value} value={r.value}>
-            {r.label}
+      <SelectInput
+        id={id}
+        aria-describedby={describedBy}
+        value={currentRole}
+        onChange={handleChange}
+        disabled={saving || disabled}
+        aria-busy={saving || undefined}
+        className="w-48"
+      >
+        {ROLE_ORDER.map((r) => (
+          <option key={r} value={r}>
+            {ROLE_WORDS[r].one}
           </option>
         ))}
-      </Select>
+      </SelectInput>
       <ConfirmDialog
         open={confirmRole !== null}
         onOpenChange={(o) => {
           if (!o) setConfirmRole(null);
         }}
-        title="Grant administrator access?"
-        description="This gives the account full admin access to every part of the site."
+        title="Make this person an admin?"
+        description="Admins can change anything here, including other people's access."
         confirmLabel="Make admin"
         variant="destructive"
         pending={saving}

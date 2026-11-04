@@ -138,6 +138,8 @@ export type DecisionVenue = {
   lng: number | null;
   neighborhood: string | null;
   deletedAt: Date | null;
+  /** Events and markets (not archived) that point at the place. Place decisions are filed only for places that carry it. */
+  uses?: { events: number; markets: number };
 };
 
 export type DecisionMemo = { kind: string; key: string; until: Date | null };
@@ -151,6 +153,8 @@ export type DecisionInput = {
   submissions: DecisionSubmission[];
   venues: DecisionVenue[];
   memos: DecisionMemo[];
+  /** The neighborhood list; place decisions for ZIPs without a neighborhood are filed only when it is given. */
+  neighborhoods?: { slug: string; label: string; isActive: boolean }[];
 };
 
 export type DecisionContext = {

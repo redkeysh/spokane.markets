@@ -1,50 +1,53 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
+import { formatDay, pacificDate } from "@/lib/admin/format";
+import { PageHeader } from "@/components/admin/kit/page-header";
 import { PromotionForm } from "@/components/admin/promotion-form";
-import { AdminPageHeader } from "@/components/admin/admin-page-header";
-import { notFound } from "next/navigation";
+import { upcomingEventOptions, vendorOptions } from "../../promotion-options";
 
 export const dynamic = "force-dynamic";
 
-export default async function EditPromotionPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+async function loadPromotion(id: string) {
+  return db.promotion.findUnique({
+    where: { id },
+    include: {
+      event: { select: { id: true, title: true, startDate: true } },
+      vendorProfile: { select: { id: true, businessName: true } },
+    },
+  });
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const promotion = await loadPromotion(id);
+  const name = promotion?.event?.title ?? promotion?.vendorProfile?.businessName;
+  return { title: name ? `Featured: ${name}` : "Featured on the homepage" };
+}
+
+export default async function EditPromotionPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAdmin();
 
   const { id } = await params;
-
-  const [promotion, publishedEvents, allVendors] = await Promise.all([
-    db.promotion.findUnique({
-      where: { id },
-      include: {
-        event: { select: { id: true, title: true, slug: true, startDate: true } },
-        vendorProfile: { select: { id: true, businessName: true, slug: true } },
-      },
-    }),
-    db.event.findMany({
-      where: { status: "PUBLISHED" },
-      select: { id: true, title: true, slug: true, startDate: true },
-      orderBy: { startDate: "asc" },
-    }),
-    db.vendorProfile.findMany({
-      select: { id: true, businessName: true, slug: true },
-      orderBy: { businessName: "asc" },
-    }),
+  const now = new Date();
+  const [promotion, upcomingEvents, allVendors] = await Promise.all([
+    loadPromotion(id),
+    upcomingEventOptions(now),
+    vendorOptions(),
   ]);
 
   if (!promotion) {
     notFound();
   }
 
+  const current = promotion.event;
   const events =
-    promotion.event && !publishedEvents.some((e) => e.id === promotion.event!.id)
-      ? [promotion.event, ...publishedEvents]
-      : publishedEvents;
+    current && !upcomingEvents.some((e) => e.id === current.id)
+      ? [{ id: current.id, title: current.title, when: formatDay(pacificDate(current.startDate), now) }, ...upcomingEvents]
+      : upcomingEvents;
   const vendors =
-    promotion.vendorProfile &&
-    !allVendors.some((v) => v.id === promotion.vendorProfile!.id)
+    promotion.vendorProfile && !allVendors.some((v) => v.id === promotion.vendorProfile!.id)
       ? [promotion.vendorProfile, ...allVendors]
       : allVendors;
 
@@ -61,14 +64,14 @@ export default async function EditPromotionPage({
     sortOrder: promotion.sortOrder,
   };
 
+  const name = promotion.event?.title ?? promotion.vendorProfile?.businessName ?? "Featured entry";
+
   return (
-    <div className="max-w-[1600px] space-y-6">
-      <AdminPageHeader
-        title="Edit Promotion"
-        breadcrumbs={[
-          { label: "Promotions", href: "/admin/promotions" },
-          { label: "Edit" },
-        ]}
+    <div className="mx-auto w-full max-w-[1184px] space-y-8">
+      <PageHeader
+        className="max-w-[656px]"
+        back={{ href: "/admin/promotions", label: "Back to Featured on the homepage" }}
+        title={name}
       />
       <PromotionForm events={events} vendors={vendors} initialData={initialData} />
     </div>

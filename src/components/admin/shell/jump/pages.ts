@@ -34,15 +34,15 @@ export const JUMP_PAGES: readonly JumpPage[] = [
   {
     id: "venue-duplicates",
     label: "Venues: duplicates",
-    href: "/admin/venues/duplicates",
+    href: "/admin/venues?view=duplicates",
     keywords: ["merge", "duplicate places", "same place", "twins"],
   },
-  { id: "neighborhoods", label: "Neighborhoods", href: "/admin/neighborhoods", keywords: ["areas", "area filter", "zip"] },
+  { id: "neighborhoods", label: "Neighborhoods", href: "/admin/venues?view=neighborhood-list", keywords: ["areas", "area filter", "zip"] },
   { id: "vendors", label: "Vendors", href: "/admin/vendors", keywords: ["sellers", "makers", "profiles"] },
   {
     id: "site",
     label: "Site",
-    href: "/admin/settings",
+    href: "/admin/site",
     keywords: ["banner", "banners", "announcement", "homepage", "palette", "colors", "maintenance", "settings"],
   },
   {
@@ -73,6 +73,8 @@ export const JUMP_PAGES: readonly JumpPage[] = [
   { id: "data", label: "Import and export", href: "/admin/data", keywords: ["data", "csv", "import", "export", "backup"] },
   { id: "api-tokens", label: "API tokens", href: "/admin/api-tokens", keywords: ["tokens", "mcp", "claude", "api", "assistant"] },
   { id: "history", label: "History", href: "/admin/audit-log", keywords: ["audit log", "activity", "changes", "undo", "log"] },
+  { id: "more", label: "More", href: "/admin/more", keywords: ["preferences", "directory", "rare", "settings"] },
+  { id: "preferences", label: "Preferences", href: "/admin/more#preferences", keywords: ["color mode", "dark", "shortcuts", "keys"] },
 ];
 
 export const JUMP_COMMANDS: readonly JumpCommand[] = [
@@ -82,13 +84,13 @@ export const JUMP_COMMANDS: readonly JumpCommand[] = [
     id: "edit-announcement",
     label: "Edit announcement",
     keywords: ["announcement bar", "banner message", "notice"],
-    action: { type: "href", href: "/admin/settings" },
+    action: { type: "href", href: "/admin/site#announcement" },
   },
   {
     id: "merge-places",
     label: "Merge places",
     keywords: ["merge venues", "duplicates", "same place"],
-    action: { type: "href", href: "/admin/venues/duplicates" },
+    action: { type: "href", href: "/admin/venues?view=duplicates" },
   },
   { id: "view-site", label: "View site", keywords: ["public site", "open site", "homepage"], action: { type: "view-site" } },
   { id: "mode-dark", label: "Switch to dark mode", keywords: ["dark", "theme", "night"], action: { type: "mode", mode: "dark" } },

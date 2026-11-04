@@ -47,32 +47,47 @@ export function HistoryList({
   empty = "Nothing has changed here yet.",
   headingLevel = "h3",
   stickyHeadings = true,
+  compact = false,
   className,
 }: {
   entries: readonly HistoryListEntry[];
   onUndo?: (id: string) => void | Promise<void>;
   empty?: React.ReactNode;
   headingLevel?: "h2" | "h3" | "h4";
-  /** false inside a record's History section, where nothing is sticky. */
+  /** false inside a record's History section, where nothing is sticky and an empty list is one quiet line. */
   stickyHeadings?: boolean;
+  /** For a side column: small day labels instead of day bands, rows flush with the column. */
+  compact?: boolean;
   className?: string;
 }) {
   const [undoing, setUndoing] = React.useState<string | null>(null);
 
-  if (entries.length === 0) return <Empty>{empty}</Empty>;
+  if (entries.length === 0) return stickyHeadings ? <Empty>{empty}</Empty> : <p className="text-sm text-ash">{empty}</p>;
+  const DayHeading = headingLevel;
+  /** Details stack as label, "Before: x", "After: y" in a side column and below 640 px. */
+  const stackedCell = compact ? "block p-0" : "max-sm:block max-sm:p-0";
 
   return (
     <div className={cn("font-text", className)}>
       {groupByDay(entries).map((group) => (
         <section key={group.day} aria-label={group.day}>
-          <GroupHeading as={headingLevel} sticky={stickyHeadings}>
-            {group.day}
-          </GroupHeading>
+          {compact ? (
+            <DayHeading className="pt-2 text-xs font-medium text-ash">{group.day}</DayHeading>
+          ) : (
+            <GroupHeading as={headingLevel} sticky={stickyHeadings}>
+              {group.day}
+            </GroupHeading>
+          )}
           <ul role="list">
             {group.entries.map((entry) => (
               <li
                 key={entry.id}
-                className="grid grid-cols-[4.5rem_minmax(0,1fr)_auto] gap-x-3 border-b border-seam px-4 py-2.5"
+                className={cn(
+                  "grid gap-x-3 border-b border-seam",
+                  compact
+                    ? "grid-cols-[4rem_minmax(0,1fr)_auto] py-2"
+                    : "grid-cols-[4.5rem_minmax(0,1fr)] px-4 py-2.5 sm:grid-cols-[4.5rem_minmax(0,1fr)_auto]"
+                )}
               >
                 <Tooltip content={entry.timestamp} placement="top-start">
                   <time dateTime={new Date(entry.at).toISOString()} className="pt-px text-xs text-ash tabular-nums">
@@ -89,10 +104,10 @@ export function HistoryList({
                         Details
                       </summary>
                       <p className="mt-2 text-xs text-ash tabular-nums">{entry.timestamp}</p>
-                      <table className="mt-2 w-full table-fixed text-left text-xs">
-                        <thead>
+                      <table className={cn("mt-2 w-full text-left text-xs", compact ? "block" : "max-sm:block sm:table-fixed")}>
+                        <thead className={compact ? "hidden" : "max-sm:hidden"}>
                           <tr className="text-ash">
-                            <th scope="col" className="w-28 pr-4 pb-1 font-semibold">
+                            <th scope="col" className="w-[30%] pr-4 pb-1 font-semibold">
                               Field
                             </th>
                             <th scope="col" className="pr-4 pb-1 font-semibold">
@@ -103,14 +118,20 @@ export function HistoryList({
                             </th>
                           </tr>
                         </thead>
-                        <tbody>
+                        <tbody className={compact ? "block" : "max-sm:block"}>
                           {entry.details.map((d) => (
-                            <tr key={d.label} className="align-top">
-                              <th scope="row" className="pr-4 pb-1 font-normal text-ash">
+                            <tr key={d.label} className={cn("align-top", compact ? "block pb-2" : "max-sm:block max-sm:pb-2")}>
+                              <th scope="row" className={cn("pr-4 pb-1 font-normal text-ash", stackedCell)}>
                                 {d.label}
                               </th>
-                              <td className="pr-4 pb-1 break-words text-basalt">{d.before ?? "None"}</td>
-                              <td className="pb-1 break-words text-basalt">{d.after ?? "None"}</td>
+                              <td className={cn("pr-4 pb-1 break-words text-basalt", stackedCell)}>
+                                <span className={cn("text-ash", !compact && "sm:hidden")}>Before: </span>
+                                {d.before ?? "None"}
+                              </td>
+                              <td className={cn("pb-1 break-words text-basalt", stackedCell)}>
+                                <span className={cn("text-ash", !compact && "sm:hidden")}>After: </span>
+                                {d.after ?? "None"}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -122,6 +143,7 @@ export function HistoryList({
                   <AdminButton
                     variant="quiet"
                     size="sm"
+                    className={compact ? undefined : "max-sm:col-start-2 max-sm:mt-1 max-sm:-ml-3 max-sm:justify-self-start"}
                     busy={undoing === entry.id}
                     busyLabel="Undoing"
                     onClick={async () => {
@@ -136,7 +158,7 @@ export function HistoryList({
                     Undo
                   </AdminButton>
                 ) : (
-                  <span />
+                  <span className={compact ? undefined : "max-sm:hidden"} />
                 )}
               </li>
             ))}

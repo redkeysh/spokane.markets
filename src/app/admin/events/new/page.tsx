@@ -1,36 +1,15 @@
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth-utils";
-import { db } from "@/lib/db";
-import { EventForm } from "@/components/admin/event-form";
-import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { EventEditor } from "@/components/admin/editor/event-editor";
+import { loadNewEditor, type SearchParams } from "@/components/admin/editor/load";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewEventPage() {
+export const metadata: Metadata = { title: "New event" };
+
+export default async function NewEventPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   await requireAdmin();
-
-  const [venues, markets, tags, features] = await Promise.all([
-    db.venue.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
-    db.market.findMany({ select: { id: true, name: true, venueId: true }, orderBy: { name: "asc" } }),
-    db.tag.findMany({ orderBy: { name: "asc" } }),
-    db.feature.findMany({ orderBy: { name: "asc" } }),
-  ]);
-
-  return (
-    <div className="max-w-[1600px] space-y-6">
-      <AdminPageHeader
-        title="Create Event"
-        breadcrumbs={[
-          { label: "Events", href: "/admin/events" },
-          { label: "New event" },
-        ]}
-      />
-      <EventForm
-        venues={venues}
-        markets={markets}
-        tags={tags}
-        features={features}
-        showJsonImport
-      />
-    </div>
-  );
+  const params = await searchParams;
+  const props = await loadNewEditor(params);
+  return <EventEditor key={props.context.copiedFrom?.id ?? "new"} {...props} />;
 }

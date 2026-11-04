@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { pairKey } from "@/lib/events/twins";
 import {
   baseVenueName,
   DEFAULT_PIN,
@@ -275,7 +276,53 @@ describe("isPossibleDuplicate (admin suggestions)", () => {
   });
 });
 
+describe("isPossibleDuplicate, second pass: one town however it is spelled", () => {
+  it("suggests the same street and name when the town is misspelled and the ZIPs disagree", () => {
+    expect(
+      isPossibleDuplicate(
+        v("Q'emiln Park", "200 N Spokane St", { city: "Post Falles", zip: "" }),
+        v("Qemiln Park", "200 North Spokane Street", { city: "Post Falls", zip: "83854" })
+      )
+    ).toBe(true);
+  });
+
+  it("still keeps different names at one street address in different towns apart", () => {
+    expect(
+      isPossibleDuplicate(
+        v("City Hall", "100 Main St", { city: "Post Falles", zip: "" }),
+        v("Art Gallery", "100 Main St", { city: "Post Falls", zip: "83877" })
+      )
+    ).toBe(false);
+  });
+
+  it("never lets the town alone join two towns' same address and name", () => {
+    expect(isPossibleDuplicate(v("City Hall", "100 Main St"), v("City Hall", "100 Main St", { zip: "83854", city: "Post Falls" }))).toBe(false);
+  });
+
+  it("does not change the strict reuse rule", () => {
+    expect(
+      isSameVenue(v("Q'emiln Park", "200 N Spokane St", { city: "Post Falles", zip: "" }), v("Qemiln Park", "200 N Spokane St", { city: "Post Falls", zip: "83854" }))
+    ).toBe(false);
+  });
+});
+
 describe("findDuplicateGroups", () => {
+  it("leaves a pair the owner called different apart, and splits a group pair by pair", () => {
+    const a = v("Spokane Community College", "1810 North Greene Street");
+    const b = v("Spokane Community College", "1810 N Greene St");
+    const c = v("Spokane Community College, The Lair", "1810 N Greene St");
+    const different = new Set([pairKey(a.id, b.id), pairKey(a.id, c.id), pairKey(b.id, c.id)]);
+    expect(findDuplicateGroups([a, b, c], { different })).toEqual([]);
+    expect(findDuplicateGroups([a, b, c], { different: new Set([pairKey(a.id, b.id)]) })).toHaveLength(1);
+  });
+
+  it("joins a pair the owner called the same place even when the finder does not", () => {
+    const a = v("Spokane County Fair & Expo Center", "404 N Havana St", { city: "Spokane Valley", zip: "99216" });
+    const b = v("The Fairgrounds", "Gate 3, Broadway Ave", { city: "Spokane Valley", zip: "99216" });
+    expect(findDuplicateGroups([a, b])).toEqual([]);
+    expect(findDuplicateGroups([a, b], { same: new Set([pairKey(a.id, b.id)]) })).toEqual([[a, b]]);
+  });
+
   it("groups duplicates transitively and leaves singletons out", () => {
     const venues = [
       v("Spokane Community College", "1810 North Greene Street"),

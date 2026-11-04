@@ -17,40 +17,7 @@ import {
   approveSubmissionWithEvent,
   rejectSubmission,
 } from "@/lib/submission-approval";
-import { mergeVenues, type MergeVenuesResult } from "@/lib/venues/merge";
 import { createApiToken } from "@/lib/api-tokens";
-
-const editSubmissionSchema = z.object({
-  eventTitle: z.string().trim().min(1, "Event title is required"),
-  eventDescription: z.string().trim().max(20000).nullable().optional(),
-  eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Event date must be YYYY-MM-DD"),
-  eventTime: z.string().regex(/^\d{2}:\d{2}$/, "Start time must be HH:mm"),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "End date must be YYYY-MM-DD").nullable().optional(),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/, "End time must be HH:mm").nullable().optional(),
-  allDay: z.boolean(),
-  venueName: z.string().trim().min(1, "Venue name is required"),
-  venueAddress: z.string().trim().min(1, "Venue address is required"),
-  venueCity: z.string().trim().nullable().optional(),
-  venueState: z.string().trim().nullable().optional(),
-  venueZip: z.string().trim().nullable().optional(),
-  imageUrl: z.string().trim().nullable().optional(),
-  facebookUrl: z.string().trim().nullable().optional(),
-  instagramUrl: z.string().trim().nullable().optional(),
-  websiteUrl: z.string().trim().nullable().optional(),
-  notes: z.string().trim().max(20000).nullable().optional(),
-});
-
-function optionalUrlOrNull(value: string | null | undefined): string | null {
-  const trimmed = value?.trim() ?? "";
-  if (!trimmed) return null;
-  try {
-    // Accept only absolute URLs to stay consistent with current validators.
-    const parsed = new URL(trimmed);
-    return parsed.toString();
-  } catch {
-    throw new Error("Links must be valid absolute URLs (including https://).");
-  }
-}
 
 async function requireAdminAction(permission: AdminPermissionKey) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -175,23 +142,6 @@ export async function restoreVenue(id: string) {
     newValue: { deletedAt: null },
   });
   revalidatePath("/admin/venues");
-}
-
-export async function mergeDuplicateVenues(
-  keepId: string,
-  mergeIds: string[]
-): Promise<MergeVenuesResult> {
-  const session = await requireAdminAction("admin.listings.manage");
-  const result = await mergeVenues(keepId, mergeIds, session.user.id);
-  if (result.ok) {
-    revalidatePath("/admin/venues");
-    revalidatePath("/admin/venues/duplicates");
-    revalidatePath("/admin/events");
-    revalidatePath("/admin/markets");
-    revalidatePath("/events");
-    revalidatePath("/markets");
-  }
-  return result;
 }
 
 const createApiTokenSchema = z.object({
@@ -447,77 +397,6 @@ export async function updateSubmissionStatus(
         error instanceof Error
           ? error.message
           : "Unable to update submission status right now.",
-    };
-  }
-}
-
-export async function updateSubmissionDraft(
-  id: string,
-  input: z.input<typeof editSubmissionSchema>
-) {
-  try {
-    const session = await requireAdminAction("admin.moderation.manage");
-    const parsed = editSubmissionSchema.safeParse(input);
-    if (!parsed.success) {
-      const firstError = parsed.error.issues[0]?.message ?? "Invalid submission edits.";
-      return { ok: false as const, error: firstError };
-    }
-
-    const existing = await db.submission.findUnique({
-      where: { id },
-      select: { id: true, status: true },
-    });
-    if (!existing) {
-      return { ok: false as const, error: "Submission not found." };
-    }
-    if (existing.status !== "PENDING") {
-      return { ok: false as const, error: "Only pending submissions can be edited." };
-    }
-
-    const data = parsed.data;
-    const next = {
-      eventTitle: data.eventTitle,
-      eventDescription: data.eventDescription?.trim() ? data.eventDescription.trim() : null,
-      eventDate: data.eventDate,
-      eventTime: data.eventTime,
-      endDate: data.endDate?.trim() ? data.endDate.trim() : null,
-      endTime: data.endTime?.trim() ? data.endTime.trim() : null,
-      allDay: data.allDay,
-      venueName: data.venueName,
-      venueAddress: data.venueAddress,
-      venueCity: data.venueCity?.trim() ? data.venueCity.trim() : null,
-      venueState: data.venueState?.trim() ? data.venueState.trim() : null,
-      venueZip: data.venueZip?.trim() ? data.venueZip.trim() : null,
-      imageUrl: optionalUrlOrNull(data.imageUrl),
-      facebookUrl: optionalUrlOrNull(data.facebookUrl),
-      instagramUrl: optionalUrlOrNull(data.instagramUrl),
-      websiteUrl: optionalUrlOrNull(data.websiteUrl),
-      notes: data.notes?.trim() ? data.notes.trim() : null,
-    };
-
-    const updated = await db.submission.updateMany({
-      where: { id, status: "PENDING" },
-      data: next,
-    });
-    if (updated.count === 0) {
-      return { ok: false as const, error: "Only pending submissions can be edited." };
-    }
-
-    await logAudit(session.user.id, "UPDATE_SUBMISSION", "SUBMISSION", id, {
-      newValue: next,
-    });
-
-    revalidatePath("/admin/submissions");
-    revalidatePath(`/admin/submissions/${id}`);
-    revalidatePath("/admin/queues");
-    return { ok: true as const };
-  } catch (error) {
-    return {
-      ok: false as const,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to save submission edits.",
     };
   }
 }

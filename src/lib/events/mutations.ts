@@ -1,4 +1,4 @@
-import type { EventStatus, Prisma } from "@prisma/client";
+import type { EventStatus, ParticipationMode, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { notifySubmitterOfStatusChange } from "@/lib/events/status-notifications";
 import { placeProblems } from "@/lib/events/readiness";
@@ -28,6 +28,14 @@ export type EventFieldChanges = {
   imageFocalX?: number;
   imageFocalY?: number;
   complianceNotes?: string | null;
+  /** Vendor settings; null follows the market (or the site default without one). */
+  participationMode?: ParticipationMode | null;
+  vendorCapacity?: number | null;
+  publicIntentListEnabled?: boolean | null;
+  publicIntentNamesEnabled?: boolean | null;
+  publicRosterEnabled?: boolean | null;
+  /** Onboarding columns the editor shows under More details, in their column types; null clears. */
+  details?: Partial<Record<DetailColumn, string | number | boolean | Date | null>>;
   tagIds?: string[];
   featureIds?: string[];
   /**
@@ -57,7 +65,35 @@ const SCALAR_FIELDS = [
   "imageFocalX",
   "imageFocalY",
   "complianceNotes",
+  "participationMode",
+  "vendorCapacity",
+  "publicIntentListEnabled",
+  "publicIntentNamesEnabled",
+  "publicRosterEnabled",
 ] as const;
+
+/** Onboarding columns `details` may set. */
+export const DETAIL_COLUMNS = [
+  "indoorOutdoor",
+  "accessibilitySummary",
+  "parkingSummary",
+  "restroomAccess",
+  "petPolicy",
+  "vendorApplicationState",
+  "vendorApplicationDeadline",
+  "feeModelVendor",
+  "boothLogistics",
+  "typicalVendorCount",
+  "specialEventPermitStatus",
+  "expectedAttendance",
+  "streetClosureImpact",
+  "streetClosureNarrative",
+  "insuranceSummary",
+  "safetyPlanSummary",
+  "sanitationPlan",
+  "cancellationPolicy",
+] as const;
+type DetailColumn = (typeof DETAIL_COLUMNS)[number];
 
 type Submitter = { name: string | null; email: string; notificationPreference: { organizerAlertsEnabled: boolean } | null } | null;
 
@@ -123,6 +159,12 @@ export async function updateEventFields(
       imageFocalX: true,
       imageFocalY: true,
       complianceNotes: true,
+      participationMode: true,
+      vendorCapacity: true,
+      publicIntentListEnabled: true,
+      publicIntentNamesEnabled: true,
+      publicRosterEnabled: true,
+      ...Object.fromEntries(DETAIL_COLUMNS.map((key) => [key, true])) as Record<DetailColumn, true>,
       startDate: true,
       endDate: true,
       tags: { select: { id: true } },
@@ -153,6 +195,13 @@ export async function updateEventFields(
   const previousValue: Record<string, unknown> = Object.fromEntries(Object.keys(scalars).map((key) => [key, existing[key as keyof typeof existing]]));
   const newValue: Record<string, unknown> = { ...scalars };
   const data: Prisma.EventUncheckedUpdateInput = { ...(scalars as Prisma.EventUncheckedUpdateInput), updatedAt: at };
+  for (const [key, value] of Object.entries(changes.details ?? {})) {
+    if (value === undefined || !(DETAIL_COLUMNS as readonly string[]).includes(key)) continue;
+    const before = existing[key as DetailColumn];
+    previousValue[key] = before instanceof Date ? before.toISOString() : before;
+    newValue[key] = value instanceof Date ? value.toISOString() : value;
+    (data as Record<string, unknown>)[key] = value;
+  }
 
   if (changes.tagIds) {
     previousValue.tagIds = existing.tags.map((t) => t.id);

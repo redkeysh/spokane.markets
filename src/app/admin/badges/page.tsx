@@ -1,9 +1,11 @@
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
 import { CommunityBadgesManager } from "@/components/admin/community-badges-manager";
-import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { title: "Community badges" };
 
 export default async function AdminCommunityBadgesPage() {
   await requireAdmin();
@@ -17,11 +19,7 @@ export default async function AdminCommunityBadgesPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <AdminPageHeader
-        title="Community Badges"
-        description="Create and manage the badge definitions admins, vendors, and organizers can apply."
-      />
+    <div className="mx-auto w-full max-w-[1184px] space-y-5">
       <CommunityBadgesManager initialBadges={badges} />
     </div>
   );

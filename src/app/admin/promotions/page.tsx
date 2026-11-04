@@ -1,136 +1,76 @@
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { AdminPageHeader } from "@/components/admin/admin-page-header";
-import { AdminTable } from "@/components/admin/admin-table";
-import { DeleteButton } from "@/components/admin/action-buttons";
-import { deletePromotion } from "../actions";
-import Link from "next/link";
-import { formatDate } from "@/lib/utils";
-import type { PromotionType } from "@prisma/client";
+import { PageHeader } from "@/components/admin/kit/page-header";
+import { AdminLinkButton } from "@/components/admin/kit/button";
+import { Empty } from "@/components/admin/kit/empty";
+import { ListSection } from "@/components/admin/rare/list-section";
+import { PromotionRows } from "@/components/admin/promotion-rows";
+import { groupPromotions } from "@/components/admin/promotion-words";
 
 export const dynamic = "force-dynamic";
 
-const PROMOTION_TYPE_LABELS: Record<PromotionType, string> = {
-  SPONSORED: "Sponsored",
-  PARTNERSHIP: "Partner Spotlight",
-  FEATURED: "Featured",
-};
+export const metadata: Metadata = { title: "Featured on the homepage" };
+
+async function loadPromotions() {
+  return db.promotion.findMany({
+    include: {
+      event: { select: { id: true, title: true, slug: true, startDate: true } },
+      vendorProfile: { select: { id: true, businessName: true, slug: true } },
+    },
+    orderBy: [{ sortOrder: "asc" }, { startDate: "asc" }],
+  });
+}
 
 export default async function AdminPromotionsPage() {
   await requireAdmin();
 
-  const promotions = await db.promotion.findMany({
-    include: {
-      event: {
-        select: { id: true, title: true, slug: true, startDate: true },
-      },
-      vendorProfile: {
-        select: { id: true, businessName: true, slug: true },
-      },
-    },
-    orderBy: [{ sortOrder: "asc" }, { startDate: "asc" }],
-  });
-
   const now = new Date();
+  const groups = groupPromotions(await loadPromotions(), now);
+  const nothing = groups.now.length + groups.upcoming.length + groups.ended.length === 0;
 
   return (
-    <div className="space-y-6">
-      <AdminPageHeader
-        title="Promotions"
-        description="Manage featured, sponsored, and partner promotions shown across event and vendor surfaces."
+    <div className="mx-auto w-full max-w-[1184px] space-y-8">
+      <PageHeader
+        back={{ href: "/admin/site", label: "Back to Site" }}
+        title="Featured on the homepage"
+        description="Events and vendors in the homepage carousel, each between the dates you set."
         actions={
-          <>
-            <Button asChild>
-              <Link href="/admin/promotions/new">New Promotion</Link>
-            </Button>
-          </>
+          <AdminLinkButton href="/admin/promotions/new" variant="ink">
+            Feature an event
+          </AdminLinkButton>
         }
       />
 
-      <AdminTable>
-          <thead className="bg-muted/50">
-            <tr>
-              <th className="p-3 text-left font-medium">Target</th>
-              <th className="p-3 text-left font-medium">Type</th>
-              <th className="p-3 text-left font-medium">Sponsor</th>
-              <th className="p-3 text-left font-medium">Display Period</th>
-              <th className="p-3 text-left font-medium">Order</th>
-              <th className="p-3 text-right font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {promotions.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="p-6 text-center text-muted-foreground">
-                  No promotions yet. Create one to feature events or vendors.
-                </td>
-              </tr>
+      {nothing ? (
+        <Empty detail="Feature an event to show it in the homepage carousel.">Nothing is featured yet.</Empty>
+      ) : (
+        <>
+          <ListSection id="showing" title="Showing now">
+            {groups.now.length > 0 ? (
+              <PromotionRows promotions={groups.now} phase="now" now={now} />
             ) : (
-              promotions.map((p) => {
-                const isActive =
-                  p.startDate <= now &&
-                  p.endDate >= now &&
-                  (p.event || p.vendorProfile);
-                const isEventTarget = !!p.event;
-                return (
-                  <tr key={p.id} className="hover:bg-muted/30">
-                    <td className="p-3 font-medium">
-                      {p.event ? (
-                        <Link
-                          href={`/events/${p.event.slug}`}
-                          className="text-primary hover:underline"
-                        >
-                          {p.event.title}
-                        </Link>
-                      ) : p.vendorProfile ? (
-                        <Link
-                          href={`/vendors/${p.vendorProfile.slug}`}
-                          className="text-primary hover:underline"
-                        >
-                          {p.vendorProfile.businessName}
-                        </Link>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {isEventTarget ? "Event" : "Vendor"}
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      <Badge variant="secondary">
-                        {PROMOTION_TYPE_LABELS[p.type]}
-                      </Badge>
-                    </td>
-                    <td className="p-3 text-muted-foreground">
-                      {p.sponsorName || "—"}
-                    </td>
-                    <td className="p-3 text-muted-foreground">
-                      {formatDate(p.startDate)} – {formatDate(p.endDate)}
-                      {isActive && (
-                        <Badge variant="default" className="ml-2 text-xs">
-                          Active
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="p-3 text-muted-foreground">{p.sortOrder}</td>
-                    <td className="space-x-2 p-3 text-right">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={`/admin/promotions/${p.id}/edit`}>Edit</Link>
-                      </Button>
-                      <DeleteButton
-                        action={deletePromotion.bind(null, p.id)}
-                        title="Delete promotion"
-                        description="Are you sure? This will remove the promotion from the home page carousel."
-                      />
-                    </td>
-                  </tr>
-                );
-              })
+              <Empty className="py-2">Nothing is on the homepage carousel right now.</Empty>
             )}
-          </tbody>
-      </AdminTable>
+          </ListSection>
+          {groups.upcoming.length > 0 && (
+            <ListSection id="coming-up" title="Coming up">
+              <PromotionRows promotions={groups.upcoming} phase="upcoming" now={now} />
+            </ListSection>
+          )}
+          {groups.ended.length > 0 && (
+            <details className="group">
+              <summary className="inline-flex min-h-6 cursor-pointer items-center gap-2 rounded-sm font-text text-[15px]/[20px] font-semibold text-basalt">
+                Ended
+                <span className="font-text text-xs font-medium text-ash tabular-nums">{groups.ended.length}</span>
+              </summary>
+              <div className="mt-3">
+                <PromotionRows promotions={groups.ended} phase="ended" now={now} />
+              </div>
+            </details>
+          )}
+        </>
+      )}
     </div>
   );
 }

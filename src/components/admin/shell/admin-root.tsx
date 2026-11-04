@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import dynamic from "next/dynamic";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ADMIN_NAV, hasWeekChips, railVariant } from "@/lib/admin/nav";
 import type { NavSignals } from "@/lib/admin/nav-signals";
@@ -12,9 +12,10 @@ import { DialogPortalContext } from "@/components/ui/dialog";
 import { AdminToaster } from "@/components/admin/kit/toaster";
 import { SingleKeysContext, useShortcuts } from "@/components/admin/kit/use-shortcuts";
 import { BottomBar } from "./bottom-bar";
+import { useLeaveGuardHost } from "./leave-guard";
 import { AnnounceProvider, LiveRegion, useLiveRegionState } from "./live-region";
 import { setAdminMode, setSingleKeyShortcuts } from "./mode-actions";
-import { MODE_LABEL, ShellContext, type ShellContextValue } from "./shell-context";
+import { MODE_LABEL, ShellContext, useShell, type ShellContextValue } from "./shell-context";
 import { Rail } from "./rail";
 import { RailProvider } from "./rail-context";
 import { RailSlim } from "./rail-slim";
@@ -62,17 +63,17 @@ function navHref(key: string): string {
 
 /** Shortcuts that work on every admin screen. */
 function GlobalShortcuts({ onJump, onSheet }: { onJump: () => void; onSheet: () => void }) {
-  const router = useRouter();
+  const { navigate } = useShell();
   useShortcuts({
     "/": onJump,
     "mod+k": onJump,
     "?": onSheet,
-    "g t": () => router.push(navHref("todo")),
-    "g e": () => router.push(navHref("events")),
-    "g m": () => router.push(navHref("markets")),
-    "g v": () => router.push(navHref("venues")),
-    "g s": () => router.push(navHref("site")),
-    n: () => router.push("/admin/events/new"),
+    "g t": () => navigate(navHref("todo")),
+    "g e": () => navigate(navHref("events")),
+    "g m": () => navigate(navHref("markets")),
+    "g v": () => navigate(navHref("venues")),
+    "g s": () => navigate(navHref("site")),
+    n: () => navigate("/admin/events/new"),
   });
   return null;
 }
@@ -121,6 +122,7 @@ export function AdminRoot({
   }
 
   const [, startTransition] = React.useTransition();
+  const { navigate, leave, setLeaveGuard } = useLeaveGuardHost();
 
   const shell = React.useMemo<ShellContextValue>(
     () => ({
@@ -138,8 +140,11 @@ export function AdminRoot({
       },
       openJump,
       openShortcuts: () => setSheetOpen(true),
+      navigate,
+      leave,
+      setLeaveGuard,
     }),
-    [mode, singleKeys, announce, openJump]
+    [mode, singleKeys, announce, openJump, navigate, leave, setLeaveGuard]
   );
 
   const full = railVariant(pathname) === "full";

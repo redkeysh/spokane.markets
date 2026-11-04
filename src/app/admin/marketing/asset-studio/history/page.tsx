@@ -1,15 +1,17 @@
-import Link from "next/link";
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { DeleteRenderButton } from "@/components/admin/marketing/delete-render-button";
-import { AdminPageHeader } from "@/components/admin/admin-page-header";
-import { AdminTable } from "@/components/admin/admin-table";
 import { parseEnumParam } from "@/lib/admin/table-query";
+import { PageHeader } from "@/components/admin/kit/page-header";
+import { AdminLinkButton } from "@/components/admin/kit/button";
+import { Empty } from "@/components/admin/kit/empty";
+import { UrlFilters } from "@/components/admin/rare/url-filters";
+import { RenderRows } from "@/components/admin/marketing/render-rows";
+import { RENDER_STATUS_ORDER, RENDER_STATUS_WORDS } from "@/components/admin/marketing/words";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { title: "Past graphics" };
 
 export default async function MarketingAssetStudioHistoryPage({
   searchParams,
@@ -19,14 +21,7 @@ export default async function MarketingAssetStudioHistoryPage({
   await requireAdmin();
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
-  const status = params.status?.trim() ?? "";
-  const statusFilter = parseEnumParam(status, [
-    "QUEUED",
-    "PROCESSING",
-    "SUCCEEDED",
-    "FAILED",
-    "CANCELLED",
-  ] as const);
+  const statusFilter = parseEnumParam(params.status?.trim() ?? "", RENDER_STATUS_ORDER);
   const renders = await db.marketingRender.findMany({
     where: {
       deletedAt: null,
@@ -41,7 +36,7 @@ export default async function MarketingAssetStudioHistoryPage({
         : {}),
     },
     include: {
-      template: { select: { id: true, name: true, slug: true, profile: true } },
+      template: { select: { name: true } },
       user: { select: { name: true, email: true } },
       vendor: { select: { businessName: true } },
       event: { select: { title: true } },
@@ -51,81 +46,46 @@ export default async function MarketingAssetStudioHistoryPage({
     take: 100,
   });
 
+  const statusWord = statusFilter ? RENDER_STATUS_WORDS[statusFilter].word.toLowerCase() : null;
+  const emptyMessage = q
+    ? `No graphic made from a template matching "${q}"${statusWord ? ` is ${statusWord}` : ""}.`
+    : statusWord
+      ? `No graphic is ${statusWord}.`
+      : "No graphics made yet.";
+
   return (
-    <div className="space-y-6">
-      <AdminPageHeader
-        title="Render History"
-        description="Re-download, duplicate, or delete past renders."
+    <div className="mx-auto w-full max-w-[1184px] space-y-5">
+      <PageHeader
+        back={{ href: "/admin/marketing/asset-studio", label: "Back to Graphics" }}
+        title="Past graphics"
+        description="Download a graphic again, make another like it, or delete it."
         actions={
-          <Button asChild>
-            <Link href="/admin/marketing/asset-studio/new">New Render</Link>
-          </Button>
+          <AdminLinkButton href="/admin/marketing/asset-studio/new" variant="ink">
+            New graphic
+          </AdminLinkButton>
         }
       />
 
-      <form className="flex items-center gap-2">
-        <Input name="q" placeholder="Search template name or slug..." defaultValue={q} />
-        <Input name="status" placeholder="Status (QUEUED, SUCCEEDED...)" defaultValue={status} />
-        <Button type="submit" variant="outline">Filter</Button>
-      </form>
+      <UrlFilters
+        label="Filter past graphics"
+        search={{ label: "Search template name", placeholder: "Search template name" }}
+        selects={[
+          {
+            name: "status",
+            label: "Showing",
+            options: [
+              { value: "", label: "Every graphic" },
+              ...RENDER_STATUS_ORDER.map((s) => ({ value: s, label: RENDER_STATUS_WORDS[s].word })),
+            ],
+          },
+        ]}
+      />
 
-      <AdminTable>
-          <thead className="bg-muted/50">
-            <tr>
-              <th className="px-4 py-3 text-left font-medium">Date</th>
-              <th className="px-4 py-3 text-left font-medium">Template</th>
-              <th className="px-4 py-3 text-left font-medium">Entity</th>
-              <th className="px-4 py-3 text-left font-medium">Status</th>
-              <th className="px-4 py-3 text-left font-medium">Scale</th>
-              <th className="px-4 py-3 text-left font-medium">By</th>
-              <th className="px-4 py-3 text-right font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {renders.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                  No renders found.
-                </td>
-              </tr>
-            ) : (
-              renders.map((render) => {
-                const entityLabel = render.vendor?.businessName || render.event?.title || render.market?.name || "Manual";
-                const isFocused = params.renderId === render.id;
-                return (
-                  <tr
-                    key={render.id}
-                    className={`border-t border-border ${isFocused ? "bg-primary/5" : ""}`}
-                  >
-                    <td className="px-4 py-3">{render.createdAt.toLocaleString()}</td>
-                    <td className="px-4 py-3">{render.template.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{entityLabel}</td>
-                    <td className="px-4 py-3">
-                      <Badge variant={render.status === "SUCCEEDED" ? "default" : "outline"}>{render.status}</Badge>
-                    </td>
-                    <td className="px-4 py-3">{render.scale}x</td>
-                    <td className="px-4 py-3">{render.user.name ?? render.user.email ?? "Unknown"}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="outline" asChild>
-                          <Link href={`/api/admin/marketing/renders/${render.id}/download`} target="_blank">
-                            Download
-                          </Link>
-                        </Button>
-                        <Button size="sm" variant="outline" asChild>
-                          <Link href={`/admin/marketing/asset-studio/new?duplicateRenderId=${render.id}`}>
-                            Duplicate
-                          </Link>
-                        </Button>
-                        <DeleteRenderButton renderId={render.id} />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-      </AdminTable>
+      {renders.length === 0 ? (
+        <Empty>{emptyMessage}</Empty>
+      ) : (
+        <RenderRows renders={renders} label="Past graphics" focusedId={params.renderId} />
+      )}
     </div>
   );
 }

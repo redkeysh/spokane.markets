@@ -1,3 +1,5 @@
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { JUMP_COMMANDS, JUMP_PAGES, availableCommands } from "./pages";
 
@@ -10,6 +12,17 @@ describe("Jump pages", () => {
     expect(new Set(JUMP_PAGES.map((p) => p.id)).size).toBe(JUMP_PAGES.length);
     expect(new Set(JUMP_PAGES.map((p) => p.label)).size).toBe(JUMP_PAGES.length);
     expect(JUMP_PAGES.every((p) => p.href.startsWith("/admin"))).toBe(true);
+  });
+
+  it("links every page and command to a page that exists", () => {
+    const pages = new Set(
+      readdirSync(join(process.cwd(), "src/app/admin"), { recursive: true, encoding: "utf8" })
+        .map((f) => f.replaceAll("\\", "/"))
+        .filter((f) => /(^|\/)page\.tsx$/.test(f))
+        .map((f) => ("/admin/" + f.replace(/(^|\/)page\.tsx$/, "")).replace(/\/$/, ""))
+    );
+    const hrefs = [...JUMP_PAGES.map((p) => p.href), ...JUMP_COMMANDS.flatMap((c) => (c.action.type === "href" ? [c.action.href] : []))];
+    for (const href of hrefs) expect(pages, href).toContain(href.split(/[?#]/)[0]);
   });
 
   it("finds pages by the owner's words", () => {

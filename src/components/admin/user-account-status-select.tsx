@@ -3,36 +3,34 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import type { AccountStatus } from "@prisma/client";
 import { getApiErrorMessage } from "@/lib/api-client";
-import { Select } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { SelectInput } from "@/components/admin/rare/controls";
+import { useAnnounce } from "@/components/admin/shell/live-region";
+import { STATUS_ORDER, STATUS_WORDS } from "@/components/admin/user-words";
 
-const ACCOUNT_STATUSES = [
-  { value: "ACTIVE", label: "Active" },
-  { value: "SUSPENDED", label: "Suspended" },
-  { value: "BANNED", label: "Banned" },
-  { value: "DEACTIVATED", label: "Deactivated" },
-] as const;
-
-type AccountStatus = (typeof ACCOUNT_STATUSES)[number]["value"];
-
-const STATUS_LABEL: Record<AccountStatus, string> = Object.fromEntries(
-  ACCOUNT_STATUSES.map((s) => [s.value, s.label])
-) as Record<AccountStatus, string>;
-
-// Statuses that block or restrict sign-in warrant a confirmation step.
-const HIGH_IMPACT: AccountStatus[] = ["SUSPENDED", "BANNED", "DEACTIVATED"];
+/** Statuses that stop or limit sign-in ask first. */
+const HIGH_IMPACT: readonly AccountStatus[] = ["SUSPENDED", "BANNED", "DEACTIVATED"];
 
 interface UserAccountStatusSelectProps {
   userId: string;
   currentStatus: AccountStatus;
+  id?: string;
+  "aria-describedby"?: string;
+  disabled?: boolean;
 }
 
+/** Whether one person can sign in. */
 export function UserAccountStatusSelect({
   userId,
   currentStatus,
+  id,
+  "aria-describedby": describedBy,
+  disabled = false,
 }: UserAccountStatusSelectProps) {
   const router = useRouter();
+  const announce = useAnnounce();
   const [confirmStatus, setConfirmStatus] = useState<AccountStatus | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -45,13 +43,14 @@ export function UserAccountStatusSelect({
     });
     setSaving(false);
     if (res.ok) {
-      toast.success("Account status updated.");
-      router.refresh();
+      const message = `Account set to ${STATUS_WORDS[accountStatus].toLowerCase()}.`;
+      toast.success(message);
+      announce(message);
     } else {
       const body = await res.json().catch(() => ({}));
-      toast.error(getApiErrorMessage(body, "Failed to update account status."));
-      router.refresh();
+      toast.error(getApiErrorMessage(body, "Could not change the account."));
     }
+    router.refresh();
   }
 
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
@@ -66,23 +65,29 @@ export function UserAccountStatusSelect({
 
   return (
     <>
-      <Select value={currentStatus} onChange={handleChange} disabled={saving} className="w-36">
-        {ACCOUNT_STATUSES.map((status) => (
-          <option key={status.value} value={status.value}>
-            {status.label}
+      <SelectInput
+        id={id}
+        aria-describedby={describedBy}
+        value={currentStatus}
+        onChange={handleChange}
+        disabled={saving || disabled}
+        aria-busy={saving || undefined}
+        className="w-48"
+      >
+        {STATUS_ORDER.map((status) => (
+          <option key={status} value={status}>
+            {STATUS_WORDS[status]}
           </option>
         ))}
-      </Select>
+      </SelectInput>
       <ConfirmDialog
         open={confirmStatus !== null}
         onOpenChange={(o) => {
           if (!o) setConfirmStatus(null);
         }}
-        title="Change account status?"
-        description={`This sets the account to "${
-          confirmStatus ? STATUS_LABEL[confirmStatus] : ""
-        }" and can block the user from signing in.`}
-        confirmLabel="Update status"
+        title={`Set this account to ${confirmStatus ? STATUS_WORDS[confirmStatus].toLowerCase() : "this"}?`}
+        description="This can stop them from signing in. You can set the account back to active later."
+        confirmLabel={confirmStatus ? `Set to ${STATUS_WORDS[confirmStatus].toLowerCase()}` : "Change"}
         variant="destructive"
         pending={saving}
         onConfirm={() => {

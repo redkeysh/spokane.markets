@@ -2,296 +2,195 @@
 
 import * as React from "react";
 import type { BadgeDefinition } from "@prisma/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
 import { getApiErrorMessage } from "@/lib/api-client";
+import { AdminButton } from "@/components/admin/kit/button";
+import { Empty } from "@/components/admin/kit/empty";
+import { Field, FieldRow } from "@/components/admin/kit/field";
+import { List } from "@/components/admin/kit/list";
+import { PageHeader } from "@/components/admin/kit/page-header";
+import { ActionRow } from "@/components/admin/rare/action-row";
+import { TextArea, TextInput } from "@/components/admin/rare/controls";
+import { EditDialog } from "@/components/admin/rare/edit-dialog";
+import { badgeUse } from "@/components/admin/rare/words";
+import { useAnnounce } from "@/components/admin/shell/live-region";
 
-type CommunityBadgeRow = Pick<
-  BadgeDefinition,
-  "id" | "name" | "slug" | "description" | "icon" | "sortOrder"
-> & {
+type CommunityBadgeRow = Pick<BadgeDefinition, "id" | "name" | "slug" | "description" | "icon" | "sortOrder"> & {
   _count: { vendorProfiles: number; markets: number };
 };
 
-export function CommunityBadgesManager({
-  initialBadges,
-}: {
-  initialBadges: CommunityBadgeRow[];
-}) {
+type Draft = { name: string; slug: string; description: string; icon: string; sortOrder: number };
+
+const EMPTY_DRAFT: Draft = { name: "", slug: "", description: "", icon: "", sortOrder: 100 };
+
+/** The Community badges page: the list, read only, and one dialog to add or edit a badge. */
+export function CommunityBadgesManager({ initialBadges }: { initialBadges: CommunityBadgeRow[] }) {
+  const announce = useAnnounce();
   const [badges, setBadges] = React.useState(initialBadges);
-  const [newBadge, setNewBadge] = React.useState({
-    name: "",
-    slug: "",
-    description: "",
-    icon: "",
-    sortOrder: 100,
-  });
+  const [editing, setEditing] = React.useState<CommunityBadgeRow | null>(null);
+  const [open, setOpen] = React.useState(false);
+  const [draft, setDraft] = React.useState<Draft>(EMPTY_DRAFT);
   const [error, setError] = React.useState<string | null>(null);
-  const [savingId, setSavingId] = React.useState<string | null>(null);
-  const [creating, setCreating] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [removing, setRemoving] = React.useState(false);
+
+  function openFor(row: CommunityBadgeRow | null) {
+    setEditing(row);
+    setDraft(
+      row
+        ? { name: row.name, slug: row.slug, description: row.description ?? "", icon: row.icon ?? "", sortOrder: row.sortOrder }
+        : EMPTY_DRAFT
+    );
+    setError(null);
+    setOpen(true);
+  }
 
   async function refresh() {
     const res = await fetch("/api/admin/community-badges");
     if (!res.ok) return;
-    const rows = (await res.json()) as CommunityBadgeRow[];
-    setBadges(rows);
+    setBadges((await res.json()) as CommunityBadgeRow[]);
   }
 
-  async function createBadge() {
-    setCreating(true);
+  function done(message: string) {
+    setOpen(false);
+    toast.success(message);
+    announce(message);
+  }
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (!draft.name.trim()) {
+      setError("Give the badge a name.");
+      return;
+    }
+    setSaving(true);
     setError(null);
     try {
-      const res = await fetch("/api/admin/community-badges", {
-        method: "POST",
+      const res = await fetch(editing ? `/api/admin/community-badges/${editing.id}` : "/api/admin/community-badges", {
+        method: editing ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newBadge),
+        body: JSON.stringify(draft),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(getApiErrorMessage(body, "Failed to create badge"));
+        throw new Error(getApiErrorMessage(body, "Could not save the badge."));
       }
-      setNewBadge({ name: "", slug: "", description: "", icon: "", sortOrder: 100 });
       await refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create badge");
+      done(editing ? `Saved ${draft.name.trim()}.` : `Added ${draft.name.trim()}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save the badge.");
     } finally {
-      setCreating(false);
+      setSaving(false);
     }
   }
 
-  async function updateBadge(row: CommunityBadgeRow) {
-    setSavingId(row.id);
+  async function remove() {
+    if (!editing) return;
+    setRemoving(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/community-badges/${row.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: row.name,
-          slug: row.slug,
-          description: row.description ?? "",
-          icon: row.icon ?? "",
-          sortOrder: row.sortOrder,
-        }),
-      });
+      const res = await fetch(`/api/admin/community-badges/${editing.id}`, { method: "DELETE" });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(getApiErrorMessage(body, "Failed to update badge"));
+        throw new Error(getApiErrorMessage(body, "Could not delete the badge."));
       }
       await refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update badge");
+      done(`Deleted ${editing.name}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete the badge.");
     } finally {
-      setSavingId(null);
+      setRemoving(false);
     }
   }
 
-  async function deleteBadge(id: string) {
-    if (!confirm("Delete this badge definition?")) return;
-    setSavingId(id);
-    setError(null);
-    try {
-      const res = await fetch(`/api/admin/community-badges/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(getApiErrorMessage(body, "Failed to delete badge"));
-      }
-      await refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete badge");
-    } finally {
-      setSavingId(null);
-    }
-  }
+  const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }));
 
   return (
-    <div className="space-y-6">
-      {error && (
-        <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
-        </div>
+    <>
+      <PageHeader
+        title="Community badges"
+        description="Badges vendors and markets can show on their pages, such as women-owned or veteran-owned."
+        actions={
+          <AdminButton variant="ink" onClick={() => openFor(null)} aria-haspopup="dialog">
+            Add badge
+          </AdminButton>
+        }
+      />
+
+      {badges.length === 0 ? (
+        <Empty>No community badges yet.</Empty>
+      ) : (
+        <List label="Community badges">
+          {badges.map((row) => (
+            <ActionRow
+              key={row.id}
+              rowKey={row.id}
+              title={row.name}
+              openLabel={`Edit ${row.name}`}
+              onOpen={() => openFor(row)}
+              hint="Edit"
+              meta={
+                <>
+                  {row.description && <span className="block max-w-[72ch] text-ash">{row.description}</span>}
+                  <span className="tabular-nums">{badgeUse(row._count.vendorProfiles, row._count.markets)}</span>
+                </>
+              }
+            />
+          ))}
+        </List>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Add Community Badge</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label>Name</Label>
-            <Input
-              value={newBadge.name}
-              onChange={(e) =>
-                setNewBadge((p) => ({ ...p, name: e.target.value }))
+      <EditDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={editing ? `Edit ${editing.name}` : "Add a badge"}
+        formId="badge-form"
+        onSubmit={save}
+        saveLabel={editing ? "Save" : "Add"}
+        saving={saving}
+        error={error}
+        removing={removing}
+        remove={
+          editing
+            ? {
+                label: "Delete badge",
+                title: `Delete ${editing.name}?`,
+                description:
+                  editing._count.vendorProfiles + editing._count.markets > 0
+                    ? `${badgeUse(editing._count.vendorProfiles, editing._count.markets)}. They lose the badge. This cannot be undone.`
+                    : "No vendor or market uses it. This cannot be undone.",
+                confirmLabel: "Delete badge",
+                busyLabel: "Deleting",
+                run: remove,
               }
-              placeholder="Women-owned"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Slug (optional)</Label>
-            <Input
-              value={newBadge.slug}
-              onChange={(e) =>
-                setNewBadge((p) => ({ ...p, slug: e.target.value }))
-              }
-              placeholder="women_owned"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Icon (Lucide name)</Label>
-            <Input
-              value={newBadge.icon}
-              onChange={(e) =>
-                setNewBadge((p) => ({ ...p, icon: e.target.value }))
-              }
-              placeholder="Users"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Sort order</Label>
-            <Input
-              type="number"
-              min={0}
-              value={newBadge.sortOrder}
-              onChange={(e) =>
-                setNewBadge((p) => ({
-                  ...p,
-                  sortOrder: Number(e.target.value || 0),
-                }))
-              }
-            />
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label>Description (optional)</Label>
-            <Textarea
-              rows={2}
-              value={newBadge.description}
-              onChange={(e) =>
-                setNewBadge((p) => ({ ...p, description: e.target.value }))
-              }
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <Button
-              type="button"
-              onClick={createBadge}
-              disabled={creating || !newBadge.name.trim()}
-            >
-              {creating ? "Adding..." : "Add badge"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Existing Community Badges</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {badges.map((row) => (
-            <div key={row.id} className="rounded-lg border border-border p-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Input
-                  value={row.name}
-                  onChange={(e) =>
-                    setBadges((prev) =>
-                      prev.map((b) =>
-                        b.id === row.id ? { ...b, name: e.target.value } : b
-                      )
-                    )
-                  }
-                  placeholder="Name"
-                />
-                <Input
-                  value={row.slug}
-                  onChange={(e) =>
-                    setBadges((prev) =>
-                      prev.map((b) =>
-                        b.id === row.id ? { ...b, slug: e.target.value } : b
-                      )
-                    )
-                  }
-                  placeholder="Slug"
-                />
-                <Input
-                  value={row.icon ?? ""}
-                  onChange={(e) =>
-                    setBadges((prev) =>
-                      prev.map((b) =>
-                        b.id === row.id ? { ...b, icon: e.target.value } : b
-                      )
-                    )
-                  }
-                  placeholder="Icon"
-                />
-                <Input
-                  type="number"
-                  min={0}
-                  value={row.sortOrder}
-                  onChange={(e) =>
-                    setBadges((prev) =>
-                      prev.map((b) =>
-                        b.id === row.id
-                          ? { ...b, sortOrder: Number(e.target.value || 0) }
-                          : b
-                      )
-                    )
-                  }
-                  placeholder="Sort order"
-                />
-                <div className="sm:col-span-2">
-                  <Textarea
-                    rows={2}
-                    value={row.description ?? ""}
-                    onChange={(e) =>
-                      setBadges((prev) =>
-                        prev.map((b) =>
-                          b.id === row.id
-                            ? { ...b, description: e.target.value }
-                            : b
-                        )
-                      )
-                    }
-                    placeholder="Description"
-                  />
-                </div>
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Used by {row._count.vendorProfiles} vendors and {row._count.markets} markets.
-              </p>
-              <div className="mt-3 flex gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => updateBadge(row)}
-                  disabled={savingId === row.id}
-                >
-                  {savingId === row.id ? "Saving..." : "Save"}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => deleteBadge(row.id)}
-                  disabled={savingId === row.id}
-                >
-                  Delete
-                </Button>
-              </div>
-            </div>
-          ))}
-          {badges.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              No community badge definitions yet.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+            : undefined
+        }
+      >
+        <Field id="badge-name" label="Name" required>
+          <TextInput value={draft.name} placeholder="Women-owned" onChange={(e) => set("name", e.target.value)} />
+        </Field>
+        <Field id="badge-description" label="Description">
+          <TextArea rows={2} value={draft.description} onChange={(e) => set("description", e.target.value)} />
+        </Field>
+        <FieldRow>
+          <Field id="badge-slug" label="Short name" help="Made from the name when left empty.">
+            <TextInput value={draft.slug} placeholder="women_owned" onChange={(e) => set("slug", e.target.value)} />
+          </Field>
+          <Field id="badge-icon" label="Icon" help="A Lucide icon name, such as Users.">
+            <TextInput value={draft.icon} placeholder="Users" onChange={(e) => set("icon", e.target.value)} />
+          </Field>
+        </FieldRow>
+        <Field id="badge-order" label="Order" help="Lower numbers show first.">
+          <TextInput
+            type="number"
+            min={0}
+            inputMode="numeric"
+            className="w-32"
+            value={draft.sortOrder}
+            onChange={(e) => set("sortOrder", Number(e.target.value || 0))}
+          />
+        </Field>
+      </EditDialog>
+    </>
   );
 }

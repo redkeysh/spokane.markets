@@ -429,7 +429,9 @@
   .sm-shell:has([data-no-bottom-bar]) .sm-bottom-bar {
     display: none;
   }
+  /* Positioned, so absolutely placed descendants (sr-only labels) stay inside the scroller. */
   .sm-pane {
+    position: relative;
     padding: 16px;
   }
   .sm-sticky-bottom {
@@ -458,6 +460,12 @@
     }
     .sm-shell:has([data-no-bottom-bar]) {
       --sm-bottom-bar-h: 0px;
+    }
+  }
+  /* A decision's phone action bar takes the bottom bar's place, so toasts and sticky rows sit above it. */
+  @media (max-width: 1023.98px) {
+    .sm-shell:has([data-decision-bar]) {
+      --sm-bottom-bar-h: calc(64px + env(safe-area-inset-bottom));
     }
   }
   @media (min-width: 768px) {

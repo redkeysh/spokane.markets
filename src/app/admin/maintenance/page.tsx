@@ -1,7 +1,5 @@
 import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default async function AdminMaintenancePage() {
-  redirect("/admin/settings");
+export default function AdminMaintenancePage(): never {
+  redirect("/admin/site#maintenance");
 }

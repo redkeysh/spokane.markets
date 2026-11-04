@@ -3,16 +3,16 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Bot, Check, Copy } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { ConfirmDialog } from "@/components/admin/confirm-dialog";
-import { EmptyState } from "@/components/admin/empty-state";
-import { AdminTable, AdminTableBody, AdminTableHead } from "@/components/admin/admin-table";
+import { Check, Copy } from "lucide-react";
 import { createApiTokenAction, revokeApiTokenAction } from "@/app/admin/actions";
+import { AdminButton } from "@/components/admin/kit/button";
+import { Empty } from "@/components/admin/kit/empty";
+import { Field, Section } from "@/components/admin/kit/field";
+import { List } from "@/components/admin/kit/list";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { StaticRow } from "@/components/admin/rare/action-row";
+import { SelectInput, TextInput } from "@/components/admin/rare/controls";
+import { useAnnounce } from "@/components/admin/shell/live-region";
 import { cn } from "@/lib/utils";
 
 export type ApiTokenRow = {
@@ -28,13 +28,19 @@ export type ApiTokenRow = {
 };
 
 const EXPIRY_OPTIONS = [
-  { value: "30", label: "30 days" },
-  { value: "90", label: "90 days" },
-  { value: "365", label: "1 year" },
+  { value: "30", label: "In 30 days" },
+  { value: "90", label: "In 90 days" },
+  { value: "365", label: "In a year" },
   { value: "never", label: "Never" },
 ] as const;
 
-function CopyField({ label, value }: { label: string; value: string }) {
+const STATUS = {
+  active: { label: "Active", className: "text-basalt" },
+  expired: { label: "Expired", className: "text-ash-quiet" },
+  revoked: { label: "Revoked", className: "text-ash-quiet" },
+} as const;
+
+function CopyField({ id, label, value }: { id: string; label: string; value: string }) {
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -43,20 +49,28 @@ function CopyField({ label, value }: { label: string; value: string }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Could not copy. Select the text and copy it manually.");
+      toast.error("Could not copy. Select the text and copy it yourself.");
     }
   }
 
   return (
-    <div className="space-y-1.5">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-      <div className="flex items-start gap-2">
-        <code className="min-w-0 flex-1 break-all rounded-md border border-border bg-muted/40 px-3 py-2 font-mono text-xs">
-          {value}
-        </code>
-        <Button type="button" variant="outline" size="sm" onClick={copy} aria-label={`Copy ${label}`}>
-          {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-        </Button>
+    <div>
+      <label htmlFor={id} className="block font-text text-sm font-medium text-basalt">
+        {label}
+      </label>
+      <div className="mt-1.5 flex items-start gap-2">
+        <textarea
+          id={id}
+          readOnly
+          rows={value.length > 80 ? 3 : 1}
+          value={value}
+          onFocus={(e) => e.currentTarget.select()}
+          className="min-h-9 w-full resize-none rounded-md border border-seam-strong bg-sheet px-3 py-2 font-text text-sm leading-5 break-all text-basalt"
+        />
+        <AdminButton variant="outline" onClick={copy} aria-label={`Copy the ${label.toLowerCase()}`}>
+          {copied ? <Check strokeWidth={1.75} aria-hidden="true" /> : <Copy strokeWidth={1.75} aria-hidden="true" />}
+          {copied ? "Copied" : "Copy"}
+        </AdminButton>
       </div>
     </div>
   );
@@ -65,23 +79,22 @@ function CopyField({ label, value }: { label: string; value: string }) {
 function NewTokenPanel({ token, mcpUrl, onDone }: { token: string; mcpUrl: string; onDone: () => void }) {
   const command = `claude mcp add --transport http spokane-markets ${mcpUrl} --header "Authorization: Bearer ${token}"`;
   return (
-    <section className="space-y-4 rounded-xl border border-emerald-600/40 bg-emerald-600/5 p-4">
-      <div>
-        <h2 className="font-semibold">Copy your token now</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          This is the only time the token is shown. Only a hash is stored, so a lost token has to be revoked and replaced.
-        </p>
-      </div>
-      <CopyField label="Token" value={token} />
-      <CopyField label="Claude Code" value={command} />
-      <p className="text-sm text-muted-foreground">
-        Other MCP clients connect to <code className="rounded bg-muted px-1">{mcpUrl}</code> over Streamable HTTP with the
-        header <code className="rounded bg-muted px-1">Authorization: Bearer &lt;token&gt;</code>.
+    <Section id="new-token" title="Copy your token now">
+      <p className="max-w-[72ch] font-text text-sm text-ash">
+        This is the only time it is shown. Only a fingerprint of it is kept, so a lost token has to be revoked and
+        replaced.
       </p>
-      <Button type="button" size="sm" onClick={onDone}>
-        I saved it
-      </Button>
-    </section>
+      <CopyField id="new-token-value" label="Token" value={token} />
+      <CopyField id="new-token-command" label="Command for Claude Code" value={command} />
+      <p className="max-w-[72ch] font-text text-sm text-ash">
+        Other assistants connect to {mcpUrl} over Streamable HTTP with the header Authorization: Bearer and the token.
+      </p>
+      <div>
+        <AdminButton variant="ink" onClick={onDone}>
+          I saved it
+        </AdminButton>
+      </div>
+    </Section>
   );
 }
 
@@ -109,67 +122,62 @@ function CreateTokenForm({ onCreated }: { onCreated: (token: string) => void }) 
         onCreated(result.token);
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not create the token.");
+        toast.error(err instanceof Error ? err.message : "Could not make the token.");
       }
     });
   }
 
   return (
-    <form
-      onSubmit={submit}
-      className="grid gap-4 rounded-xl border border-border bg-card p-4 md:grid-cols-[minmax(0,1fr)_200px_160px_auto] md:items-end"
-    >
-      <div className="space-y-1.5">
-        <Label htmlFor="token-name">Name</Label>
-        <Input
-          id="token-name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Claude on my laptop"
-          maxLength={80}
-          required
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="token-access">Access</Label>
-        <Select id="token-access" value={access} onChange={(e) => setAccess(e.target.value as "READ" | "WRITE")}>
-          <option value="READ">Read only</option>
-          <option value="WRITE">Read and write</option>
-        </Select>
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="token-expiry">Expires</Label>
-        <Select
-          id="token-expiry"
-          value={expiry}
-          onChange={(e) => setExpiry(e.target.value as (typeof EXPIRY_OPTIONS)[number]["value"])}
-        >
-          {EXPIRY_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </Select>
-      </div>
-      <Button type="submit" disabled={pending || name.trim() === ""}>
-        Create token
-      </Button>
-      <p className="text-xs text-muted-foreground md:col-span-4">
-        Read only tokens can search and inspect. Read and write tokens can also approve or reject submissions, edit events and
-        venues, and merge duplicate venues. Every change is recorded in the audit log under your name.
-      </p>
-    </form>
+    <Section id="new-token" title="New token">
+      <form onSubmit={submit} className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_12rem_10rem] md:items-start">
+          <Field id="token-name" label="Name" help="Say where it is used.">
+            <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Claude on my laptop" maxLength={80} />
+          </Field>
+          <Field id="token-access" label="Access">
+            <SelectInput value={access} onChange={(e) => setAccess(e.target.value as "READ" | "WRITE")}>
+              <option value="READ">Read only</option>
+              <option value="WRITE">Read and write</option>
+            </SelectInput>
+          </Field>
+          <Field id="token-expiry" label="Stops working">
+            <SelectInput value={expiry} onChange={(e) => setExpiry(e.target.value as (typeof EXPIRY_OPTIONS)[number]["value"])}>
+              {EXPIRY_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </SelectInput>
+          </Field>
+        </div>
+        <p className="max-w-[72ch] font-text text-xs text-ash">
+          Read only tokens can search and look. Read and write tokens can also publish or reject what the public sends,
+          edit events and places, and merge duplicate places. History records every change under your name.
+        </p>
+        <AdminButton type="submit" variant="ink" disabled={name.trim() === ""} busy={pending} busyLabel="Making the token">
+          Make token
+        </AdminButton>
+      </form>
+    </Section>
   );
 }
 
-const STATUS_BADGE = {
-  active: { label: "Active", variant: "success" },
-  expired: { label: "Expired", variant: "secondary" },
-  revoked: { label: "Revoked", variant: "secondary" },
-} as const;
+function tokenMeta(t: ApiTokenRow): string {
+  return [
+    t.access === "WRITE" ? "Read and write" : "Read only",
+    `starts with ${t.prefix}`,
+    `made by ${t.owner} on ${t.created}`,
+    t.lastUsed ? `last used ${t.lastUsed}` : "never used",
+    t.status === "revoked" ? null : t.expires ? `${t.status === "expired" ? "stopped" : "stops"} working on ${t.expires}` : "never stops working",
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
 
+/** Make a token, copy it once, and see or revoke the ones that exist. */
 export function ApiTokensManager({ tokens, mcpUrl }: { tokens: ApiTokenRow[]; mcpUrl: string }) {
   const router = useRouter();
+  const announce = useAnnounce();
   const [newToken, setNewToken] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<ApiTokenRow | null>(null);
   const [pending, startTransition] = useTransition();
@@ -183,7 +191,9 @@ export function ApiTokensManager({ tokens, mcpUrl }: { tokens: ApiTokenRow[]; mc
           toast.error(result.error);
           return;
         }
-        toast.success(`Revoked ${revoking.name}.`);
+        const message = `Revoked ${revoking.name}.`;
+        toast.success(message);
+        announce(message);
         setRevoking(null);
         router.refresh();
       } catch (err) {
@@ -193,66 +203,50 @@ export function ApiTokensManager({ tokens, mcpUrl }: { tokens: ApiTokenRow[]; mc
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       {newToken ? (
         <NewTokenPanel token={newToken} mcpUrl={mcpUrl} onDone={() => setNewToken(null)} />
       ) : (
-        <CreateTokenForm onCreated={setNewToken} />
+        <CreateTokenForm
+          onCreated={(token) => {
+            setNewToken(token);
+            announce("Token made. Copy it now: it is shown only once.");
+          }}
+        />
       )}
 
-      {tokens.length === 0 ? (
-        <EmptyState
-          icon={Bot}
-          title="No API tokens yet"
-          description="Create a token above, then add the MCP server to Claude with the command shown."
-        />
-      ) : (
-        <AdminTable>
-          <AdminTableHead>
-            <th className="p-3">Name</th>
-            <th className="p-3">Token</th>
-            <th className="p-3">Access</th>
-            <th className="p-3">Owner</th>
-            <th className="p-3">Created</th>
-            <th className="p-3">Last used</th>
-            <th className="p-3">Expires</th>
-            <th className="p-3">Status</th>
-            <th className="p-3" />
-          </AdminTableHead>
-          <AdminTableBody>
-            {tokens.map((t) => {
-              const status = STATUS_BADGE[t.status];
-              return (
-                <tr key={t.id} className={cn(t.status !== "active" && "text-muted-foreground")}>
-                  <td className="p-3 font-medium">{t.name}</td>
-                  <td className="p-3 font-mono text-xs">{t.prefix}…</td>
-                  <td className="p-3">{t.access === "WRITE" ? "Read and write" : "Read only"}</td>
-                  <td className="p-3">{t.owner}</td>
-                  <td className="p-3 whitespace-nowrap">{t.created}</td>
-                  <td className="p-3 whitespace-nowrap">{t.lastUsed ?? "Never"}</td>
-                  <td className="p-3 whitespace-nowrap">{t.expires ?? "Never"}</td>
-                  <td className="p-3">
-                    <Badge variant={status.variant}>{status.label}</Badge>
-                  </td>
-                  <td className="p-3 text-right">
-                    {t.status === "active" && (
-                      <Button type="button" variant="outline" size="sm" onClick={() => setRevoking(t)}>
-                        Revoke
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </AdminTableBody>
-        </AdminTable>
-      )}
+      <Section id="tokens" title="Tokens">
+        {tokens.length === 0 ? (
+          <Empty className="py-2" detail="Make one above, then add the server to Claude with the command shown.">
+            There are no API tokens yet.
+          </Empty>
+        ) : (
+          <List label="Tokens">
+            {tokens.map((t) => (
+              <StaticRow
+                key={t.id}
+                title={t.name}
+                muted={t.status !== "active"}
+                meta={<span className="tabular-nums">{tokenMeta(t)}</span>}
+                status={<span className={cn("font-text text-sm font-medium", STATUS[t.status].className)}>{STATUS[t.status].label}</span>}
+                action={
+                  t.status === "active" ? (
+                    <AdminButton variant="danger-outline" size="sm" onClick={() => setRevoking(t)} aria-haspopup="dialog">
+                      Revoke<span className="sr-only"> {t.name}</span>
+                    </AdminButton>
+                  ) : undefined
+                }
+              />
+            ))}
+          </List>
+        )}
+      </Section>
 
       <ConfirmDialog
         open={revoking !== null}
         onOpenChange={(open) => !open && setRevoking(null)}
-        title={`Revoke ${revoking?.name ?? "token"}?`}
-        description="Any client using this token loses access immediately. This cannot be undone."
+        title={`Revoke ${revoking?.name ?? "this token"}?`}
+        description="Anything using it loses access at once. This cannot be undone."
         confirmLabel="Revoke token"
         variant="destructive"
         pending={pending}

@@ -1,24 +1,23 @@
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth-utils";
-import { AdminVendorForm } from "@/components/admin/vendor-form";
 import { getListingCommunityBadgeOptions } from "@/lib/listing-community-badges";
-import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { EMPTY_VENDOR } from "@/lib/vendors/admin-input";
+import { vendorCategories } from "@/lib/vendors/categories";
+import { AdminVendorForm } from "@/components/admin/vendor-form";
 
-export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "New vendor" };
 
 export default async function NewVendorPage() {
   await requireAdmin();
-  const listingCommunityBadgeOptions = await getListingCommunityBadgeOptions();
-
+  const [badgeOptions, categories] = await Promise.all([getListingCommunityBadgeOptions(), vendorCategories()]);
   return (
-    <div className="max-w-[1600px] space-y-6">
-      <AdminPageHeader
-        title="Create Vendor"
-        breadcrumbs={[
-          { label: "Vendors", href: "/admin/vendors" },
-          { label: "New vendor" },
-        ]}
-      />
-      <AdminVendorForm listingCommunityBadgeOptions={listingCommunityBadgeOptions} />
-    </div>
+    <AdminVendorForm
+      vendor={null}
+      initial={EMPTY_VENDOR}
+      initialOwner={null}
+      badgeOptions={badgeOptions.map((b) => ({ id: b.id, name: b.name, description: b.description }))}
+      categories={categories}
+      eventsAt={null}
+    />
   );
 }

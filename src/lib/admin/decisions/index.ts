@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { eventOrigin, importCohorts } from "@/lib/events/origin";
 import { eventLocalDates, hasEnded, readiness as readinessOf, type Readiness } from "@/lib/events/readiness";
 import { findTwins, placeGroupIndex } from "@/lib/events/twins";
-import { findDuplicateGroups } from "@/lib/venues/match";
+import { findDuplicateGroups, placeMemosOf } from "@/lib/venues/match";
 import { addDays, dateColumnToIso, formatWeekendSpan, pacificDate, saturdayOf, startOfPacificDay } from "../format";
 import { localDayName } from "../local-days";
 import { AREAS, areaOf } from "../regions";
@@ -92,7 +92,7 @@ function buildContext(input: DecisionInput): DecisionContext {
   const lastRailDay = addDays(saturdays[RAIL_WEEKS - 1], 1);
 
   const activeVenues = input.venues.filter((v) => !v.deletedAt);
-  const groups = findDuplicateGroups(activeVenues);
+  const groups = findDuplicateGroups(activeVenues, placeMemosOf(input.memos));
   const placeGroups = placeGroupIndex(groups);
   const duplicateVenueIds = new Set(groups.flat().map((v) => v.id));
 
@@ -325,7 +325,7 @@ export function buildDecisions(input: DecisionInput, registry: DecisionKindDefin
 /** Reads the rows decisions are made from: a handful of queries, no per-row reads. */
 export async function loadDecisionInput(now: Date): Promise<DecisionInput> {
   const startOfToday = startOfPacificDay(pacificDate(now));
-  const [events, importRows, venues, submissions, memos] = await Promise.all([
+  const [events, importRows, venues, submissions, memos, neighborhoods] = await Promise.all([
     db.event.findMany({
       where: {
         deletedAt: null,
@@ -360,7 +360,19 @@ export async function loadDecisionInput(now: Date): Promise<DecisionInput> {
     }),
     db.event.findMany({ select: { id: true, createdAt: true } }),
     db.venue.findMany({
-      select: { id: true, name: true, address: true, city: true, state: true, zip: true, lat: true, lng: true, neighborhood: true, deletedAt: true },
+      select: {
+        id: true,
+        name: true,
+        address: true,
+        city: true,
+        state: true,
+        zip: true,
+        lat: true,
+        lng: true,
+        neighborhood: true,
+        deletedAt: true,
+        _count: { select: { events: { where: { deletedAt: null } }, markets: { where: { deletedAt: null } } } },
+      },
     }),
     db.submission.findMany({
       where: { status: "PENDING" },
@@ -378,7 +390,11 @@ export async function loadDecisionInput(now: Date): Promise<DecisionInput> {
         venueCity: true,
       },
     }),
-    db.adminMemo.findMany({ where: { kind: { in: ["later", "not-same-event"] } }, select: { kind: true, key: true, until: true } }),
+    db.adminMemo.findMany({
+      where: { kind: { in: ["later", "not-same-event", "not-same-place", "same-place"] } },
+      select: { kind: true, key: true, until: true },
+    }),
+    db.neighborhood.findMany({ select: { slug: true, label: true, isActive: true } }),
   ]);
 
   // Exact email match: approveSubmissionWithEvent finds the account it notifies the same way.
@@ -433,8 +449,9 @@ export async function loadDecisionInput(now: Date): Promise<DecisionInput> {
       venueName: s.venueName,
       venueCity: s.venueCity,
     })),
-    venues,
+    venues: venues.map(({ _count, ...v }) => ({ ...v, uses: { events: _count.events, markets: _count.markets } })),
     memos,
+    neighborhoods,
   };
 }
 

@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   eventSlugProblem: vi.fn(),
   recordEventSlugChange: vi.fn(),
   resolveEventSlugRedirect: vi.fn(),
+  memoFindMany: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -48,6 +49,7 @@ vi.mock("@/lib/db", () => ({
       update: mocks.venueUpdate,
     },
     tag: { findMany: mocks.tagFindMany },
+    adminMemo: { findMany: mocks.memoFindMany },
     feature: { findMany: mocks.featureFindMany },
     $transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
       fn({ event: { update: mocks.txEventUpdate }, $queryRaw: mocks.txQueryRaw, auditLog: { create: vi.fn() } }),
@@ -135,6 +137,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.lookupVenue.mockResolvedValue({ status: "new", coords: { lat: 47.65, lng: -117.42 } });
   mocks.venueFindMany.mockResolvedValue([]);
+  mocks.memoFindMany.mockResolvedValue([]);
 });
 
 describe("tool gating", () => {
@@ -258,6 +261,30 @@ describe("search_venues", () => {
     expect(mocks.venueFindMany).toHaveBeenCalledWith(
       expect.objectContaining({ select: expect.objectContaining({ lat: true, lng: true }) })
     );
+  });
+});
+
+describe("find_duplicate_venues", () => {
+  const hall = (id: string) => ({
+    id,
+    name: "Grange Hall",
+    address: "1 Main St",
+    city: "Spokane",
+    state: "WA",
+    zip: "99201",
+    lat: null,
+    lng: null,
+    createdAt: new Date("2026-01-01T00:00:00Z"),
+    _count: { events: 0, markets: 0 },
+  });
+
+  it("leaves out places the owner kept apart as different places", async () => {
+    mocks.venueFindMany.mockResolvedValue([hall("a"), hall("b")]);
+    const before = await callTool("find_duplicate_venues", {});
+    expect(before).toMatchObject({ isError: false, data: [{ venues: [{ id: "a" }, { id: "b" }] }] });
+    mocks.memoFindMany.mockImplementation(async ({ where }: { where: { kind: string } }) => (where.kind === "not-same-place" ? [{ key: "a|b" }] : []));
+    const after = await callTool("find_duplicate_venues", {});
+    expect(after).toMatchObject({ isError: false, data: [] });
   });
 });
 

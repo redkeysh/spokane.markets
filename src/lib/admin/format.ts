@@ -181,3 +181,13 @@ export function formatTimestamp(instant: Date): string {
 export function formatWeekdayTime(instant: Date): string {
   return `${formatWeekday(pacificDate(instant))} ${formatTime(pacificTime(instant), { dense: true })}`;
 }
+
+/** "Saved just now", "Saved 2 min ago", "Saved 1 hr ago", else null (show the timestamp). */
+export function savedAgo(savedAt: number, now: number): string | null {
+  const minutes = Math.floor((now - savedAt) / 60_000);
+  if (minutes < 1) return "Saved just now";
+  if (minutes < 60) return `Saved ${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 12) return `Saved ${hours} hr ago`;
+  return null;
+}

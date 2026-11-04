@@ -1,314 +1,154 @@
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { formatDateRangeInTimezone, cn } from "@/lib/utils";
-import { DeleteButton, StatusButton } from "@/components/admin/action-buttons";
-import { AdminEventTableRow } from "@/components/admin/admin-event-table-row";
-import { Pagination } from "@/components/pagination";
-import { deleteEvent, restoreEvent } from "../actions";
-import Link from "next/link";
-import type { EventStatus } from "@prisma/client";
-import { parseAdminPagination, parseFlag, parseQuery, parseEnumParam } from "@/lib/admin/table-query";
-import { buildAdminEventsWhere, resolveAdminEventsTimeScope } from "@/lib/admin/events-query";
-import { AdminPageHeader } from "@/components/admin/admin-page-header";
-import { AdminTable } from "@/components/admin/admin-table";
+import { dateColumnToIso, pacificDate, startOfPacificDay } from "@/lib/admin/format";
 import {
-  buildAdminEventsOrderBy,
-  parseAdminEventsSort,
-  type AdminEventsSortField,
-} from "@/lib/admin/events-list-order";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+  buildEventsList,
+  buildEventsListWhere,
+  clearedFiltersHref,
+  emptyMessage,
+  eventsListHref,
+  eventsListQuery,
+  parseEventsListParams,
+  resultSummary,
+  type EventsListParams,
+  type ListSourceEvent,
+} from "@/lib/admin/events-query";
+import { getWeekendRail } from "@/lib/admin/weekends";
+import { hasEnded } from "@/lib/events/readiness";
+import { loadPlaceMemos } from "@/lib/venues/place-data";
+import { EventsScreen } from "@/components/admin/events-list/events-screen";
 
-export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Events" };
 
-const STATUS_TABS = [
-  { label: "All", value: "" },
-  { label: "Draft", value: "DRAFT" },
-  { label: "Pending Review", value: "PENDING" },
-  { label: "Published", value: "PUBLISHED" },
-  { label: "Rejected", value: "REJECTED" },
-  { label: "Cancelled", value: "CANCELLED" },
-] as const;
+/** More than any season holds; the list is filtered in memory after this. */
+const ROW_LIMIT = 3000;
 
-const statusVariant: Record<EventStatus, "info" | "warning" | "success" | "destructive" | "outline"> = {
-  DRAFT: "info",
-  PENDING: "warning",
-  PUBLISHED: "success",
-  REJECTED: "destructive",
-  CANCELLED: "destructive",
-};
+const LISTED = ["PENDING", "DRAFT", "PUBLISHED"] as const;
 
-const statusLabel: Record<EventStatus, string> = {
-  DRAFT: "Draft",
-  PENDING: "Pending Review",
-  PUBLISHED: "Published",
-  REJECTED: "Rejected",
-  CANCELLED: "Cancelled",
-};
-
-export default async function AdminEventsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{
-    status?: string;
-    page?: string;
-    limit?: string;
-    archived?: string;
-    past?: string;
-    q?: string;
-    sort?: string;
-    dir?: string;
-  }>;
-}) {
+export default async function AdminEventsPage({ searchParams }: { searchParams: Promise<EventsListParams> }) {
   await requireAdmin();
-
-  const params = await searchParams;
-  const statusFilter = parseEnumParam(
-    params.status,
-    ["DRAFT", "PENDING", "PUBLISHED", "REJECTED", "CANCELLED"] as const
-  );
-  const archived = parseFlag(params.archived);
-  const past = parseFlag(params.past);
-  const timeScope = resolveAdminEventsTimeScope({ archived, past });
-  const q = parseQuery(params.q);
-  const { page, limit } = parseAdminPagination(params);
-  const { sort, dir } = parseAdminEventsSort({
-    sort: params.sort,
-    dir: params.dir,
-    timeScope,
-  });
-
-  // Pin `now` once per request so count and findMany see the same cutoff.
+  const filters = parseEventsListParams(await searchParams);
   const now = new Date();
-  const where = buildAdminEventsWhere({ statusFilter, timeScope, q, now });
-  const orderBy = buildAdminEventsOrderBy({ sort, dir });
-  const [total, events] = await Promise.all([
-    db.event.count({ where }),
+  const today = pacificDate(now);
+  const startOfToday = startOfPacificDay(today);
+
+  const [rail, events, context, venues, importRows, memos, markets, tags, placeMemos] = await Promise.all([
+    getWeekendRail(now),
     db.event.findMany({
-      where,
-      include: { venue: { select: { name: true } } },
-      orderBy,
-      skip: (page - 1) * limit,
-      take: limit,
+      where: buildEventsListWhere(filters, now),
+      take: ROW_LIMIT,
+      orderBy: { startDate: "asc" },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        status: true,
+        deletedAt: true,
+        startDate: true,
+        endDate: true,
+        createdAt: true,
+        updatedAt: true,
+        imageUrl: true,
+        marketId: true,
+        market: { select: { name: true } },
+        venue: {
+          select: { id: true, name: true, address: true, city: true, state: true, zip: true, neighborhood: true, deletedAt: true },
+        },
+        scheduleDays: { select: { date: true, startTime: true, endTime: true, allDay: true } },
+        _count: { select: { tags: true } },
+        submittedBy: {
+          select: { name: true, email: true, role: true, notificationPreference: { select: { organizerAlertsEnabled: true } } },
+        },
+        submissionFrom: { select: { id: true } },
+      },
     }),
+    db.event.findMany({
+      where: { deletedAt: null, status: { in: [...LISTED] }, endDate: { gte: startOfToday } },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        startDate: true,
+        endDate: true,
+        venueId: true,
+        marketId: true,
+        scheduleDays: { select: { date: true } },
+      },
+    }),
+    db.venue.findMany({
+      select: { id: true, name: true, address: true, city: true, state: true, zip: true, lat: true, lng: true, deletedAt: true },
+      orderBy: { name: "asc" },
+    }),
+    db.event.findMany({ select: { id: true, createdAt: true } }),
+    db.adminMemo.findMany({ where: { kind: "not-same-event" }, select: { key: true } }),
+    db.market.findMany({ where: { deletedAt: null }, select: { id: true, name: true, venue: { select: { city: true } } }, orderBy: { name: "asc" } }),
+    db.tag.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    loadPlaceMemos(),
   ]);
-  const totalPages = Math.ceil(total / limit);
 
-  function buildEventsHref(overrides: {
-    status?: string;
-    page?: string;
-    archived?: string;
-    past?: string;
-    q?: string;
-    sort?: string;
-    dir?: string;
-    limit?: string;
-  }) {
-    const next = {
-      status: statusFilter,
-      page: page > 1 ? String(page) : undefined,
-      archived: archived ? "1" : undefined,
-      past: past ? "1" : undefined,
-      q: q || undefined,
-      sort,
-      dir,
-      limit: params.limit,
-      ...overrides,
-    };
-    const qp = new URLSearchParams();
-    if (next.status) qp.set("status", next.status);
-    if (next.page) qp.set("page", next.page);
-    if (next.archived) qp.set("archived", next.archived);
-    if (next.past) qp.set("past", next.past);
-    if (next.q) qp.set("q", next.q);
-    if (next.sort) qp.set("sort", next.sort);
-    if (next.dir) qp.set("dir", next.dir);
-    if (next.limit) qp.set("limit", next.limit);
-    const qs = qp.toString();
-    return qs ? `/admin/events?${qs}` : "/admin/events";
-  }
+  const rows: ListSourceEvent[] = events.map((e) => ({
+    id: e.id,
+    title: e.title,
+    slug: e.slug,
+    status: e.status,
+    deletedAt: e.deletedAt,
+    startDate: e.startDate,
+    endDate: e.endDate,
+    createdAt: e.createdAt,
+    updatedAt: e.updatedAt,
+    scheduleDays: e.scheduleDays.map((d) => ({ date: dateColumnToIso(d.date), startTime: d.startTime, endTime: d.endTime, allDay: d.allDay })),
+    imageUrl: e.imageUrl,
+    tagCount: e._count.tags,
+    marketId: e.marketId,
+    marketName: e.market?.name ?? null,
+    venue: e.venue,
+    submittedBy: e.submittedBy
+      ? {
+          name: e.submittedBy.name?.trim() || e.submittedBy.email.split("@")[0],
+          role: e.submittedBy.role,
+          alertsOn: e.submittedBy.notificationPreference?.organizerAlertsEnabled !== false,
+        }
+      : null,
+    fromSubmission: !!e.submissionFrom,
+  }));
 
-  function buildSortHref(column: AdminEventsSortField) {
-    const nextDir = sort === column && dir === "asc" ? "desc" : "asc";
-    return buildEventsHref({ sort: column, dir: nextDir, page: "1" });
-  }
+  const upcoming = context
+    .map((e) => ({ ...e, scheduleDays: e.scheduleDays.map((d) => ({ date: dateColumnToIso(d.date) })) }))
+    .filter((e) => !hasEnded(e, today));
 
-  function renderSortIcon(column: AdminEventsSortField) {
-    if (sort !== column) return <ArrowUpDown className="h-3.5 w-3.5" aria-hidden />;
-    return dir === "asc" ? (
-      <ArrowUp className="h-3.5 w-3.5" aria-hidden />
-    ) : (
-      <ArrowDown className="h-3.5 w-3.5" aria-hidden />
-    );
-  }
+  const result = buildEventsList(
+    {
+      now,
+      events: rows,
+      context: upcoming,
+      venues,
+      importRows,
+      notSameEvent: memos.map((m) => m.key),
+      placeMemos,
+      rail: rail.weeks,
+    },
+    filters
+  );
+
+  const empty = emptyMessage(filters, { weekLabel: result.weekLabel, sourceOptions: result.sourceOptions });
 
   return (
-    <div className="space-y-6">
-      <AdminPageHeader
-        title="Events"
-        actions={
-          <>
-            <Button asChild variant={archived ? "default" : "outline"}>
-              <Link href={archived ? buildEventsHref({ archived: undefined, page: "1" }) : buildEventsHref({ archived: "1", page: "1" })}>
-                {archived ? "Hide all records" : "Show all records"}
-              </Link>
-            </Button>
-            <Button asChild>
-              <Link href="/admin/events/new">Create Event</Link>
-            </Button>
-          </>
-        }
-      />
-
-      <div className="flex gap-2 border-b border-border pb-2">
-        <Link
-          href={buildEventsHref({ archived: undefined, past: undefined, page: "1" })}
-          className={cn(
-            "px-3 py-1.5 text-sm rounded-md transition-colors",
-            !archived && timeScope === "active"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-muted"
-          )}
-        >
-          Active
-        </Link>
-        <Link
-          href={buildEventsHref({ archived: undefined, past: "1", page: "1" })}
-          className={cn(
-            "px-3 py-1.5 text-sm rounded-md transition-colors",
-            !archived && timeScope === "past"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-muted"
-          )}
-        >
-          Past
-        </Link>
-      </div>
-
-      <form className="flex items-center gap-2">
-        <Input name="q" defaultValue={q} placeholder="Search title, slug, venue..." />
-        {statusFilter && <input type="hidden" name="status" value={statusFilter} />}
-        {archived && <input type="hidden" name="archived" value="1" />}
-        {past && !archived && <input type="hidden" name="past" value="1" />}
-        {params.sort && <input type="hidden" name="sort" value={params.sort} />}
-        {params.dir && <input type="hidden" name="dir" value={params.dir} />}
-        {params.limit && <input type="hidden" name="limit" value={params.limit} />}
-        <Button type="submit" variant="outline">Search</Button>
-        <Button type="button" variant="outline" asChild>
-          <Link
-            href={`/api/admin/data/export/entity?entity=events${statusFilter ? `&status=${statusFilter}` : ""}${archived ? "&archived=1" : ""}${past && !archived ? "&past=1" : ""}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-          >
-            Export CSV
-          </Link>
-        </Button>
-      </form>
-
-      <div className="flex gap-2 border-b border-border pb-2">
-        {STATUS_TABS.map((tab) => (
-          <Link
-            key={tab.value}
-            href={buildEventsHref({ status: tab.value || undefined, page: "1" })}
-            className={cn(
-              "px-3 py-1.5 text-sm rounded-md transition-colors",
-              (statusFilter ?? "") === tab.value
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted"
-            )}
-          >
-            {tab.label}
-          </Link>
-        ))}
-      </div>
-
-      <AdminTable>
-          <thead className="bg-muted/50">
-            <tr>
-              <th className="text-left p-3 font-medium">
-                <Link href={buildSortHref("title")} className="inline-flex items-center gap-1.5 hover:text-foreground">
-                  Title
-                  {renderSortIcon("title")}
-                </Link>
-              </th>
-              <th className="text-left p-3 font-medium">
-                <Link href={buildSortHref("startDate")} className="inline-flex items-center gap-1.5 hover:text-foreground">
-                  Date
-                  {renderSortIcon("startDate")}
-                </Link>
-              </th>
-              <th className="text-left p-3 font-medium">
-                <Link href={buildSortHref("venue")} className="inline-flex items-center gap-1.5 hover:text-foreground">
-                  Venue
-                  {renderSortIcon("venue")}
-                </Link>
-              </th>
-              <th className="text-left p-3 font-medium">
-                <Link href={buildSortHref("status")} className="inline-flex items-center gap-1.5 hover:text-foreground">
-                  Status
-                  {renderSortIcon("status")}
-                </Link>
-              </th>
-              <th className="text-right p-3 font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {events.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="p-6 text-center text-muted-foreground">
-                  No events found.
-                </td>
-              </tr>
-            ) : (
-              events.map((event) => (
-                <AdminEventTableRow
-                  key={event.id}
-                  href={`/admin/events/${event.id}/edit`}
-                >
-                  <td className="p-3 font-medium">{event.title}</td>
-                  <td className="p-3 text-muted-foreground">
-                    {formatDateRangeInTimezone(event.startDate, event.endDate, null)}
-                  </td>
-                  <td className="p-3 text-muted-foreground">{event.venue.name}</td>
-                  <td className="p-3">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={statusVariant[event.status]}>
-                        {statusLabel[event.status]}
-                      </Badge>
-                      {event.deletedAt && <Badge variant="secondary">Archived</Badge>}
-                      {!event.deletedAt && event.endDate < now && (
-                        <Badge variant="secondary">Past</Badge>
-                      )}
-                    </div>
-                  </td>
-                  <td className="p-3 text-right">
-                    <div className="flex items-center justify-end gap-2" data-row-action>
-                    {event.deletedAt ? (
-                      <StatusButton
-                        action={restoreEvent.bind(null, event.id)}
-                        label="Restore"
-                        variant="outline"
-                      />
-                    ) : (
-                      <DeleteButton
-                        action={deleteEvent.bind(null, event.id)}
-                        title="Archive event"
-                        description={`Archive "${event.title}"? You can restore it later from archived events.`}
-                        label="Archive"
-                        confirmLabel="Archive"
-                        pendingLabel="Archiving..."
-                        iconOnly
-                        iconName="recycle"
-                      />
-                    )}
-                    </div>
-                  </td>
-                </AdminEventTableRow>
-              ))
-            )}
-          </tbody>
-      </AdminTable>
-      <Pagination page={page} totalPages={totalPages} totalItems={total} limit={limit} />
-    </div>
+    <EventsScreen
+      filters={filters}
+      query={eventsListQuery(filters)}
+      result={result}
+      summary={resultSummary(result, filters.view)}
+      empty={{
+        text: empty.text,
+        clearHref: empty.clear === "search" ? eventsListHref(filters, { q: "" }) : empty.clear ? clearedFiltersHref(filters) : null,
+        clearLabel: empty.clear === "search" ? "Clear search" : "Clear filters",
+      }}
+      markets={markets.map((m) => ({ value: m.id, label: m.name, detail: m.venue?.city ?? undefined }))}
+      places={venues
+        .filter((v) => !v.deletedAt)
+        .map((v) => ({ value: v.id, label: v.name, detail: [v.address, v.city].filter(Boolean).join(", ") }))}
+      tags={tags.map((t) => ({ value: t.id, label: t.name }))}
+    />
   );
 }

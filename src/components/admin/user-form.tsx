@@ -1,21 +1,17 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { adminCreateUserSchema, type AdminCreateUserInput } from "@/lib/validations";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
-
-const ROLES = [
-  { value: "USER", label: "User" },
-  { value: "VENDOR", label: "Vendor" },
-  { value: "ORGANIZER", label: "Organizer" },
-  { value: "ADMIN", label: "Admin" },
-] as const;
+import { useRouter } from "next/navigation";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import { adminCreateUserSchema, type AdminCreateUserInput } from "@/lib/validations";
+import { AdminButton, AdminLinkButton } from "@/components/admin/kit/button";
+import { Field, FieldRow } from "@/components/admin/kit/field";
+import { LeavePrompt } from "@/components/admin/kit/save-bar";
+import { useLeavePrompt } from "@/components/admin/shell/leave-guard";
+import { FormError, SelectInput, TextInput } from "@/components/admin/rare/controls";
+import { ROLE_ORDER, ROLE_WORDS } from "@/components/admin/user-words";
 
 export function UserForm() {
   const router = useRouter();
@@ -25,7 +21,8 @@ export function UserForm() {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    control,
+    formState: { errors, isDirty },
   } = useForm<AdminCreateUserInput>({
     resolver: zodResolver(adminCreateUserSchema),
     defaultValues: {
@@ -37,7 +34,12 @@ export function UserForm() {
     },
   });
 
+  const role = useWatch({ control, name: "role" });
+  const [made, setMade] = useState(false);
+  const { leaving, stay, go } = useLeavePrompt(isDirty && !made, "/admin/users");
+
   const onSubmit = async (data: AdminCreateUserInput) => {
+    const then = leaving;
     setSubmitting(true);
     setError(null);
 
@@ -54,85 +56,69 @@ export function UserForm() {
         if (body.error?.email) {
           throw new Error(body.error.email[0]);
         }
-        throw new Error(body.error?.message || "Failed to create user");
+        throw new Error(body.error?.message || "Could not make the account.");
       }
 
-      router.push("/admin/users");
-      router.refresh();
+      toast.success(`Made an account for ${data.email}.`);
+      setMade(true);
+      if (then) go(then);
+      else router.replace("/admin/users");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create user");
+      setError(err instanceof Error ? err.message : "Could not make the account.");
+      stay();
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-md">
-      {error && (
-        <div
-          role="alert"
-          className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-        >
-          {error}
-        </div>
-      )}
-
-      <div className="space-y-2">
-        <Label htmlFor="name">Name</Label>
-        <Input id="name" type="text" placeholder="Jane Doe" {...register("name")} />
-        {errors.name && (
-          <p className="text-sm text-destructive">{errors.name.message}</p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" type="email" placeholder="jane@example.com" {...register("email")} />
-        {errors.email && (
-          <p className="text-sm text-destructive">{errors.email.message}</p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <Input id="password" type="password" placeholder="••••••••" {...register("password")} />
-        {errors.password && (
-          <p className="text-sm text-destructive">{errors.password.message}</p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="confirmPassword">Confirm password</Label>
-        <Input
-          id="confirmPassword"
-          type="password"
-          placeholder="••••••••"
-          {...register("confirmPassword")}
-        />
-        {errors.confirmPassword && (
-          <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="role">Role</Label>
-        <Select id="role" {...register("role")}>
-          {ROLES.map((r) => (
-            <option key={r.value} value={r.value}>
-              {r.label}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+      <Field id="name" label="Name" required error={errors.name?.message}>
+        <TextInput autoComplete="off" {...register("name")} />
+      </Field>
+      <Field id="email" label="Email" required error={errors.email?.message}>
+        <TextInput type="email" autoComplete="off" {...register("email")} />
+      </Field>
+      <FieldRow>
+        <Field id="password" label="Password" required error={errors.password?.message}>
+          <TextInput type="password" autoComplete="new-password" {...register("password")} />
+        </Field>
+        <Field id="confirmPassword" label="Password again" required error={errors.confirmPassword?.message}>
+          <TextInput type="password" autoComplete="new-password" {...register("confirmPassword")} />
+        </Field>
+      </FieldRow>
+      <Field id="role" label="Role" help={role ? ROLE_WORDS[role].help : undefined}>
+        <SelectInput className="w-48" {...register("role")}>
+          {ROLE_ORDER.map((r) => (
+            <option key={r} value={r}>
+              {ROLE_WORDS[r].one}
             </option>
           ))}
-        </Select>
-      </div>
+        </SelectInput>
+      </Field>
 
-      <div className="flex gap-3">
-        <Button type="submit" disabled={submitting}>
-          {submitting ? "Creating…" : "Create user"}
-        </Button>
-        <Button type="button" variant="outline" onClick={() => router.back()}>
-          Cancel
-        </Button>
-      </div>
+      <FormError>{error}</FormError>
+
+      {leaving ? (
+        <LeavePrompt
+          onStay={stay}
+          onDiscard={() => go(leaving)}
+          onSave={handleSubmit(onSubmit, stay)}
+          saving={submitting}
+          saveLabel="Make the account"
+          busyLabel="Making the account"
+          className="border-t border-seam pt-4"
+        />
+      ) : (
+        <div className="flex flex-wrap items-center gap-2 border-t border-seam pt-4">
+          <AdminButton type="submit" variant="ink" busy={submitting} busyLabel="Making the account">
+            Make the account
+          </AdminButton>
+          <AdminLinkButton href="/admin/users" variant="quiet">
+            Cancel
+          </AdminLinkButton>
+        </div>
+      )}
     </form>
   );
 }

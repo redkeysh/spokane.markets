@@ -1,11 +1,11 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ADMIN_NAV, PHONE_NAV_KEYS, activeNavKey, hasWeekChips, railVariant, weekHref } from "./nav";
+import { ADMIN_NAV, PHONE_NAV_KEYS, activeNavKey, hasWeekChips, phoneNavKey, railVariant, weekHref } from "./nav";
 
 describe("ADMIN_NAV", () => {
   it("has the top bar items in order", () => {
-    expect(ADMIN_NAV.map((i) => i.label)).toEqual(["To do", "Events", "Markets", "Venues", "Vendors", "Site"]);
+    expect(ADMIN_NAV.map((i) => i.label)).toEqual(["To do", "Events", "Markets", "Venues", "Vendors", "Site", "More"]);
   });
 
   it("links every item and phone item to a page that exists", () => {
@@ -49,6 +49,21 @@ describe("activeNavKey", () => {
     expect(activeNavKey("/admin/users")).toBe("more");
     expect(activeNavKey("/admin/audit-log")).toBe("more");
     expect(activeNavKey("/events")).toBeNull();
+  });
+});
+
+describe("phoneNavKey", () => {
+  it("highlights More for screens that live under More on phones", () => {
+    expect(phoneNavKey("/admin/vendors")).toBe("more");
+    expect(phoneNavKey("/admin/site")).toBe("more");
+    expect(phoneNavKey("/admin/marketing/asset-studio")).toBe("more");
+    expect(phoneNavKey("/admin/users")).toBe("more");
+  });
+
+  it("keeps the phone items and nothing outside the admin", () => {
+    expect(phoneNavKey("/admin")).toBe("todo");
+    expect(phoneNavKey("/admin/venues/v1")).toBe("venues");
+    expect(phoneNavKey("/events")).toBeNull();
   });
 });
 

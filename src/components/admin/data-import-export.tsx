@@ -1,23 +1,36 @@
 "use client";
 
 import * as React from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Upload, Download, FileJson, FileSpreadsheet } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { AdminButton } from "@/components/admin/kit/button";
+import { Section } from "@/components/admin/kit/field";
+import { FormError } from "@/components/admin/rare/controls";
+import { useAnnounce } from "@/components/admin/shell/live-region";
+import { importReport, type ImportReportInput } from "./data-import-report";
 
+type Format = "json" | "csv";
+
+const FORMATS: { value: Format; label: string; help: string }[] = [
+  { value: "json", label: "JSON", help: "Places, markets and events together." },
+  { value: "csv", label: "CSV", help: "Places only: name, address, city, state, zip, lat, lng." },
+];
+
+const MAX_ERRORS_SHOWN = 5;
+
+/** Import from a file, and export a backup of every event, market and place. */
 export function DataImportExport() {
+  const announce = useAnnounce();
+  const fileRef = React.useRef<HTMLInputElement>(null);
+  const router = useRouter();
   const [importFile, setImportFile] = React.useState<File | null>(null);
-  const [importFormat, setImportFormat] = React.useState<"json" | "csv">("json");
+  const [importFormat, setImportFormat] = React.useState<Format>("json");
   const [importing, setImporting] = React.useState(false);
-  const [importResult, setImportResult] = React.useState<{
-    venuesCreated: number;
-    marketsCreated: number;
-    eventsCreated: number;
-    errors: string[];
-  } | null>(null);
+  const [importResult, setImportResult] = React.useState<ImportReportInput | null>(null);
+  const [importFailure, setImportFailure] = React.useState<string | null>(null);
   const [exporting, setExporting] = React.useState(false);
+  const [exportFailure, setExportFailure] = React.useState<string | null>(null);
   const [exportResult, setExportResult] = React.useState<{
     url: string;
     filename: string;
@@ -29,25 +42,23 @@ export function DataImportExport() {
     if (!importFile) return;
     setImporting(true);
     setImportResult(null);
+    setImportFailure(null);
     try {
       const formData = new FormData();
       formData.set("file", importFile);
       formData.set("format", importFormat);
-      const res = await fetch("/api/admin/data/import", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Import failed");
-      setImportResult(data);
+      const res = await fetch("/api/admin/data/import", { method: "POST", body: formData });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "The import did not run.");
+      setImportResult(data as ImportReportInput);
       setImportFile(null);
+      if (fileRef.current) fileRef.current.value = "";
+      announce(`Import finished. ${importReport(data as ImportReportInput).made}`);
+      router.refresh();
     } catch (err) {
-      setImportResult({
-        venuesCreated: 0,
-        marketsCreated: 0,
-        eventsCreated: 0,
-        errors: [err instanceof Error ? err.message : "Import failed"],
-      });
+      const message = err instanceof Error ? err.message : "The import did not run.";
+      setImportFailure(message);
+      announce(message);
     } finally {
       setImporting(false);
     }
@@ -56,134 +67,130 @@ export function DataImportExport() {
   async function handleExport() {
     setExporting(true);
     setExportResult(null);
+    setExportFailure(null);
     try {
       const res = await fetch("/api/admin/data/export", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Export failed");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "The backup was not made.");
       setExportResult(data);
-      if (data.url) {
-        window.open(data.url, "_blank");
-      }
+      toast.success(`Saved ${data.filename}.`);
+      if (data.url) window.open(data.url, "_blank");
     } catch (err) {
-      setExportResult({
-        url: "",
-        filename: "",
-        counts: { venues: 0, markets: 0, events: 0 },
-      });
-      alert(err instanceof Error ? err.message : "Export failed");
+      setExportFailure(err instanceof Error ? err.message : "The backup was not made.");
     } finally {
       setExporting(false);
     }
   }
 
-  return (
-    <div className="grid gap-6 md:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
-            Import
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            JSON: full structure with venues, markets, events. CSV: venues only (name, address, city, state, zip, lat, lng).
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form onSubmit={handleImport} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Format</Label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="format"
-                    value="json"
-                    checked={importFormat === "json"}
-                    onChange={() => setImportFormat("json")}
-                  />
-                  <FileJson className="h-4 w-4" />
-                  JSON
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="format"
-                    value="csv"
-                    checked={importFormat === "csv"}
-                    onChange={() => setImportFormat("csv")}
-                  />
-                  <FileSpreadsheet className="h-4 w-4" />
-                  CSV (venues)
-                </label>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="import-file">File</Label>
-              <Input
-                id="import-file"
-                type="file"
-                accept={importFormat === "json" ? ".json" : ".csv"}
-                onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
-              />
-            </div>
-            <Button type="submit" disabled={!importFile || importing}>
-              {importing ? "Importing…" : "Import"}
-            </Button>
-          </form>
-          {importResult && (
-            <div className="rounded-lg border border-border p-3 text-sm space-y-1">
-              <p>
-                Created: {importResult.venuesCreated} venues, {importResult.marketsCreated} markets, {importResult.eventsCreated} events
-              </p>
-              {importResult.errors.length > 0 && (
-                <div className="text-destructive">
-                  <p className="font-medium">Errors:</p>
-                  <ul className="list-disc list-inside">
-                    {importResult.errors.slice(0, 5).map((e, i) => (
-                      <li key={i}>{e}</li>
-                    ))}
-                    {importResult.errors.length > 5 && (
-                      <li>…and {importResult.errors.length - 5} more</li>
-                    )}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+  const report = importResult ? importReport(importResult) : null;
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Download className="h-5 w-5" />
-            Export / Backup
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Export all events, markets, and venues to a JSON file. Saved to uploads/backups/ on the host.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Button onClick={handleExport} disabled={exporting}>
-            {exporting ? "Exporting…" : "Export Backup"}
-          </Button>
-          {exportResult && exportResult.url && (
-            <div className="rounded-lg border border-border p-3 text-sm space-y-1">
-              <p>
-                Exported {exportResult.counts.venues} venues, {exportResult.counts.markets} markets, {exportResult.counts.events} events
-              </p>
-              <a
-                href={exportResult.url}
-                target="_blank"
-                rel="noreferrer"
-                className="text-primary hover:underline"
-              >
-                Download {exportResult.filename}
-              </a>
+  return (
+    <div className="space-y-10">
+      <Section id="import" title="Import">
+        <form onSubmit={handleImport} className="space-y-4">
+          <fieldset>
+            <legend className="font-text text-sm font-medium text-basalt">File type</legend>
+            <div className="mt-2 space-y-2">
+              {FORMATS.map((format) => (
+                <label key={format.value} className="flex cursor-pointer items-start gap-2 font-text text-sm text-basalt">
+                  <input
+                    type="radio"
+                    name="format"
+                    value={format.value}
+                    checked={importFormat === format.value}
+                    onChange={() => setImportFormat(format.value)}
+                    className="mt-0.5 size-4 shrink-0 cursor-pointer accent-basalt"
+                  />
+                  <span>
+                    <span className="block font-medium">{format.label}</span>
+                    <span className="block text-xs text-ash">{format.help}</span>
+                  </span>
+                </label>
+              ))}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </fieldset>
+          <div>
+            <label htmlFor="import-file" className="block font-text text-sm font-medium text-basalt">
+              File
+            </label>
+            <input
+              ref={fileRef}
+              id="import-file"
+              type="file"
+              accept={importFormat === "json" ? ".json,application/json" : ".csv,text/csv"}
+              onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+              className="mt-1.5 block w-full max-w-md font-text text-sm text-basalt file:mr-3 file:h-9 file:cursor-pointer file:rounded-md file:border file:border-seam-strong file:bg-sheet file:px-3 file:font-text file:text-sm file:font-medium file:text-basalt hover:file:bg-hover"
+            />
+          </div>
+          <AdminButton type="submit" variant="ink" disabled={!importFile} busy={importing} busyLabel="Importing">
+            Import
+          </AdminButton>
+        </form>
+
+        <FormError>{importFailure}</FormError>
+        {report && importResult && (
+          <div className="max-w-[72ch] space-y-2 border-t border-seam pt-4 font-text text-sm text-basalt" role="status">
+            <p className="tabular-nums">{report.made}</p>
+            {report.removed && <p className="text-ash">{report.removed}</p>}
+            {report.needsHours && (
+              <div>
+                <p>{report.needsHours}</p>
+                <ul role="list" className="mt-1 space-y-0.5 text-ash">
+                  {importResult.eventsNeedingSchedule?.slice(0, 10).map((e) => (
+                    <li key={`${e.row}-${e.slug}`}>
+                      {e.title}, row <span className="tabular-nums">{e.row}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {report.errors && (
+              <div>
+                <p className="text-ponderosa">{report.errors}</p>
+                <ul role="list" className="mt-1 space-y-0.5 text-ash">
+                  {importResult.errors.slice(0, MAX_ERRORS_SHOWN).map((message, i) => (
+                    <li key={i}>{message}</li>
+                  ))}
+                  {importResult.errors.length > MAX_ERRORS_SHOWN && (
+                    <li>And {importResult.errors.length - MAX_ERRORS_SHOWN} more.</li>
+                  )}
+                </ul>
+              </div>
+            )}
+            {importResult.eventsCreated > 0 && (
+              <Link href="/admin" className="inline-flex min-h-6 items-center rounded-sm text-lilac underline-offset-4 hover:underline">
+                Decide on the new events in To do
+              </Link>
+            )}
+          </div>
+        )}
+      </Section>
+
+      <Section id="export" title="Export">
+        <p className="max-w-[72ch] font-text text-sm text-ash">
+          Saves every event, market and place to a JSON file on the server and opens it, so you can keep a copy.
+        </p>
+        <div>
+          <AdminButton variant="outline" onClick={handleExport} busy={exporting} busyLabel="Exporting">
+            Export a backup
+          </AdminButton>
+        </div>
+        <FormError>{exportFailure}</FormError>
+        {exportResult?.url && (
+          <p className="max-w-[72ch] font-text text-sm text-basalt tabular-nums" role="status">
+            Saved {exportResult.counts.events} events, {exportResult.counts.markets} markets and{" "}
+            {exportResult.counts.venues} places.{" "}
+            <a
+              href={exportResult.url}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-sm text-lilac underline-offset-4 hover:underline"
+            >
+              Download {exportResult.filename}
+            </a>
+          </p>
+        )}
+      </Section>
     </div>
   );
 }

@@ -12,6 +12,11 @@ const mocks = vi.hoisted(() => ({
   memoFindMany: vi.fn(),
   memoDeleteMany: vi.fn(),
   memoUpdateMany: vi.fn(),
+  venueFindMany: vi.fn(),
+  venueUpdate: vi.fn(),
+  venueUpdateMany: vi.fn(),
+  neighborhoodFindMany: vi.fn(),
+  neighborhoodUpdateMany: vi.fn(),
   revalidatePath: vi.fn(),
   eventSlugProblem: vi.fn(async (): Promise<string | null> => null),
   lockEventForSlugChange: vi.fn(async () => ({ slug: "new-name", status: "PUBLISHED" })),
@@ -31,8 +36,9 @@ vi.mock("@/lib/db", () => {
     eventScheduleDay: { deleteMany: vi.fn(), createMany: vi.fn() },
     submission: { findMany: mocks.submissionFindMany, update: mocks.submissionUpdate, updateMany: mocks.submissionUpdateMany },
     market: { findMany: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
-    venue: { findMany: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
+    venue: { findMany: mocks.venueFindMany, update: mocks.venueUpdate, updateMany: mocks.venueUpdateMany },
     adminMemo: { findMany: mocks.memoFindMany, deleteMany: mocks.memoDeleteMany, updateMany: mocks.memoUpdateMany },
+    neighborhood: { findMany: mocks.neighborhoodFindMany, updateMany: mocks.neighborhoodUpdateMany },
     $transaction: (fn: (tx: unknown) => unknown) => fn(client),
   };
   return { db: client };
@@ -72,6 +78,10 @@ beforeEach(() => {
   mocks.submissionUpdateMany.mockResolvedValue({ count: 1 });
   mocks.memoDeleteMany.mockResolvedValue({ count: 1 });
   mocks.memoUpdateMany.mockResolvedValue({ count: 1 });
+  mocks.venueFindMany.mockResolvedValue([]);
+  mocks.venueUpdateMany.mockResolvedValue({ count: 1 });
+  mocks.neighborhoodFindMany.mockResolvedValue([]);
+  mocks.neighborhoodUpdateMany.mockResolvedValue({ count: 1 });
 });
 
 describe("undoBlockers", () => {
@@ -136,6 +146,22 @@ describe("undoDecision", () => {
       metadata: { newValue: { status: "PENDING" }, details: { undoOf: "d1" } },
     });
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/events/emerge");
+  });
+
+  it("archives the dates a decision created", async () => {
+    const created = entry("1", "n1", {
+      action: "CREATE_EVENT",
+      meta: { previousValue: null, newValue: { status: "DRAFT", marketId: "m1" }, details: { decisionId: "d1", at, title: "Night Market" } },
+    });
+    mocks.auditFindMany.mockResolvedValueOnce([created]).mockResolvedValueOnce([]);
+    mocks.eventFindMany.mockResolvedValueOnce([{ id: "n1", updatedAt: new Date(at), title: "Night Market" }]).mockResolvedValueOnce([]);
+    const result = await undoDecision("d1", "admin");
+    expect(result).toMatchObject({ ok: true, restored: [{ targetType: "EVENT", targetId: "n1", title: "Night Market" }] });
+    expect(mocks.eventUpdateMany).toHaveBeenCalledWith({
+      where: { id: "n1", updatedAt: { lte: new Date(Date.parse(at) + 2000) } },
+      data: { deletedAt: expect.any(Date), updatedAt: expect.any(Date) },
+    });
+    expect(mocks.eventUpdate).not.toHaveBeenCalled();
   });
 
   it("restores nothing when a row changes between the check and the write", async () => {
@@ -216,6 +242,38 @@ describe("undoDecision", () => {
     mocks.memoFindMany.mockResolvedValueOnce([{ id: "memo1", createdAt: new Date(at), until: new Date("2026-11-09T08:00:00Z") }]);
     await expect(undoDecision("d1", "admin")).resolves.toMatchObject({ ok: false, refused: [{ reason: "It changed after this decision." }] });
     expect(mocks.memoDeleteMany).not.toHaveBeenCalled();
+  });
+
+  it("takes a neighborhood it added back off the area filter and clears it from the places", async () => {
+    const added = entry("1", "n1", {
+      action: "CREATE_NEIGHBORHOOD",
+      targetType: "NEIGHBORHOOD",
+      meta: { previousValue: null, newValue: { slug: "post-falls", label: "Post Falls", isActive: true }, details: { decisionId: "d1", at, title: "Post Falls" } },
+    });
+    const set = entry("2", "v1", {
+      action: "UPDATE_VENUE",
+      targetType: "VENUE",
+      meta: { previousValue: { neighborhood: null }, newValue: { neighborhood: "post-falls" }, details: { decisionId: "d1", at, title: "Post Falls City Hall" } },
+    });
+    mocks.auditFindMany.mockResolvedValueOnce([added, set]).mockResolvedValueOnce([]);
+    mocks.neighborhoodFindMany.mockResolvedValueOnce([{ id: "n1", updatedAt: new Date(at), label: "Post Falls" }]);
+    mocks.venueFindMany.mockResolvedValueOnce([{ id: "v1", updatedAt: new Date(at), name: "Post Falls City Hall" }]);
+    const result = await undoDecision("d1", "admin");
+    expect(result).toMatchObject({ ok: true, refused: [] });
+    expect(mocks.neighborhoodUpdateMany).toHaveBeenCalledWith({ where: { id: "n1", updatedAt: { lte: expect.any(Date) } }, data: { isActive: false } });
+    expect(mocks.venueUpdate).toHaveBeenCalledWith({ where: { id: "v1" }, data: { neighborhood: null } });
+  });
+
+  it("turns a neighborhood it turned on back off", async () => {
+    const turnedOn = entry("1", "n1", {
+      action: "UPDATE_NEIGHBORHOOD",
+      targetType: "NEIGHBORHOOD",
+      meta: { previousValue: { isActive: false }, newValue: { isActive: true }, details: { decisionId: "d1", at, title: "Post Falls" } },
+    });
+    mocks.auditFindMany.mockResolvedValueOnce([turnedOn]).mockResolvedValueOnce([]);
+    mocks.neighborhoodFindMany.mockResolvedValueOnce([{ id: "n1", updatedAt: new Date(at), label: "Post Falls" }]);
+    await expect(undoDecision("d1", "admin")).resolves.toMatchObject({ ok: true });
+    expect(mocks.neighborhoodUpdateMany).toHaveBeenCalledWith({ where: { id: "n1", updatedAt: { lte: expect.any(Date) } }, data: { isActive: false } });
   });
 
   it("refuses a decision already undone", async () => {

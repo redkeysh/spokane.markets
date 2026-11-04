@@ -8,15 +8,21 @@ import { nextRovingIndex, rovingMoveFor } from "./use-roving";
 
 const ITEM = "[data-roving-item]";
 
-function rowItems(list: HTMLElement): HTMLElement[] {
+export function rowItems(list: HTMLElement): HTMLElement[] {
   return Array.from(list.querySelectorAll<HTMLElement>(ITEM));
 }
 
-/** Keeps exactly one row link in the tab order: the focused one, else the first. */
-function normalizeTabStops(list: HTMLElement, preferred: HTMLElement | null) {
+/**
+ * Keeps exactly one row link in the tab order: the focused one, else the first. With `controls`,
+ * the matching controls in that link's `.sm-row` stay in the tab order and every other row's leave it.
+ */
+export function normalizeTabStops(list: HTMLElement, preferred: HTMLElement | null, controls?: string) {
   const items = rowItems(list);
   const stop = preferred && items.includes(preferred) ? preferred : items[0];
   for (const item of items) item.tabIndex = item === stop ? 0 : -1;
+  if (!controls) return;
+  const row = stop?.closest(".sm-row") ?? null;
+  for (const control of list.querySelectorAll<HTMLElement>(controls)) control.tabIndex = row?.contains(control) ? 0 : -1;
 }
 
 /**

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalendarDays, ListChecks, MapPin, Menu, Store, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ADMIN_NAV, PHONE_NAV_KEYS, activeNavKey, type AdminNavKey } from "@/lib/admin/nav";
+import { ADMIN_NAV, PHONE_NAV_KEYS, phoneNavKey, type AdminNavKey } from "@/lib/admin/nav";
 import type { NavSignals } from "@/lib/admin/nav-signals";
 import { NavDot } from "./nav-link";
 
@@ -19,7 +19,7 @@ const ICONS: Partial<Record<AdminNavKey, LucideIcon>> = {
 /** Phone navigation, 56 px plus the safe area: icon and word for each of PHONE_NAV_KEYS. */
 export function BottomBar({ signals }: { signals: NavSignals }) {
   const pathname = usePathname();
-  const current = activeNavKey(pathname);
+  const current = phoneNavKey(pathname);
 
   return (
     <nav aria-label="Admin" className="sm-bottom-bar border-t border-seam bg-fog">

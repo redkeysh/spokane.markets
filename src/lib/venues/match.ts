@@ -1,3 +1,6 @@
+import { findTown } from "@/lib/admin/regions";
+import { pairKey } from "@/lib/events/twins";
+
 export type VenueLike = {
   id?: string;
   name: string;
@@ -125,6 +128,12 @@ function sameZipArea(a: VenueLike, b: VenueLike): boolean {
   return /^\d{5}$/.test(za) && /^\d{5}$/.test(zb) && za.slice(0, 3) === zb.slice(0, 3);
 }
 
+/** One known town however its name is spelled ("SPOKANE" and "Spokane", "Post Falles" and "Post Falls"). */
+function sameKnownTown(a: VenueLike, b: VenueLike): boolean {
+  const ta = findTown(a.city);
+  return ta !== null && ta === findTown(b.city);
+}
+
 function nameTokenOverlap(a: string, b: string) {
   const ta = new Set(normalizeVenueName(a).split(" ").filter(Boolean));
   const tb = new Set(normalizeVenueName(b).split(" ").filter(Boolean));
@@ -225,18 +234,37 @@ export function isSameVenue(input: VenueLike, existing: VenueLike): boolean {
  * Loose: worth showing an admin as a possible duplicate. Also catches the same
  * address under a different name, the same name with a mistyped address, and
  * the same address and name with the city and ZIP typed differently within one
- * postal area.
+ * postal area or one town. Never used to merge without an admin's choice.
  */
 export function isPossibleDuplicate(a: VenueLike, b: VenueLike): boolean {
   if (isSameVenue(a, b) || isSameVenue(b, a)) return true;
   if (sameLocality(a, b) && sameStreetAddress(a, b)) return true;
   if (sameLocality(a, b) && normalizeVenueName(a.name) === normalizeVenueName(b.name)) return true;
-  if (sameZipArea(a, b) && sameStreetAddress(a, b) && namesLookAlike(a.name, b.name)) return true;
+  if ((sameZipArea(a, b) || sameKnownTown(a, b)) && sameStreetAddress(a, b) && namesLookAlike(a.name, b.name)) return true;
   return atSameSpot(a, b) && namesLookAlike(a.name, b.name);
 }
 
-/** Groups (2 or more venues each) linked by isPossibleDuplicate, transitively. */
-export function findDuplicateGroups<T extends VenueLike & { id: string }>(venues: T[]): T[][] {
+export type DuplicateMemos = {
+  /** pairKey of two places the owner said are different: that pair is never linked directly. */
+  different?: ReadonlySet<string>;
+  /** pairKey of two places the owner said are one place: always linked. */
+  same?: ReadonlySet<string>;
+};
+
+/** The owner's "different places" and "same place" pairs among memo rows, as findDuplicateGroups takes them. */
+export function placeMemosOf(memos: readonly { kind: string; key: string }[]): DuplicateMemos {
+  return {
+    different: new Set(memos.filter((m) => m.kind === "not-same-place").map((m) => m.key)),
+    same: new Set(memos.filter((m) => m.kind === "same-place").map((m) => m.key)),
+  };
+}
+
+/**
+ * Groups (2 or more venues each) linked by isPossibleDuplicate or a "same"
+ * memo, transitively. A "different" memo removes only its own pair's link, so
+ * a group the owner split pair by pair falls apart.
+ */
+export function findDuplicateGroups<T extends VenueLike & { id: string }>(venues: T[], memos: DuplicateMemos = {}): T[][] {
   const parent = new Map(venues.map((v) => [v.id, v.id]));
   const find = (id: string): string => {
     let root = id;
@@ -246,7 +274,8 @@ export function findDuplicateGroups<T extends VenueLike & { id: string }>(venues
   };
   for (let i = 0; i < venues.length; i++) {
     for (let j = i + 1; j < venues.length; j++) {
-      if (isPossibleDuplicate(venues[i], venues[j])) {
+      const key = pairKey(venues[i].id, venues[j].id);
+      if (memos.same?.has(key) || (!memos.different?.has(key) && isPossibleDuplicate(venues[i], venues[j]))) {
         parent.set(find(venues[i].id), find(venues[j].id));
       }
     }

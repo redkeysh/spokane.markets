@@ -1,17 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { KeyRound } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { AdminButton } from "@/components/admin/kit/button";
+import { AdminDialog } from "@/components/admin/kit/dialog";
+import { FormError } from "@/components/admin/rare/controls";
+import { useAnnounce } from "@/components/admin/shell/live-region";
 
 interface UserResetPasswordButtonProps {
   userId: string;
@@ -19,20 +14,17 @@ interface UserResetPasswordButtonProps {
   userEmail: string;
 }
 
-export function UserResetPasswordButton({
-  userId,
-  userName,
-  userEmail,
-}: UserResetPasswordButtonProps) {
+/** Emails the person a link to choose a new password, after a confirmation. */
+export function UserResetPasswordButton({ userId, userName, userEmail }: UserResetPasswordButtonProps) {
   const router = useRouter();
+  const announce = useAnnounce();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const displayName = userName || userEmail;
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function send() {
     setError(null);
     setSaving(true);
     try {
@@ -43,10 +35,13 @@ export function UserResetPasswordButton({
       });
       if (res.ok) {
         setOpen(false);
+        const message = `Sent a password reset email to ${userEmail}.`;
+        toast.success(message);
+        announce(message);
         router.refresh();
       } else {
-        const body = await res.json();
-        setError(body.error?.message || "Failed to send password reset email");
+        const body = await res.json().catch(() => ({}));
+        setError(body.error?.message || "Could not send the email. Try again.");
       }
     } finally {
       setSaving(false);
@@ -55,41 +50,30 @@ export function UserResetPasswordButton({
 
   return (
     <>
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label={`Reset password for ${displayName}`}
-        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-        onClick={() => setOpen(true)}
+      <AdminButton variant="outline" onClick={() => setOpen(true)} aria-haspopup="dialog">
+        Send password reset
+      </AdminButton>
+      <AdminDialog
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (!next) setError(null);
+        }}
+        title="Send a password reset email?"
+        description={`${displayName} gets an email at ${userEmail} with a link to choose a new password.`}
+        footer={
+          <>
+            <AdminButton variant="outline" onClick={() => setOpen(false)} disabled={saving}>
+              Cancel
+            </AdminButton>
+            <AdminButton variant="ink" onClick={send} busy={saving} busyLabel="Sending">
+              Send email
+            </AdminButton>
+          </>
+        }
       >
-        <KeyRound className="h-4 w-4" />
-      </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <form onSubmit={handleSubmit}>
-            <DialogHeader>
-              <DialogTitle>Send password reset email</DialogTitle>
-              <DialogDescription>
-                Send {displayName} an email with a secure link to choose a new password.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="p-6 space-y-4 text-sm text-muted-foreground">
-              <p>
-                An email will be sent to <span className="font-medium text-foreground">{userEmail}</span>.
-              </p>
-              {error && <p className="text-sm text-destructive">{error}</p>}
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={saving}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={saving}>
-                {saving ? "Sending…" : "Send email"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+        <FormError>{error}</FormError>
+      </AdminDialog>
     </>
   );
 }

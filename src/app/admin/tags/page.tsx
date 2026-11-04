@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
+import { PageHeader } from "@/components/admin/kit/page-header";
 import { CategoriesManager } from "@/components/admin/categories-manager";
-import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { title: "Tags and features" };
 
 export default async function AdminTagsPage() {
   await requireAdmin();
@@ -20,12 +23,11 @@ export default async function AdminTagsPage() {
   ]);
 
   return (
-    <div className="space-y-6">
-      <AdminPageHeader
-        title="Tags & Features"
-        description="Manage event tags (e.g. Farmers Market, Craft Fair) and features/amenities (e.g. Indoor, WiFi Available). These appear in filters and on event cards. The slug is auto-generated from the name."
+    <div className="mx-auto w-full max-w-[1184px] space-y-6">
+      <PageHeader
+        title="Tags and features"
+        description="Both show up in the site's filters and on event cards. Choose them for each event in its editor."
       />
-
       <CategoriesManager initialTags={tags} initialFeatures={features} />
     </div>
   );

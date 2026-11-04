@@ -1,6 +1,7 @@
-import type { Decision } from "../types";
+import { spellingDecisions } from "@/lib/venues/place-decisions";
+import type { Decision, DecisionContext } from "../types";
 
-/** Place names and addresses with spelling to tidy. Returns no decisions. */
-export function find(): Decision[] {
-  return [];
+/** Place towns, states, ZIPs and addresses with spelling to tidy, as one decision. */
+export function find(ctx: DecisionContext): Decision[] {
+  return spellingDecisions(ctx);
 }

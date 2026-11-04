@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { pairKey } from "@/lib/events/twins";
+import type { DuplicateMemos } from "@/lib/venues/match";
 import { addDays, pacificDate, startOfPacificDay, weekdayIndex } from "./format";
 import { decisionDetails, type DecisionRef } from "./decision-details";
 import { revalidateAdmin } from "./revalidate";
@@ -121,4 +122,10 @@ export async function getSnoozed(now: Date = new Date()): Promise<{ key: string;
 export async function getPairKeys(kind: Exclude<MemoKind, "later">): Promise<Set<string>> {
   const rows = await db.adminMemo.findMany({ where: { kind }, select: { key: true } });
   return new Set(rows.map((r) => r.key));
+}
+
+/** The owner's "different places" and "same place" pairs, as the duplicate finder takes them. */
+export async function getPlaceMemos(): Promise<DuplicateMemos> {
+  const [different, same] = await Promise.all([getPairKeys("not-same-place"), getPairKeys("same-place")]);
+  return { different, same };
 }

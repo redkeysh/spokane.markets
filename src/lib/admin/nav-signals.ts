@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { findDuplicateGroups } from "@/lib/venues/match";
 import { pacificDate, startOfPacificDay } from "./format";
+import { getPlaceMemos } from "./memo";
 import { getModerationPendingCount } from "./queues";
 import { getWeekendRail } from "./weekends";
 
@@ -73,7 +74,7 @@ export function buildNavSignals(c: NavSignalCounts): NavSignals {
 /** The top bar's dots for the admin layout: a few counts read in parallel, no per-row reads. */
 export const getNavSignals = cache(async (): Promise<NavSignals> => {
   const now = new Date();
-  const [rail, publicWaiting, activeVenues, archivedInUse, marketsAwaitingVerification] = await Promise.all([
+  const [rail, publicWaiting, activeVenues, archivedInUse, marketsAwaitingVerification, placeMemos] = await Promise.all([
     getWeekendRail(now),
     getModerationPendingCount(),
     db.venue.findMany({
@@ -82,12 +83,13 @@ export const getNavSignals = cache(async (): Promise<NavSignals> => {
     }),
     db.venue.count({ where: archivedPlaceInUse(startOfPacificDay(pacificDate(now))) }),
     db.market.count({ where: { deletedAt: null, verificationStatus: "PENDING" } }),
+    getPlaceMemos(),
   ]);
   const thisWeek = rail.weeks[0];
   return buildNavSignals({
     weekendWaiting: thisWeek ? thisWeek.pending + thisWeek.draft : 0,
     publicWaiting,
-    duplicateGroups: findDuplicateGroups(activeVenues).length,
+    duplicateGroups: findDuplicateGroups(activeVenues, placeMemos).length,
     archivedInUse,
     marketsAwaitingVerification,
   });

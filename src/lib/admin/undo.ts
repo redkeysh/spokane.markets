@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { parseDateOnlyToUTCNoon } from "@/lib/utils";
 import { revalidateAdmin } from "./revalidate";
 import { eventSlugProblem, lockEventForSlugChange, recordEventSlugChange } from "@/lib/events/slug";
+import { DETAIL_COLUMNS } from "@/lib/events/mutations";
 
 /** A new id that groups the audit entries of one decision. */
 export function newDecisionId(): string {
@@ -45,11 +46,12 @@ const SAME_WRITE_MS = 2000;
 
 /** Actions undoDecision can reverse, by target type. */
 const UNDOABLE: Record<string, Set<string>> = {
-  EVENT: new Set(["UPDATE_EVENT", "SOFT_DELETE_EVENT", "RESTORE_EVENT"]),
+  EVENT: new Set(["UPDATE_EVENT", "SOFT_DELETE_EVENT", "RESTORE_EVENT", "CREATE_EVENT"]),
   SUBMISSION: new Set(["UPDATE_SUBMISSION", "UPDATE_SUBMISSION_STATUS"]),
   MARKET: new Set(["CREATE_MARKET"]),
   ADMIN_MEMO: new Set(["SET_ADMIN_MEMO"]),
-  VENUE: new Set(["MERGE_VENUES"]),
+  VENUE: new Set(["MERGE_VENUES", "UPDATE_VENUE", "SOFT_DELETE_VENUE", "RESTORE_VENUE"]),
+  NEIGHBORHOOD: new Set(["CREATE_NEIGHBORHOOD", "UPDATE_NEIGHBORHOOD"]),
 };
 
 export function isUndoable(entry: AuditRow): boolean {
@@ -86,7 +88,7 @@ export async function currentRows(entries: AuditRow[]): Promise<CurrentRows> {
     .map((e) => metaOf(e).newValue?.createdEventId)
     .filter((id): id is string => typeof id === "string");
   const eventIds = [...new Set([...ids("EVENT"), ...createdEvents])];
-  const [events, submissions, markets, venues, memos] = await Promise.all([
+  const [events, submissions, markets, venues, memos, neighborhoods] = await Promise.all([
     eventIds.length ? db.event.findMany({ where: { id: { in: eventIds } }, select: { id: true, updatedAt: true, title: true } }) : [],
     ids("SUBMISSION").length
       ? db.submission.findMany({ where: { id: { in: ids("SUBMISSION") } }, select: { id: true, updatedAt: true, eventTitle: true } })
@@ -96,6 +98,9 @@ export async function currentRows(entries: AuditRow[]): Promise<CurrentRows> {
     ids("ADMIN_MEMO").length
       ? db.adminMemo.findMany({ where: { id: { in: ids("ADMIN_MEMO") } }, select: { id: true, createdAt: true, until: true } })
       : [],
+    ids("NEIGHBORHOOD").length
+      ? db.neighborhood.findMany({ where: { id: { in: ids("NEIGHBORHOOD") } }, select: { id: true, updatedAt: true, label: true } })
+      : [],
   ]);
   const rows: CurrentRows = new Map();
   for (const e of events) rows.set(`EVENT:${e.id}`, { updatedAt: e.updatedAt, title: e.title });
@@ -103,6 +108,7 @@ export async function currentRows(entries: AuditRow[]): Promise<CurrentRows> {
   for (const m of markets) rows.set(`MARKET:${m.id}`, { updatedAt: m.updatedAt, title: m.name });
   for (const v of venues) rows.set(`VENUE:${v.id}`, { updatedAt: v.updatedAt, title: v.name });
   for (const m of memos) rows.set(`ADMIN_MEMO:${m.id}`, { updatedAt: m.createdAt, title: null, until: m.until });
+  for (const n of neighborhoods) rows.set(`NEIGHBORHOOD:${n.id}`, { updatedAt: n.updatedAt, title: n.label });
   return rows;
 }
 
@@ -203,8 +209,14 @@ const EVENT_SCALARS = new Set([
   "complianceNotes",
   "complianceFlagged",
   "duplicateOfId",
+  "participationMode",
+  "vendorCapacity",
+  "publicIntentListEnabled",
+  "publicIntentNamesEnabled",
+  "publicRosterEnabled",
+  ...DETAIL_COLUMNS.filter((key) => key !== "vendorApplicationDeadline"),
 ]);
-const EVENT_DATES = new Set(["startDate", "endDate", "deletedAt"]);
+const EVENT_DATES = new Set(["startDate", "endDate", "deletedAt", "vendorApplicationDeadline"]);
 
 /** The values the rows had before the decision: for each field, the oldest previousValue wins. */
 function valuesBefore(entries: AuditRow[]): Record<string, unknown> {
@@ -282,6 +294,12 @@ async function restoreTarget(tx: Tx, entries: AuditRow[], at: Date, limit: Date)
   const touchedEvents: string[] = [];
   switch (first.targetType) {
     case "EVENT":
+      if (entries.some((e) => e.action === "CREATE_EVENT")) {
+        // An event the decision created is archived.
+        claimed(await tx.event.updateMany({ where: { id, ...unchanged }, data: { deletedAt: at, updatedAt: at } }), key);
+        touchedEvents.push(id);
+        break;
+      }
       claimed(await tx.event.updateMany({ where: { id, ...unchanged }, data: { updatedAt: at } }), key);
       await restoreEvent(tx, id, before, at, key);
       touchedEvents.push(id);
@@ -338,6 +356,12 @@ async function restoreTarget(tx: Tx, entries: AuditRow[], at: Date, limit: Date)
       const keep: Prisma.VenueUpdateInput = {};
       for (const [field, value] of Object.entries(before)) (keep as Record<string, unknown>)[field] = value;
       if (Object.keys(keep).length > 0) await tx.venue.update({ where: { id }, data: keep });
+      break;
+    }
+    case "NEIGHBORHOOD": {
+      // A neighborhood the decision created had no previous value; undoing it turns it off.
+      const isActive = typeof before.isActive === "boolean" ? before.isActive : false;
+      claimed(await tx.neighborhood.updateMany({ where: { id, ...unchanged }, data: { isActive } }), key);
       break;
     }
   }

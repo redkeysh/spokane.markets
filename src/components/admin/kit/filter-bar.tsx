@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { adminButtonClass } from "./button";
@@ -113,6 +114,36 @@ export function FilterSelect({
         ))}
       </select>
     </span>
+  );
+}
+
+/**
+ * A FilterSelect whose choices are addresses, for phones in place of a segmented control of links:
+ * choosing one replaces the URL.
+ */
+export function FilterLinkSelect({
+  label,
+  value,
+  options,
+  className,
+}: {
+  label: string;
+  value: string;
+  options: ReadonlyArray<{ value: string; label: string; href: string }>;
+  className?: string;
+}) {
+  const router = useRouter();
+  return (
+    <FilterSelect
+      label={label}
+      value={value}
+      className={className}
+      options={options}
+      onChange={(e) => {
+        const next = options.find((o) => o.value === e.target.value);
+        if (next) router.replace(next.href, { scroll: false });
+      }}
+    />
   );
 }
 

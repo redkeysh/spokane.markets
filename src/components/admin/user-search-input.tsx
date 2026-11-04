@@ -33,16 +33,15 @@ export function UserSearchInput({
   className,
   disabled,
 }: UserSearchInputProps) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(value && displayValue ? displayValue : "");
   const [suggestions, setSuggestions] = useState<UserOption[]>([]);
 
-  React.useEffect(() => {
-    if (value && displayValue) {
-      setQuery(displayValue);
-    } else if (!value) {
-      setQuery("");
-    }
-  }, [value, displayValue, setQuery]);
+  const [seen, setSeen] = useState({ value, displayValue });
+  if (seen.value !== value || seen.displayValue !== displayValue) {
+    setSeen({ value, displayValue });
+    if (value && displayValue) setQuery(displayValue);
+    else if (!value) setQuery("");
+  }
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [, setSelectedUser] = useState<UserOption | null>(null);
@@ -129,30 +128,30 @@ export function UserSearchInput({
           <button
             type="button"
             onClick={handleClear}
-            className="shrink-0 rounded-md border border-border px-2 text-sm text-muted-foreground hover:bg-muted"
+            className="shrink-0 rounded-md border border-seam-strong px-2 text-sm text-ash hover:bg-hover"
           >
             Clear
           </button>
         )}
       </div>
       {open && suggestions.length > 0 && (
-        <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md border border-border bg-background py-1 shadow-lg">
+        <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-auto sm-float rounded-lg py-1">
           {suggestions.map((user) => (
             <li key={user.id}>
               <button
                 type="button"
-                className="w-full px-3 py-2 text-left text-sm hover:bg-muted"
+                className="w-full px-3 py-2 text-left text-sm hover:bg-hover"
                 onClick={() => handleSelect(user)}
               >
-                <span className="font-medium">{user.name || "—"}</span>
-                <span className="ml-2 text-muted-foreground">{user.email}</span>
+                <span className="font-medium">{user.name || "No name"}</span>
+                <span className="ml-2 text-ash">{user.email}</span>
               </button>
             </li>
           ))}
         </ul>
       )}
       {loading && (
-        <p className="mt-1 text-xs text-muted-foreground">Searching...</p>
+        <p className="mt-1 text-xs text-ash">Searching...</p>
       )}
     </div>
   );

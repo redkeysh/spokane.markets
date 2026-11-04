@@ -1,41 +1,35 @@
+import type { Metadata } from "next";
+import type { Role } from "@prisma/client";
 import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
-import { UserRoleSelect } from "@/components/admin/user-role-select";
-import { UserDeleteButton } from "@/components/admin/user-delete-button";
-import { UserResetPasswordButton } from "@/components/admin/user-reset-password-button";
-import { UserAccountStatusSelect } from "@/components/admin/user-account-status-select";
-import { Pagination } from "@/components/pagination";
-import { UserFilters } from "@/components/admin/user-filters";
-import { AdminPageHeader } from "@/components/admin/admin-page-header";
-import { AdminTable } from "@/components/admin/admin-table";
-import Link from "next/link";
-import type { Role } from "@prisma/client";
 import { parseAdminPagination } from "@/lib/admin/table-query";
+import { formatFullDate, pacificDate } from "@/lib/admin/format";
+import { PageHeader } from "@/components/admin/kit/page-header";
+import { AdminLinkButton } from "@/components/admin/kit/button";
+import { List, ListRow } from "@/components/admin/kit/list";
+import { Empty } from "@/components/admin/kit/empty";
+import { UserFilters } from "@/components/admin/user-filters";
+import { Pager, pageHref } from "@/components/admin/rare/pager";
+import { ROLE_WORDS, STATUS_WORDS, userCounts } from "@/components/admin/user-words";
 
 export const dynamic = "force-dynamic";
 
-const ROLES: { label: string; value: Role | "" }[] = [
-  { label: "All roles", value: "" },
-  { label: "User", value: "USER" },
-  { label: "Vendor", value: "VENDOR" },
-  { label: "Organizer", value: "ORGANIZER" },
-  { label: "Admin", value: "ADMIN" },
-];
+export const metadata: Metadata = { title: "Users" };
+
+const ROLES: readonly Role[] = ["USER", "VENDOR", "ORGANIZER", "ADMIN"];
 
 export default async function AdminUsersPage({
   searchParams,
 }: {
   searchParams: Promise<{ page?: string; limit?: string; q?: string; role?: string }>;
 }) {
-  const session = await requireAdmin();
+  await requireAdmin();
 
   const params = await searchParams;
   const { page, limit } = parseAdminPagination(params);
   const q = (params.q ?? "").trim();
   const roleParam = params.role ?? "";
-  const roleFilter = ["USER", "VENDOR", "ORGANIZER", "ADMIN"].includes(roleParam)
-    ? (roleParam as Role)
-    : undefined;
+  const roleFilter = (ROLES as readonly string[]).includes(roleParam) ? (roleParam as Role) : undefined;
 
   const whereConditions = [];
   if (q) {
@@ -58,124 +52,77 @@ export default async function AdminUsersPage({
       orderBy: { createdAt: "desc" },
       include: {
         _count: {
-          select: { ownedMarkets: true, reviews: true },
+          select: { ownedMarkets: { where: { deletedAt: null } }, reviews: true },
         },
       },
       skip: (page - 1) * limit,
       take: limit,
     }),
   ]);
-  const totalPages = Math.ceil(total / limit);
+
+  const filtered = Boolean(q || roleFilter);
+  const roleWord = roleFilter ? ROLE_WORDS[roleFilter].plural.toLowerCase() : null;
+  const emptyMessage = q
+    ? roleWord
+      ? `No ${roleWord} match "${q}".`
+      : `No one matches "${q}".`
+    : roleWord
+      ? `There are no ${roleWord}.`
+      : "No one has an account yet.";
 
   return (
-    <div className="space-y-6">
-      <AdminPageHeader
+    <div className="mx-auto w-full max-w-[1184px] space-y-5">
+      <PageHeader
         title="Users"
-        description="Manage user accounts and roles. Changing a role affects what dashboards and features the user can access."
+        description="Everyone with an account. Roles and sign-in access are set on each person's page."
         actions={
-          <>
-            <Link
-              href="/admin/users/new"
-              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-            >
-              Create user
-            </Link>
-          </>
+          <AdminLinkButton href="/admin/users/new" variant="ink">
+            New user
+          </AdminLinkButton>
         }
       />
 
-      <UserFilters q={q} role={roleParam || ""} roles={ROLES} />
+      <UserFilters />
 
-      <AdminTable>
-          <thead className="bg-muted/50">
-            <tr>
-              <th className="text-left p-3 font-medium">Name</th>
-              <th className="text-left p-3 font-medium">Email</th>
-              <th className="text-left p-3 font-medium">Role</th>
-              <th className="text-left p-3 font-medium">Status</th>
-              <th className="text-left p-3 font-medium">Markets</th>
-              <th className="text-left p-3 font-medium">Reviews</th>
-              <th className="text-left p-3 font-medium">Joined</th>
-              <th className="w-20 p-3" aria-label="Actions" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {users.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="p-6 text-center text-muted-foreground">
-                  No users found.
-                </td>
-              </tr>
-            ) : (
-              users.map((user) => (
-                <tr key={user.id} className="hover:bg-muted/30">
-                  <td className="p-3 font-medium">
-                    <Link
-                      href={`/admin/users/${user.id}`}
-                      className="text-primary hover:underline"
-                    >
-                      {user.name ?? user.email}
-                    </Link>
-                  </td>
-                  <td className="p-3 text-muted-foreground">{user.email}</td>
-                  <td className="p-3">
-                    <UserRoleSelect
-                      userId={user.id}
-                      currentRole={user.role}
-                    />
-                  </td>
-                  <td className="p-3">
-                    <UserAccountStatusSelect
-                      userId={user.id}
-                      currentStatus={user.accountStatus}
-                    />
-                  </td>
-                  <td className="p-3 text-muted-foreground">
-                    {user._count.ownedMarkets > 0 ? (
-                      <Link
-                        href="/admin/markets"
-                        className="text-primary hover:underline"
-                      >
-                        {user._count.ownedMarkets}
-                      </Link>
-                    ) : (
-                      "0"
-                    )}
-                  </td>
-                  <td className="p-3 text-muted-foreground">
-                    {user._count.reviews > 0 ? (
-                      <Link
-                        href={`/admin/reviews?user=${user.id}`}
-                        className="text-primary hover:underline"
-                      >
-                        {user._count.reviews}
-                      </Link>
-                    ) : (
-                      "0"
-                    )}
-                  </td>
-                  <td className="p-3 text-muted-foreground">
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="p-3 flex items-center gap-1">
-                    <UserResetPasswordButton
-                      userId={user.id}
-                      userName={user.name}
-                      userEmail={user.email}
-                    />
-                    <UserDeleteButton
-                      userId={user.id}
-                      userName={user.name}
-                      userEmail={user.email}
-                      isCurrentUser={user.id === session.user.id}
-                    />
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-      </AdminTable>
-      <Pagination page={page} totalPages={totalPages} totalItems={total} limit={limit} />
+      {users.length === 0 ? (
+        <Empty>{emptyMessage}</Empty>
+      ) : (
+        <List label={filtered ? "Matching people" : "People"}>
+          {users.map((user) => {
+            const counts = userCounts(user._count.ownedMarkets, user._count.reviews);
+            const blocked = user.accountStatus !== "ACTIVE";
+            return (
+              <ListRow
+                key={user.id}
+                rowKey={user.id}
+                href={`/admin/users/${user.id}`}
+                title={user.name?.trim() || user.email}
+                meta={
+                  <span className="tabular-nums">
+                    {[user.name?.trim() ? user.email : null, `joined ${formatFullDate(pacificDate(user.createdAt))}`, counts]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </span>
+                }
+                status={
+                  <span className="flex flex-col items-end gap-0.5 text-right font-text text-sm font-medium text-basalt">
+                    {ROLE_WORDS[user.role].one}
+                    {blocked && <span className="text-xs text-ponderosa">{STATUS_WORDS[user.accountStatus]}</span>}
+                  </span>
+                }
+              />
+            );
+          })}
+        </List>
+      )}
+
+      <Pager
+        page={page}
+        limit={limit}
+        total={total}
+        noun="people"
+        hrefFor={(p) => pageHref("/admin/users", { q: q || undefined, role: roleFilter, limit: params.limit }, p)}
+      />
     </div>
   );
 }

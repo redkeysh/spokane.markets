@@ -2,492 +2,318 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDownAZ, ArrowUpAZ, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { DeleteButton } from "@/components/admin/action-buttons";
-import { slugify } from "@/lib/utils";
 import { toast } from "sonner";
+import { slugify } from "@/lib/utils";
 import { getApiErrorMessage } from "@/lib/api-client";
+import { AdminButton } from "@/components/admin/kit/button";
+import { Empty } from "@/components/admin/kit/empty";
+import { Field, FieldRow } from "@/components/admin/kit/field";
+import { List } from "@/components/admin/kit/list";
+import { Segmented } from "@/components/admin/kit/segmented";
+import { ActionRow } from "@/components/admin/rare/action-row";
+import { TextInput } from "@/components/admin/rare/controls";
+import { EditDialog } from "@/components/admin/rare/edit-dialog";
+import { ListSection } from "@/components/admin/rare/list-section";
+import { countWord } from "@/components/admin/rare/words";
+import { useAnnounce } from "@/components/admin/shell/live-region";
 
 type TagWithCount = { id: string; name: string; slug: string; _count: { events: number } };
 type FeatureWithCount = { id: string; name: string; slug: string; icon: string | null; _count: { events: number } };
+type Term = { id: string; name: string; slug: string; icon?: string | null; _count: { events: number } };
+
+type Kind = "tag" | "feature";
+
+const KIND = {
+  tag: {
+    api: "/api/admin/tags",
+    one: "tag",
+    title: "Tags",
+    description: "What kind of event it is: farmers market, craft fair, flea market.",
+    namePlaceholder: "Farmers market",
+  },
+  feature: {
+    api: "/api/admin/features",
+    one: "feature",
+    title: "Features",
+    description: "What is there: indoor, power for vendors, wifi.",
+    namePlaceholder: "Indoor",
+  },
+} as const;
+
+type Order = "name" | "used";
+
+function eventsWord(count: number): string {
+  return countWord(count, "event", "events");
+}
+
+function sortTerms<T extends Term>(terms: T[], order: Order): T[] {
+  return [...terms].sort((a, b) =>
+    order === "used" ? b._count.events - a._count.events || a.name.localeCompare(b.name) : a.name.localeCompare(b.name)
+  );
+}
+
+type Draft = { name: string; slug: string; icon: string; slugTouched: boolean };
+
+function TermDialog({
+  kind,
+  term,
+  open,
+  onOpenChange,
+  onSaved,
+  onDeleted,
+}: {
+  kind: Kind;
+  term: Term | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSaved: (term: Term) => void;
+  onDeleted: (id: string) => void;
+}) {
+  const config = KIND[kind];
+  const [draft, setDraft] = useState<Draft>({ name: "", slug: "", icon: "", slugTouched: false });
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [openedFor, setOpenedFor] = useState<{ open: boolean; id?: string }>({ open: false });
+
+  if (openedFor.open !== open || openedFor.id !== term?.id) {
+    setOpenedFor({ open, id: term?.id });
+    if (open) {
+      setDraft({ name: term?.name ?? "", slug: term?.slug ?? "", icon: term?.icon ?? "", slugTouched: Boolean(term) });
+      setError(null);
+    }
+  }
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    const name = draft.name.trim();
+    const slug = draft.slug.trim() || slugify(name);
+    if (!name) {
+      setError(`Give the ${config.one} a name.`);
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const body: Record<string, unknown> = { name, slug };
+      if (kind === "feature") body.icon = draft.icon.trim() || undefined;
+      const res = await fetch(term ? `${config.api}/${term.id}` : config.api, {
+        method: term ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error?.message ?? `Could not save the ${config.one}.`);
+      onSaved({ ...(term ?? { _count: { events: 0 } }), ...data });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Could not save the ${config.one}.`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function remove() {
+    if (!term) return;
+    setRemoving(true);
+    setError(null);
+    try {
+      const res = await fetch(`${config.api}/${term.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(getApiErrorMessage(body, `Could not delete the ${config.one}.`));
+      }
+      onDeleted(term.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Could not delete the ${config.one}.`);
+    } finally {
+      setRemoving(false);
+    }
+  }
+
+  const ids = { name: `${kind}-name`, slug: `${kind}-slug`, icon: `${kind}-icon` };
+
+  return (
+    <EditDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={term ? `Edit ${term.name}` : `Add a ${config.one}`}
+      formId={`${kind}-form`}
+      onSubmit={save}
+      saveLabel={term ? "Save" : "Add"}
+      saving={saving}
+      error={error}
+      removing={removing}
+      remove={
+        term
+          ? {
+              label: `Delete ${config.one}`,
+              title: `Delete ${term.name}?`,
+              description:
+                term._count.events > 0
+                  ? `${eventsWord(term._count.events)} ${term._count.events === 1 ? "loses" : "lose"} this ${config.one}. This cannot be undone.`
+                  : `No event uses this ${config.one}. This cannot be undone.`,
+              confirmLabel: `Delete ${config.one}`,
+              busyLabel: "Deleting",
+              run: remove,
+            }
+          : undefined
+      }
+    >
+      <Field id={ids.name} label="Name" required>
+        <TextInput
+          value={draft.name}
+          placeholder={config.namePlaceholder}
+          onChange={(e) => {
+            const name = e.target.value;
+            setDraft((d) => ({ ...d, name, slug: d.slugTouched ? d.slug : slugify(name) }));
+          }}
+        />
+      </Field>
+      <FieldRow>
+        <Field id={ids.slug} label="Web address" help="Used in filter links. Made from the name unless you change it.">
+          <TextInput value={draft.slug} onChange={(e) => setDraft((d) => ({ ...d, slug: e.target.value, slugTouched: true }))} />
+        </Field>
+        {kind === "feature" ? (
+          <Field id={ids.icon} label="Icon" help="One emoji, shown before the name.">
+            <TextInput value={draft.icon} maxLength={8} onChange={(e) => setDraft((d) => ({ ...d, icon: e.target.value }))} />
+          </Field>
+        ) : (
+          <span />
+        )}
+      </FieldRow>
+    </EditDialog>
+  );
+}
+
+function TermSection<T extends Term>({
+  kind,
+  terms,
+  order,
+  onChange,
+}: {
+  kind: Kind;
+  terms: T[];
+  order: Order;
+  onChange: (terms: Term[]) => void;
+}) {
+  const router = useRouter();
+  const announce = useAnnounce();
+  const config = KIND[kind];
+  const [editing, setEditing] = useState<Term | null>(null);
+  const [open, setOpen] = useState(false);
+
+  const say = (message: string) => {
+    toast.success(message);
+    announce(message);
+  };
+
+  return (
+    <ListSection
+      id={`${kind}s`}
+      title={config.title}
+      description={config.description}
+      action={
+        <AdminButton
+          variant="outline"
+          size="sm"
+          aria-haspopup="dialog"
+          onClick={() => {
+            setEditing(null);
+            setOpen(true);
+          }}
+        >
+          Add {config.one}
+        </AdminButton>
+      }
+    >
+      {terms.length === 0 ? (
+        <Empty className="py-4">No {config.one}s yet.</Empty>
+      ) : (
+        <List label={config.title}>
+          {sortTerms(terms, order).map((term) => (
+            <ActionRow
+              key={term.id}
+              rowKey={term.id}
+              title={
+                <>
+                  {term.icon && (
+                    <span aria-hidden="true" className="mr-1.5">
+                      {term.icon}
+                    </span>
+                  )}
+                  {term.name}
+                </>
+              }
+              openLabel={`Edit ${term.name}`}
+              onOpen={() => {
+                setEditing(term);
+                setOpen(true);
+              }}
+              hint="Edit"
+              meta={
+                <span className="tabular-nums">
+                  {eventsWord(term._count.events)}, web address {term.slug}
+                </span>
+              }
+            />
+          ))}
+        </List>
+      )}
+      <TermDialog
+        kind={kind}
+        term={editing}
+        open={open}
+        onOpenChange={setOpen}
+        onSaved={(saved) => {
+          const exists = terms.some((t) => t.id === saved.id);
+          onChange(exists ? terms.map((t) => (t.id === saved.id ? { ...t, ...saved } : t)) : [...terms, saved]);
+          setOpen(false);
+          say(exists ? `Saved ${saved.name}.` : `Added ${saved.name}.`);
+          router.refresh();
+        }}
+        onDeleted={(id) => {
+          const name = terms.find((t) => t.id === id)?.name ?? `The ${config.one}`;
+          onChange(terms.filter((t) => t.id !== id));
+          setOpen(false);
+          say(`Deleted ${name}.`);
+          router.refresh();
+        }}
+      />
+    </ListSection>
+  );
+}
 
 interface CategoriesManagerProps {
   initialTags: TagWithCount[];
   initialFeatures: FeatureWithCount[];
 }
 
-export function CategoriesManager({
-  initialTags,
-  initialFeatures,
-}: CategoriesManagerProps) {
-  const router = useRouter();
-  const [tags, setTags] = useState(initialTags);
-  const [features, setFeatures] = useState(initialFeatures);
-  const [tagName, setTagName] = useState("");
-  const [tagSlug, setTagSlug] = useState("");
-  const [featureName, setFeatureName] = useState("");
-  const [featureSlug, setFeatureSlug] = useState("");
-  const [featureIcon, setFeatureIcon] = useState("");
-  const [tagSubmitting, setTagSubmitting] = useState(false);
-  const [featureSubmitting, setFeatureSubmitting] = useState(false);
-  const [tagError, setTagError] = useState<string | null>(null);
-  const [featureError, setFeatureError] = useState<string | null>(null);
-  const [editingTagId, setEditingTagId] = useState<string | null>(null);
-  const [editTagName, setEditTagName] = useState("");
-  const [editTagSlug, setEditTagSlug] = useState("");
-  const [editingFeatureId, setEditingFeatureId] = useState<string | null>(null);
-  const [editFeatureName, setEditFeatureName] = useState("");
-  const [editFeatureSlug, setEditFeatureSlug] = useState("");
-  const [editFeatureIcon, setEditFeatureIcon] = useState("");
-  const [tagEditSubmitting, setTagEditSubmitting] = useState(false);
-  const [featureEditSubmitting, setFeatureEditSubmitting] = useState(false);
-  const [tagSortDir, setTagSortDir] = useState<"asc" | "desc">("asc");
-  const [featureSortDir, setFeatureSortDir] = useState<"asc" | "desc">("asc");
-
-  const sortedTags = [...tags].sort((a, b) =>
-    tagSortDir === "asc"
-      ? a.name.localeCompare(b.name)
-      : b.name.localeCompare(a.name)
-  );
-  const sortedFeatures = [...features].sort((a, b) =>
-    featureSortDir === "asc"
-      ? a.name.localeCompare(b.name)
-      : b.name.localeCompare(a.name)
-  );
-
-  const addTag = async () => {
-    const name = tagName.trim();
-    const slug = tagSlug.trim() || slugify(name);
-    if (!name || !slug) return;
-    setTagSubmitting(true);
-    setTagError(null);
-    try {
-      const res = await fetch("/api/admin/tags", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, slug }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error?.message ?? "Failed to add tag");
-      }
-      const newTag = await res.json();
-      setTags((prev) => [...prev, newTag].sort((a, b) => a.name.localeCompare(b.name)));
-      setTagName("");
-      setTagSlug("");
-      router.refresh();
-    } catch (e) {
-      setTagError(e instanceof Error ? e.message : "Failed to add tag");
-    } finally {
-      setTagSubmitting(false);
-    }
-  };
-
-  const deleteTag = async (id: string) => {
-    const res = await fetch(`/api/admin/tags/${id}`, { method: "DELETE" });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      toast.error(getApiErrorMessage(body, "Failed to delete tag."));
-      return;
-    }
-    setTags((prev) => prev.filter((t) => t.id !== id));
-    toast.success("Tag deleted.");
-    router.refresh();
-  };
-
-  const startEditTag = (tag: TagWithCount) => {
-    setEditingTagId(tag.id);
-    setEditTagName(tag.name);
-    setEditTagSlug(tag.slug);
-  };
-
-  const cancelEditTag = () => {
-    setEditingTagId(null);
-    setEditTagName("");
-    setEditTagSlug("");
-  };
-
-  const updateTag = async () => {
-    if (!editingTagId) return;
-    const name = editTagName.trim();
-    const slug = editTagSlug.trim() || slugify(name);
-    if (!name || !slug) return;
-    setTagEditSubmitting(true);
-    setTagError(null);
-    try {
-      const res = await fetch(`/api/admin/tags/${editingTagId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, slug }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error?.message ?? "Failed to update tag");
-      }
-      const updated = await res.json();
-      setTags((prev) =>
-        prev.map((t) => (t.id === editingTagId ? { ...t, ...updated } : t)).sort((a, b) => a.name.localeCompare(b.name))
-      );
-      cancelEditTag();
-      router.refresh();
-    } catch (e) {
-      setTagError(e instanceof Error ? e.message : "Failed to update tag");
-    } finally {
-      setTagEditSubmitting(false);
-    }
-  };
-
-  const addFeature = async () => {
-    const name = featureName.trim();
-    const slug = featureSlug.trim() || slugify(name);
-    if (!name || !slug) return;
-    setFeatureSubmitting(true);
-    setFeatureError(null);
-    try {
-      const res = await fetch("/api/admin/features", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, slug, icon: featureIcon.trim() || undefined }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error?.message ?? "Failed to add feature");
-      }
-      const newFeature = await res.json();
-      setFeatures((prev) => [...prev, newFeature].sort((a, b) => a.name.localeCompare(b.name)));
-      setFeatureName("");
-      setFeatureSlug("");
-      setFeatureIcon("");
-      router.refresh();
-    } catch (e) {
-      setFeatureError(e instanceof Error ? e.message : "Failed to add feature");
-    } finally {
-      setFeatureSubmitting(false);
-    }
-  };
-
-  const deleteFeature = async (id: string) => {
-    const res = await fetch(`/api/admin/features/${id}`, { method: "DELETE" });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      toast.error(getApiErrorMessage(body, "Failed to delete feature."));
-      return;
-    }
-    setFeatures((prev) => prev.filter((f) => f.id !== id));
-    toast.success("Feature deleted.");
-    router.refresh();
-  };
-
-  const startEditFeature = (feature: FeatureWithCount) => {
-    setEditingFeatureId(feature.id);
-    setEditFeatureName(feature.name);
-    setEditFeatureSlug(feature.slug);
-    setEditFeatureIcon(feature.icon ?? "");
-  };
-
-  const cancelEditFeature = () => {
-    setEditingFeatureId(null);
-    setEditFeatureName("");
-    setEditFeatureSlug("");
-    setEditFeatureIcon("");
-  };
-
-  const updateFeature = async () => {
-    if (!editingFeatureId) return;
-    const name = editFeatureName.trim();
-    const slug = editFeatureSlug.trim() || slugify(name);
-    if (!name || !slug) return;
-    setFeatureEditSubmitting(true);
-    setFeatureError(null);
-    try {
-      const res = await fetch(`/api/admin/features/${editingFeatureId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, slug, icon: editFeatureIcon.trim() || undefined }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error?.message ?? "Failed to update feature");
-      }
-      const updated = await res.json();
-      setFeatures((prev) =>
-        prev.map((f) => (f.id === editingFeatureId ? { ...f, ...updated } : f)).sort((a, b) => a.name.localeCompare(b.name))
-      );
-      cancelEditFeature();
-      router.refresh();
-    } catch (e) {
-      setFeatureError(e instanceof Error ? e.message : "Failed to update feature");
-    } finally {
-      setFeatureEditSubmitting(false);
-    }
-  };
+/** Tags and features side by side on wide screens, each with an add button and a list that opens an edit dialog. */
+export function CategoriesManager({ initialTags, initialFeatures }: CategoriesManagerProps) {
+  const [tags, setTags] = useState<Term[]>(initialTags);
+  const [features, setFeatures] = useState<Term[]>(initialFeatures);
+  const [order, setOrder] = useState<Order>("name");
 
   return (
-    <div className="grid gap-10 lg:grid-cols-2">
-      {/* Event Types (Tags) */}
-      <section className="rounded-lg border border-border p-6">
-        <h2 className="text-xl font-semibold">Event Types</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          What kind of event: Farmers Market, Craft Fair, Flea Market, etc.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Input
-            placeholder="Name (e.g. Farmers Market)"
-            value={tagName}
-            onChange={(e) => {
-              setTagName(e.target.value);
-              if (!tagSlug) setTagSlug(slugify(e.target.value));
-            }}
-            className="w-40"
-          />
-          <Input
-            placeholder="Slug (auto)"
-            value={tagSlug}
-            onChange={(e) => setTagSlug(e.target.value)}
-            className="w-32"
-          />
-          <Button
-            size="sm"
-            onClick={addTag}
-            disabled={!tagName.trim() || tagSubmitting}
-          >
-            {tagSubmitting ? "Adding…" : "Add"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setTagSortDir((prev) => (prev === "asc" ? "desc" : "asc"))}
-            className="inline-flex items-center gap-1.5"
-          >
-            {tagSortDir === "asc" ? (
-              <>
-                <ArrowUpAZ className="h-4 w-4" />
-                A-Z
-              </>
-            ) : (
-              <>
-                <ArrowDownAZ className="h-4 w-4" />
-                Z-A
-              </>
-            )}
-          </Button>
-        </div>
-        {tagError && (
-          <p className="mt-2 text-sm text-destructive">{tagError}</p>
-        )}
-        <ul className="mt-4 space-y-2">
-          {sortedTags.map((tag) => (
-            <li
-              key={tag.id}
-              className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
-            >
-              {editingTagId === tag.id ? (
-                <>
-                  <div className="flex flex-1 flex-wrap items-center gap-2">
-                    <Input
-                      value={editTagName}
-                      onChange={(e) => {
-                        setEditTagName(e.target.value);
-                        if (!editTagSlug) setEditTagSlug(slugify(e.target.value));
-                      }}
-                      placeholder="Name"
-                      className="h-8 w-36"
-                    />
-                    <Input
-                      value={editTagSlug}
-                      onChange={(e) => setEditTagSlug(e.target.value)}
-                      placeholder="Slug"
-                      className="h-8 w-28"
-                    />
-                  </div>
-                  <div className="flex shrink-0 gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 p-0"
-                      onClick={cancelEditTag}
-                      disabled={tagEditSubmitting}
-                      aria-label="Cancel"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={updateTag}
-                      disabled={!editTagName.trim() || tagEditSubmitting}
-                    >
-                      {tagEditSubmitting ? "Saving…" : "Save"}
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => startEditTag(tag)}
-                    className="font-medium text-left"
-                  >
-                    {tag.name}
-                  </button>
-                  <div className="flex items-center gap-2" data-row-action>
-                    <span className="text-xs text-muted-foreground">
-                      {tag.slug} · {tag._count.events} events
-                    </span>
-                    <DeleteButton
-                      action={() => deleteTag(tag.id)}
-                      title="Delete event type"
-                      description={`Delete "${tag.name}"? Events using it will be updated.`}
-                      iconOnly
-                    />
-                  </div>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* Features & Amenities */}
-      <section className="rounded-lg border border-border p-6">
-        <h2 className="text-xl font-semibold">Features & Amenities</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Venue/event attributes: Indoor, WiFi Available, Power Available, etc.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Input
-            placeholder="Name (e.g. WiFi Available)"
-            value={featureName}
-            onChange={(e) => {
-              setFeatureName(e.target.value);
-              if (!featureSlug) setFeatureSlug(slugify(e.target.value));
-            }}
-            className="w-40"
-          />
-          <Input
-            placeholder="Slug (auto)"
-            value={featureSlug}
-            onChange={(e) => setFeatureSlug(e.target.value)}
-            className="w-32"
-          />
-          <Input
-            placeholder="Icon (emoji)"
-            value={featureIcon}
-            onChange={(e) => setFeatureIcon(e.target.value)}
-            className="w-20"
-          />
-          <Button
-            size="sm"
-            onClick={addFeature}
-            disabled={!featureName.trim() || featureSubmitting}
-          >
-            {featureSubmitting ? "Adding…" : "Add"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              setFeatureSortDir((prev) => (prev === "asc" ? "desc" : "asc"))
-            }
-            className="inline-flex items-center gap-1.5"
-          >
-            {featureSortDir === "asc" ? (
-              <>
-                <ArrowUpAZ className="h-4 w-4" />
-                A-Z
-              </>
-            ) : (
-              <>
-                <ArrowDownAZ className="h-4 w-4" />
-                Z-A
-              </>
-            )}
-          </Button>
-        </div>
-        {featureError && (
-          <p className="mt-2 text-sm text-destructive">{featureError}</p>
-        )}
-        <ul className="mt-4 space-y-2">
-          {sortedFeatures.map((feature) => (
-            <li
-              key={feature.id}
-              className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
-            >
-              {editingFeatureId === feature.id ? (
-                <>
-                  <div className="flex flex-1 flex-wrap items-center gap-2">
-                    <Input
-                      value={editFeatureName}
-                      onChange={(e) => {
-                        setEditFeatureName(e.target.value);
-                        if (!editFeatureSlug) setEditFeatureSlug(slugify(e.target.value));
-                      }}
-                      placeholder="Name"
-                      className="h-8 w-36"
-                    />
-                    <Input
-                      value={editFeatureSlug}
-                      onChange={(e) => setEditFeatureSlug(e.target.value)}
-                      placeholder="Slug"
-                      className="h-8 w-28"
-                    />
-                    <Input
-                      value={editFeatureIcon}
-                      onChange={(e) => setEditFeatureIcon(e.target.value)}
-                      placeholder="Icon"
-                      className="h-8 w-16"
-                    />
-                  </div>
-                  <div className="flex shrink-0 gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 p-0"
-                      onClick={cancelEditFeature}
-                      disabled={featureEditSubmitting}
-                      aria-label="Cancel"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={updateFeature}
-                      disabled={!editFeatureName.trim() || featureEditSubmitting}
-                    >
-                      {featureEditSubmitting ? "Saving…" : "Save"}
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => startEditFeature(feature)}
-                    className="font-medium text-left"
-                  >
-                    {feature.icon && <span className="mr-1">{feature.icon}</span>}
-                    {feature.name}
-                  </button>
-                  <div className="flex items-center gap-2" data-row-action>
-                    <span className="text-xs text-muted-foreground">
-                      {feature.slug} · {feature._count.events} events
-                    </span>
-                    <DeleteButton
-                      action={() => deleteFeature(feature.id)}
-                      title="Delete feature/amenity"
-                      description={`Delete "${feature.name}"? Events using it will be updated.`}
-                      iconOnly
-                    />
-                  </div>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
+    <div className="space-y-5">
+      <div className="flex items-center gap-2">
+        <span aria-hidden="true" className="font-text text-sm text-ash">
+          Order
+        </span>
+        <Segmented<Order>
+          label="Order"
+          value={order}
+          onChange={setOrder}
+          options={[
+            { value: "name", label: "A to Z" },
+            { value: "used", label: "Most used" },
+          ]}
+        />
+      </div>
+      <div className="grid gap-x-8 gap-y-10 xl:grid-cols-2">
+        <TermSection kind="tag" terms={tags} order={order} onChange={setTags} />
+        <TermSection kind="feature" terms={features} order={order} onChange={setFeatures} />
+      </div>
     </div>
   );
 }

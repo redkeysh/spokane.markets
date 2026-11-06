@@ -29,10 +29,3 @@ const TRADE_SHOW_PATTERN = new RegExp(
 export function looksLikeTradeShow(title: string): boolean {
   return TRADE_SHOW_PATTERN.test(title.toLowerCase());
 }
-
-/** The keyword a title matched, for explaining the flag; null when none did. */
-export function tradeShowKeyword(title: string): string | null {
-  const match = TRADE_SHOW_PATTERN.exec(title.toLowerCase());
-  if (!match) return null;
-  return TRADE_SHOW_KEYWORDS.find((k) => k.toLowerCase() === match[2]) ?? match[2];
-}

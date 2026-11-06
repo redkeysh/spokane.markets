@@ -13,7 +13,7 @@ vi.mock("@/lib/db", () => ({
 vi.mock("@/lib/geocode", () => ({ geocodeAddress: geocodeMock }));
 
 import { DEFAULT_PIN } from "./match";
-import { findMatchingVenue, findOrCreateVenue, lookupVenue } from "./resolve";
+import { findMatchingVenue, findMatchingVenueAmong, findOrCreateVenue, lookupVenue } from "./resolve";
 
 const INPUT = {
   name: "Shriners Event Center",
@@ -134,6 +134,24 @@ describe("findMatchingVenue", () => {
   it("does not search around the admin form's default pin", async () => {
     await findMatchingVenue({ ...INPUT, lat: DEFAULT_PIN.lat, lng: DEFAULT_PIN.lng });
     expect(findManyMock.mock.calls[0][0].where.OR).toHaveLength(2);
+  });
+});
+
+describe("findMatchingVenueAmong", () => {
+  it("matches like findMatchingVenue against venues already loaded, active ones first, without a query", () => {
+    findManyMock.mockClear();
+    const archived = existing({ id: "old", deletedAt: new Date() });
+    const otherTown = existing({ id: "far", city: "Cheney", zip: "99004", lat: 47.49, lng: -117.58 });
+    expect(findMatchingVenueAmong(INPUT, [archived, otherTown])).toBe(archived);
+    expect(findMatchingVenueAmong(INPUT, [archived, existing()])?.id).toBe("venue-1");
+    expect(findMatchingVenueAmong(INPUT, [existing({ name: "Spokane Valley Mall" })])).toBeNull();
+    expect(findManyMock).not.toHaveBeenCalled();
+  });
+
+  it("finds a venue by the nearby box when its ZIP and city differ", () => {
+    const pinned = { ...INPUT, city: "Airway Heights", zip: "99001", lat: 47.6136, lng: -117.5136 };
+    expect(findMatchingVenueAmong(pinned, [existing({ lat: 47.6137, lng: -117.5137 })])?.id).toBe("venue-1");
+    expect(findMatchingVenueAmong({ ...pinned, lat: null, lng: null }, [existing({ lat: 47.6137, lng: -117.5137 })])).toBeNull();
   });
 });
 

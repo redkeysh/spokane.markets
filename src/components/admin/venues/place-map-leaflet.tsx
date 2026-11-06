@@ -5,7 +5,10 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { MapPin } from "./place-map";
 
-/** Tiles are desaturated (and inverted in dark mode) so the pins carry the color. */
+/**
+ * Tiles are desaturated (and inverted in dark mode) so the pins carry the color. The attribution
+ * rules name .leaflet-container to outrank Leaflet's own white box, which may load after this.
+ */
 const MAP_CSS = `
 .sm-place-map .leaflet-container { font-family: inherit; background: var(--sm-fog); }
 .sm-place-map .leaflet-tile-pane { filter: grayscale(0.8) contrast(0.95); }
@@ -14,8 +17,8 @@ const MAP_CSS = `
   [data-theme="admin"][data-mode="system"] .sm-place-map .leaflet-tile-pane { filter: grayscale(1) invert(0.88) contrast(0.9); }
 }
 .sm-place-map .leaflet-control-zoom a { background: var(--sm-sheet); color: var(--sm-basalt); border-color: var(--sm-seam); }
-.sm-place-map .leaflet-control-attribution { background: color-mix(in srgb, var(--sm-sheet) 80%, transparent); color: var(--sm-ash); }
-.sm-place-map .leaflet-control-attribution a { color: var(--sm-lilac); }
+.sm-place-map .leaflet-container .leaflet-control-attribution { background: color-mix(in srgb, var(--sm-sheet) 80%, transparent); color: var(--sm-ash); }
+.sm-place-map .leaflet-container .leaflet-control-attribution a { color: var(--sm-lilac); }
 .sm-place-map .sm-pin { display: grid; place-items: center; }
 .sm-place-map .sm-pin:focus-visible { outline: 2px solid var(--sm-lilac); outline-offset: 2px; border-radius: 6px; }
 @media (forced-colors: active) { .sm-place-map .sm-pin path { fill: CanvasText; stroke: Canvas; } }

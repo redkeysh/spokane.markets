@@ -25,12 +25,3 @@ export function parseEnumParam<T extends string>(
 ): T | undefined {
   return value && (allowed as readonly string[]).includes(value) ? (value as T) : undefined;
 }
-
-export function parseFlag(value?: string) {
-  return value === "1" || value === "true";
-}
-
-export function parseQuery(value?: string) {
-  return (value ?? "").trim();
-}
-

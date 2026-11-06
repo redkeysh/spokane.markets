@@ -16,9 +16,8 @@ type LastDecision = { remember: (decisionId: string) => void; forget: (decisionI
 
 const LastDecisionContext = React.createContext<LastDecision | null>(null);
 
-/** Undoes an inbox decision: a toast and the same sentence in the live region, then fresh data. */
+/** Undoes an inbox decision: a toast and the same sentence in the live region. */
 function useInboxUndo() {
-  const router = useRouter();
   const announce = useAnnounce();
   return React.useCallback(
     async (decisionId: string) => {
@@ -26,9 +25,8 @@ function useInboxUndo() {
       if (result.ok) toast(result.message);
       else toast.error(result.message);
       announce(result.message);
-      router.refresh();
     },
-    [announce, router]
+    [announce]
   );
 }
 
@@ -81,10 +79,10 @@ export function InboxDecisions({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Runs an inbox server action: busy state, a toast (with Undo when the decision can be undone),
- * the same sentence in the live region and fresh data. Inside InboxDecisions the decision is
- * remembered for `u` and Ctrl+Z. With `then`, a successful action goes to that address instead of
- * refreshing.
+ * Runs an inbox server action: busy state, a toast (with Undo when the decision can be undone) and
+ * the same sentence in the live region; the action revalidates the admin, so its response carries
+ * fresh data. Inside InboxDecisions the decision is remembered for `u` and Ctrl+Z. With `then`, a
+ * successful action that changed something goes to that address.
  */
 export function useInboxAction(options: { onDone?: (result: InboxDone) => void } = {}) {
   const router = useRouter();
@@ -120,7 +118,6 @@ export function useInboxAction(options: { onDone?: (result: InboxDone) => void }
         announce(result.message);
         onDone.current?.(result);
         if (then && result.changed.length > 0) router.push(then);
-        else router.refresh();
         return result;
       } catch (error) {
         console.error("[inbox]", error);

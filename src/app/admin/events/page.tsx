@@ -3,12 +3,14 @@ import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
 import { dateColumnToIso, pacificDate, startOfPacificDay } from "@/lib/admin/format";
 import {
+  EVENTS_MAX_ROWS,
+  EVENTS_PAGE,
   buildEventsList,
-  buildEventsListWhere,
   clearedFiltersHref,
   emptyMessage,
   eventsListHref,
   eventsListQuery,
+  eventsListReads,
   parseEventsListParams,
   resultSummary,
   type EventsListParams,
@@ -21,8 +23,29 @@ import { EventsScreen } from "@/components/admin/events-list/events-screen";
 
 export const metadata: Metadata = { title: "Events" };
 
-/** More than any season holds; the list is filtered in memory after this. */
-const ROW_LIMIT = 3000;
+const EVENT_SELECT = {
+  id: true,
+  title: true,
+  slug: true,
+  status: true,
+  deletedAt: true,
+  startDate: true,
+  endDate: true,
+  createdAt: true,
+  updatedAt: true,
+  imageUrl: true,
+  marketId: true,
+  market: { select: { name: true } },
+  venue: {
+    select: { id: true, name: true, address: true, city: true, state: true, zip: true, neighborhood: true, deletedAt: true },
+  },
+  scheduleDays: { select: { date: true, startTime: true, endTime: true, allDay: true } },
+  _count: { select: { tags: true } },
+  submittedBy: {
+    select: { name: true, email: true, role: true, notificationPreference: { select: { organizerAlertsEnabled: true } } },
+  },
+  submissionFrom: { select: { id: true } },
+} as const;
 
 const LISTED = ["PENDING", "DRAFT", "PUBLISHED"] as const;
 
@@ -33,36 +56,13 @@ export default async function AdminEventsPage({ searchParams }: { searchParams: 
   const today = pacificDate(now);
   const startOfToday = startOfPacificDay(today);
 
-  const [rail, events, context, venues, importRows, memos, markets, tags, placeMemos] = await Promise.all([
+  const [rail, reads, context, venues, importRows, memos, markets, tags, placeMemos] = await Promise.all([
     getWeekendRail(now),
-    db.event.findMany({
-      where: buildEventsListWhere(filters, now),
-      take: ROW_LIMIT,
-      orderBy: { startDate: "asc" },
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        status: true,
-        deletedAt: true,
-        startDate: true,
-        endDate: true,
-        createdAt: true,
-        updatedAt: true,
-        imageUrl: true,
-        marketId: true,
-        market: { select: { name: true } },
-        venue: {
-          select: { id: true, name: true, address: true, city: true, state: true, zip: true, neighborhood: true, deletedAt: true },
-        },
-        scheduleDays: { select: { date: true, startTime: true, endTime: true, allDay: true } },
-        _count: { select: { tags: true } },
-        submittedBy: {
-          select: { name: true, email: true, role: true, notificationPreference: { select: { organizerAlertsEnabled: true } } },
-        },
-        submissionFrom: { select: { id: true } },
-      },
-    }),
+    Promise.all(
+      eventsListReads(filters, now).map((read) =>
+        db.event.findMany({ where: read.where, orderBy: read.orderBy, take: filters.rows + 1, select: EVENT_SELECT })
+      )
+    ),
     db.event.findMany({
       where: { deletedAt: null, status: { in: [...LISTED] }, endDate: { gte: startOfToday } },
       select: {
@@ -86,6 +86,9 @@ export default async function AdminEventsPage({ searchParams }: { searchParams: 
     db.tag.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
     loadPlaceMemos(),
   ]);
+
+  const truncated = reads.some((read) => read.length > filters.rows);
+  const events = reads.flatMap((read) => read.slice(0, filters.rows));
 
   const rows: ListSourceEvent[] = events.map((e) => ({
     id: e.id,
@@ -144,6 +147,11 @@ export default async function AdminEventsPage({ searchParams }: { searchParams: 
         clearHref: empty.clear === "search" ? eventsListHref(filters, { q: "" }) : empty.clear ? clearedFiltersHref(filters) : null,
         clearLabel: empty.clear === "search" ? "Clear search" : "Clear filters",
       }}
+      more={
+        truncated
+          ? { href: filters.rows < EVENTS_MAX_ROWS ? eventsListHref(filters, { rows: filters.rows + EVENTS_PAGE }) : null }
+          : null
+      }
       markets={markets.map((m) => ({ value: m.id, label: m.name, detail: m.venue?.city ?? undefined }))}
       places={venues
         .filter((v) => !v.deletedAt)

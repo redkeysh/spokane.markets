@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { buildDecisions, loadDecisionInput } from "@/lib/admin/decisions";
-import type { DecisionEvent, DecisionInput, DecisionLane, DecisionsResult } from "@/lib/admin/decisions/types";
+import type { DecisionEvent, DecisionInput, DecisionLane, DecisionsResult, DecisionVenue } from "@/lib/admin/decisions/types";
 import { getDoneToday } from "@/lib/admin/done-today";
 import {
   addDays,
@@ -29,16 +29,9 @@ import {
   readiness,
   type ScheduleDayRow,
 } from "@/lib/events/readiness";
-import { findDuplicateGroups, placeMemosOf } from "@/lib/venues/match";
-import { findMatchingVenue } from "@/lib/venues/resolve";
-import { failedPlaceLine, missingPlaceParts, placeLineOf, uncheckedPlaceLine } from "./place-line";
+import { findMatchingVenueAmong } from "@/lib/venues/resolve";
+import { missingPlaceParts, placeLineOf, uncheckedPlaceLine } from "./place-line";
 import type { TodoData, TodoEvent, TodoLane, TodoLink, TodoOptions, TodoPlaceLine, TodoSubmission } from "./types";
-
-/**
- * Submissions whose place is matched against saved places on load. The load never geocodes: a
- * place that matches none is found on the map when its decision opens (checkSubmissionPlace).
- */
-const PLACE_LOOKUPS = 25;
 
 export function linkLabel(url: string): string {
   const bare = url
@@ -160,28 +153,30 @@ type SubmissionPlaceRow = {
   venueZip: string | null;
 };
 
-/** The place line a submission shows on load, from saved places only. */
-async function placeOnLoad(row: SubmissionPlaceRow): Promise<TodoPlaceLine> {
+/**
+ * The place line a submission shows on load, matched against the saved places the To do load
+ * already holds. The load never geocodes: a place that matches none is found on the map when its
+ * decision opens (checkSubmissionPlace).
+ */
+export function placeOnLoad(row: SubmissionPlaceRow, venues: readonly DecisionVenue[]): TodoPlaceLine {
   const missing = missingPlaceParts(row);
   if (missing.length > 0) return placeLineOf({ outcome: "incomplete", note: "", missing });
-  try {
-    const match = await findMatchingVenue({
+  const match = findMatchingVenueAmong(
+    {
       name: row.venueName.trim(),
       address: row.venueAddress.trim(),
       city: row.venueCity!.trim(),
       state: row.venueState!.trim(),
       zip: row.venueZip!.trim(),
-    });
-    if (!match) return uncheckedPlaceLine(row);
-    if (match.deletedAt) return placeLineOf({ outcome: "archived", venueId: match.id, name: match.name, note: "" });
-    return placeLineOf({ outcome: "existing", venueId: match.id, name: match.name, address: match.address });
-  } catch (err) {
-    console.error(`[todo] place lookup for submission ${row.id} failed:`, err);
-    return failedPlaceLine(row);
-  }
+    },
+    venues
+  );
+  if (!match) return uncheckedPlaceLine(row);
+  if (match.deletedAt) return placeLineOf({ outcome: "archived", venueId: match.id, name: match.name, note: "" });
+  return placeLineOf({ outcome: "existing", venueId: match.id, name: match.name, address: match.address });
 }
 
-async function loadSubmissions(now: Date): Promise<Record<string, TodoSubmission>> {
+async function loadSubmissions(now: Date, venues: readonly DecisionVenue[]): Promise<Record<string, TodoSubmission>> {
   const rows = await db.submission.findMany({
     where: { status: "PENDING" },
     orderBy: { createdAt: "asc" },
@@ -215,12 +210,12 @@ async function loadSubmissions(now: Date): Promise<Record<string, TodoSubmission
   const tagIds = [...new Set(rows.flatMap((r) => r.tagIds))];
   const featureIds = [...new Set(rows.flatMap((r) => r.featureIds))];
   const emails = [...new Set(rows.map((r) => r.submitterEmail))];
-  const [tags, features, accounts, places] = await Promise.all([
+  const [tags, features, accounts] = await Promise.all([
     tagIds.length ? db.tag.findMany({ where: { id: { in: tagIds } }, select: { id: true, name: true } }) : [],
     featureIds.length ? db.feature.findMany({ where: { id: { in: featureIds } }, select: { id: true, name: true } }) : [],
     db.user.findMany({ where: { email: { in: emails } }, select: { email: true } }),
-    Promise.all(rows.map((row, i) => (i < PLACE_LOOKUPS ? placeOnLoad(row) : uncheckedPlaceLine(row)))),
   ]);
+  const places = rows.map((row) => placeOnLoad(row, venues));
   const tagName = new Map(tags.map((t) => [t.id, t.name]));
   const featureName = new Map(features.map((f) => [f.id, f.name]));
   const hasAccount = new Set(accounts.map((a) => a.email));
@@ -391,16 +386,15 @@ export async function loadTodoData(actorId: string, now: Date = new Date()): Pro
         })
       : [],
     keptOffByLane(today, saturdays),
-    loadSubmissions(now),
+    loadSubmissions(now, input.venues),
     getDoneToday(actorId, now),
     loadOptions(input.venues),
   ]);
 
-  const duplicateVenueIds = new Set(findDuplicateGroups(input.venues.filter((v) => !v.deletedAt), placeMemosOf(input.memos)).flat().map((v) => v.id));
   const ctx = {
     now,
     today,
-    duplicateVenueIds,
+    duplicateVenueIds: result.duplicateVenueIds,
     cohorts: importCohorts(input.importRows ?? input.events),
     names: new Map(
       names.map((n) => [

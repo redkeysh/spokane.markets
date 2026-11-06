@@ -10,12 +10,12 @@ import {
   formatTime,
   formatTimeRange,
   formatTimestamp,
-  formatWeekdayTime,
   formatWeekendSpan,
   pacificDate,
   pacificTime,
   saturdayOf,
   startOfPacificDay,
+  endOfPacificDay,
   weekdayIndex,
 } from "./format";
 
@@ -34,6 +34,14 @@ describe("Pacific calendar", () => {
     expect(startOfPacificDay("2026-07-04")).toEqual(new Date("2026-07-04T07:00:00Z"));
     expect(startOfPacificDay("2026-11-01")).toEqual(new Date("2026-11-01T07:00:00Z"));
     expect(startOfPacificDay("2027-03-14")).toEqual(new Date("2027-03-14T08:00:00Z"));
+  });
+
+  it("ends a Pacific day one millisecond before the next one begins, across clock changes", () => {
+    expect(endOfPacificDay("2026-12-01")).toEqual(new Date("2026-12-02T07:59:59.999Z"));
+    expect(endOfPacificDay("2026-07-04")).toEqual(new Date("2026-07-05T06:59:59.999Z"));
+    expect(endOfPacificDay("2026-10-31")).toEqual(new Date("2026-11-01T06:59:59.999Z"));
+    expect(endOfPacificDay("2026-11-01")).toEqual(new Date("2026-11-02T07:59:59.999Z"));
+    expect(pacificDate(endOfPacificDay("2027-03-14"))).toBe("2027-03-14");
   });
 
   it("does date arithmetic on calendar dates", () => {
@@ -77,6 +85,5 @@ describe("wording", () => {
 
   it("formats timestamps in Pacific time", () => {
     expect(formatTimestamp(new Date("2026-11-03T17:41:00Z"))).toBe("Nov 3, 2026 at 9:41 am");
-    expect(formatWeekdayTime(new Date("2026-11-07T19:00:00Z"))).toBe("Sat 11 am");
   });
 });

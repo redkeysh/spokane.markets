@@ -1,15 +1,17 @@
 import { formatDay } from "@/lib/admin/format";
 import { townName } from "@/lib/admin/regions";
 import type { Decision, DecisionContext, DecisionInput, DecisionRow, DecisionVenue } from "@/lib/admin/decisions/types";
-import { isPossibleDuplicate, placeMemosOf } from "./match";
+import { isPossibleDuplicate } from "./match";
 import { neighborhoodBuckets, type NeighborhoodRow, type SuggestablePlace } from "./neighborhood-suggest";
 import {
   archivedInUse,
-  duplicateGroups,
+  duplicatePlans,
   nextOf,
   spellingRows,
   unusedPlaces,
+  type DuplicateGroupPlan,
   type PlaceRecord,
+  type SpellingRow,
 } from "./place-review";
 import { listSome, plural } from "./words";
 
@@ -66,6 +68,16 @@ export function placeRecords(ctx: DecisionContext): PlaceRecord[] {
     }));
 }
 
+/**
+ * The context's duplicate groups (found once per build) as plans over the place records. A venue
+ * without a record (no `uses`) drops out of its group.
+ */
+function contextPlans(ctx: DecisionContext, records: readonly PlaceRecord[]): DuplicateGroupPlan[] {
+  const byId = new Map(records.map((r) => [r.id, r]));
+  const groups = ctx.duplicateGroups.map((group) => group.flatMap((v) => byId.get(v.id) ?? [])).filter((group) => group.length > 1);
+  return duplicatePlans(groups);
+}
+
 function venueRow(place: PlaceRecord): DecisionRow {
   return { type: "venue", id: place.id, title: place.name, ...(place.next ? { firstDate: place.next.date } : {}) };
 }
@@ -76,7 +88,7 @@ function nextLine(ctx: DecisionContext, next: PlaceRecord["next"]): string {
 
 /** One decision per duplicate group: "Spokane Community College, 3 records". */
 export function placeDuplicateDecisions(ctx: DecisionContext): Decision[] {
-  return duplicateGroups(placeRecords(ctx), placeMemosOf(ctx.input.memos)).map((plan) => ({
+  return contextPlans(ctx, placeRecords(ctx)).map((plan) => ({
     key: plan.key,
     kind: "place-duplicates",
     lane: "places",
@@ -148,6 +160,21 @@ export function zipNeighborhoodDecisions(ctx: DecisionContext): Decision[] {
   });
 }
 
+/** The distinct fixes of a spelling batch, most common (then shortest) first: "Wa to WA on 4, Idaho to ID and 2 more". */
+export function spellingSummary(rows: readonly SpellingRow[]): string {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    for (const fix of row.fixes) {
+      const phrase = `${fix.before} to ${fix.after}`;
+      counts.set(phrase, (counts.get(phrase) ?? 0) + 1);
+    }
+  }
+  const phrases = [...counts]
+    .sort((a, b) => b[1] - a[1] || a[0].length - b[0].length)
+    .map(([phrase, n]) => (n > 1 ? `${phrase} on ${n}` : phrase));
+  return listSome(phrases);
+}
+
 /** One decision for every safe spelling fix: "Spelling on 9 places". */
 export function spellingDecisions(ctx: DecisionContext): Decision[] {
   const rows = spellingRows(placeRecords(ctx));
@@ -159,10 +186,7 @@ export function spellingDecisions(ctx: DecisionContext): Decision[] {
       kind: "spelling",
       lane: "places",
       title: `Spelling on ${plural(rows.length, "place")}`,
-      detail: rows
-        .slice(0, 2)
-        .map((r) => `${r.fixes[0].before} to ${r.fixes[0].after}`)
-        .join(", "),
+      detail: spellingSummary(rows),
       rows: rows.map((r) => venueRow(r.place)),
       settles: [],
       primary: { label: `Fix ${rows.length}`, action: "edit" },
@@ -210,7 +234,7 @@ export function archivedInUseDecisions(ctx: DecisionContext): Decision[] {
  */
 export function unusedPlaceDecisions(ctx: DecisionContext): Decision[] {
   const records = placeRecords(ctx);
-  const rows = unusedPlaces(records, duplicateGroups(records, placeMemosOf(ctx.input.memos)));
+  const rows = unusedPlaces(records, contextPlans(ctx, records));
   const archivable = rows.filter((r) => !r.duplicateOf);
   if (archivable.length === 0) return [];
   return [

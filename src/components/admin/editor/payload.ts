@@ -5,7 +5,7 @@
 import { z } from "zod";
 import type { EventFieldChanges, ScheduleDayChange } from "@/lib/events/mutations";
 import type { SubmissionDraft } from "@/lib/submissions/draft";
-import { startOfPacificDay } from "@/lib/admin/format";
+import { endOfPacificDay } from "@/lib/admin/format";
 import {
   DETAIL_FIELDS,
   DETAIL_KEYS,
@@ -181,8 +181,9 @@ export function detailToColumn(field: DetailField, raw: string): unknown {
       if (value !== "yes" && value !== "no") throw refuse(`${field.label} must be yes or no.`);
       return value === "yes";
     case "date":
+      // Stored as the end of that Pacific day: the site reads vendorApplicationDeadline as the instant applications close.
       if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw refuse(`${field.label} must be a date.`);
-      return startOfPacificDay(value);
+      return endOfPacificDay(value);
     default:
       return value;
   }

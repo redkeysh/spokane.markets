@@ -417,6 +417,7 @@ export function DetailsActionBar({
   onSave,
   onDiscard,
   saveLabel = "Save",
+  saveVariant = "ink",
   canSave = changes > 0,
   leaving,
   onLeave,
@@ -431,6 +432,8 @@ export function DetailsActionBar({
   /** Drops the unsaved changes and stays on the page. */
   onDiscard?: () => void;
   saveLabel?: string;
+  /** "publish" (cedar) when saving puts the market on the public site. */
+  saveVariant?: "ink" | "publish";
   canSave?: boolean;
   leaving?: boolean;
   onLeave?: () => void;
@@ -458,7 +461,14 @@ export function DetailsActionBar({
           Cancel
         </AdminButton>
       )}
-      <AdminButton variant="ink" busy={saving} busyLabel="Saving" disabled={!canSave} onClick={onSave} keys="Ctrl+S">
+      <AdminButton
+        variant={saveVariant}
+        busy={saving}
+        busyLabel={saveVariant === "publish" ? "Publishing" : "Saving"}
+        disabled={!canSave}
+        onClick={onSave}
+        keys="Ctrl+S"
+      >
         {saveLabel}
       </AdminButton>
     </SaveBar>

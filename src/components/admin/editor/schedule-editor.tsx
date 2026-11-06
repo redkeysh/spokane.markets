@@ -5,13 +5,12 @@ import { Plus, X } from "lucide-react";
 import { AdminButton } from "@/components/admin/kit/button";
 import { ToggleChip } from "@/components/admin/kit/toggle-chip";
 import { Tooltip } from "@/components/admin/kit/tooltip";
-import { addDays, formatDay, formatTime, formatWeekday } from "@/lib/admin/format";
+import { TimeOptions } from "@/components/admin/kit/time-select";
+import { addDays, formatDay, formatWeekday } from "@/lib/admin/format";
 import { generateRecurringSchedule, MAX_RECURRING_DAYS } from "@/lib/recurring-schedule";
 import { cn } from "@/lib/utils";
 import { EditorCheckbox, EditorInput, EditorSelect, LinkButton } from "./controls";
-import { dayProblems, makeDay, repeatedDates, timeChoices, type EditorDay } from "./model";
-
-const TIMES = timeChoices();
+import { dayProblems, makeDay, repeatedDates, type EditorDay } from "./model";
 
 function TimeSelect({
   id,
@@ -29,15 +28,9 @@ function TimeSelect({
   disabled?: boolean;
   invalid?: boolean;
 }) {
-  const choices = value && !TIMES.includes(value) ? [value, ...TIMES] : TIMES;
   return (
     <EditorSelect id={id} aria-label={label} value={value} disabled={disabled} aria-invalid={invalid || undefined} onChange={(e) => onChange(e.target.value)} className="tabular-nums">
-      <option value="">Choose</option>
-      {choices.map((t) => (
-        <option key={t} value={t}>
-          {formatTime(t)}
-        </option>
-      ))}
+      <TimeOptions value={value} />
     </EditorSelect>
   );
 }

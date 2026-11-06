@@ -1,7 +1,5 @@
 /** Serializable items of the From the public inbox and the To do panes. Labels are preformatted. */
 
-export type InboxLink = { label: string; href: string };
-
 /** A listing an item is about. */
 export type InboxTarget = {
   /** "event", "market", "vendor", "review" */

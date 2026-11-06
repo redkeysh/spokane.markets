@@ -1,5 +1,3 @@
-import type { EventInput } from "@/lib/validations";
-
 export const DEFAULT_START_TIME = "08:00";
 export const DEFAULT_END_TIME = "14:00";
 
@@ -37,38 +35,11 @@ export type ScheduleDayInput = {
  * Derives `allDay` for the API. When a day has explicit times, they are
  * authoritative (a partial-day span clears allDay, a midnight-11:59 PM span sets
  * it). When a day has no times (e.g. an all-day recurring day), the explicit
- * allDay flag is preserved; otherwise it would be flipped to false and the
- * legacy startDate/endDate sync below would be skipped, saving stale dates.
+ * allDay flag is preserved.
  */
 export function mapScheduleDaysForSubmit(days: ScheduleDayInput[]): ScheduleDayInput[] {
   return days.map((d) => ({
     ...d,
     allDay: d.startTime ? isFullDayTimeRange(d.startTime, d.endTime) : d.allDay,
   }));
-}
-
-/** Applies mapped schedule days and syncs legacy `startDate` / `endDate` strings on the payload. */
-export function applyScheduleToEventPayload(data: EventInput): EventInput {
-  const scheduleDays = mapScheduleDaysForSubmit(data.scheduleDays ?? []);
-  if (!scheduleDays.length) {
-    return { ...data, scheduleDays };
-  }
-  const first = scheduleDays[0];
-  const last = scheduleDays[scheduleDays.length - 1];
-  // Explicit time selection is required in the admin editor.
-  // If times are incomplete, keep original legacy datetimes unchanged.
-  if (!first.allDay && !first.startTime) {
-    return { ...data, scheduleDays };
-  }
-  if (!last.allDay && !last.endTime) {
-    return { ...data, scheduleDays };
-  }
-  const firstStart = first.allDay ? "00:00" : first.startTime!;
-  const lastEnd = last.allDay ? "23:59" : last.endTime!;
-  return {
-    ...data,
-    scheduleDays,
-    startDate: `${first.date}T${firstStart}:00`,
-    endDate: `${last.date}T${lastEnd}:00`,
-  };
 }

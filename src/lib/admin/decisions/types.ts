@@ -174,6 +174,8 @@ export type DecisionContext = {
   /** Pending and Draft events, ended or not. */
   waiting: DecisionEvent[];
   readiness: Map<string, Readiness>;
+  /** Duplicate groups among active places, found once per build. */
+  duplicateGroups: DecisionVenue[][];
   /** venue id to duplicate group id. */
   placeGroups: Map<string, string>;
   duplicateVenueIds: Set<string>;
@@ -225,4 +227,6 @@ export type DecisionsResult = {
   /** Decisions under an active "later" memo, with when they come back. */
   snoozed: { decision: Decision; until: Date }[];
   lanes: LaneSummary[];
+  /** Active places in a duplicate group. */
+  duplicateVenueIds: Set<string>;
 };

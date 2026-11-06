@@ -52,6 +52,14 @@ function nearbyBox(coords: { lat: number; lng: number }) {
   };
 }
 
+type MatchCandidate = { name: string; address: string; city: string; zip: string; lat?: number | null; lng?: number | null; deletedAt: Date | null };
+
+/** The match among `candidates`: the same venue (isSameVenue), active ones before archived ones. */
+function pickMatch<T extends MatchCandidate>(input: VenueAddressInput, candidates: readonly T[]): T | null {
+  const matches = candidates.filter((candidate) => isSameVenue(input, candidate));
+  return matches.find((m) => m.deletedAt === null) ?? matches[0] ?? null;
+}
+
 /**
  * The venue an input refers to, if one exists. Active venues win over archived
  * ones. Candidates share the input's ZIP or city, or lie near its coordinates
@@ -70,8 +78,31 @@ export async function findMatchingVenue(input: VenueAddressInput): Promise<Venue
     },
     select: MATCH_SELECT,
   });
-  const matches = candidates.filter((candidate) => isSameVenue(input, candidate));
-  return matches.find((m) => m.deletedAt === null) ?? matches[0] ?? null;
+  return pickMatch(input, candidates);
+}
+
+/**
+ * findMatchingVenue over venues already loaded (archived ones included), with the same
+ * candidate rule, for a caller that holds every venue.
+ */
+export function findMatchingVenueAmong<T extends MatchCandidate>(input: VenueAddressInput, venues: readonly T[]): T | null {
+  const zip = input.zip.trim().slice(0, 5);
+  const city = input.city.trim().toLowerCase();
+  const coords = realCoords(input);
+  const box = coords ? nearbyBox(coords) : null;
+  const candidates = venues.filter(
+    (v) =>
+      (zip !== "" && v.zip.startsWith(zip)) ||
+      v.city.toLowerCase() === city ||
+      (box !== null &&
+        typeof v.lat === "number" &&
+        typeof v.lng === "number" &&
+        v.lat >= box.lat.gte &&
+        v.lat <= box.lat.lte &&
+        v.lng >= box.lng.gte &&
+        v.lng <= box.lng.lte)
+  );
+  return pickMatch(input, candidates);
 }
 
 export type FindOrCreateVenueResult =

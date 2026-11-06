@@ -13,8 +13,6 @@ export type PublicDecisionItems = {
   markets: { id: string; name: string; requestedAt: Date; owner: string | null }[];
 };
 
-export const NO_PUBLIC_ITEMS: PublicDecisionItems = { reviews: [], photos: [], reports: [], applications: [], messages: [], markets: [] };
-
 /** How many items the decision kinds file. */
 export function publicItemCount(items: PublicDecisionItems | undefined): number {
   if (!items) return 0;

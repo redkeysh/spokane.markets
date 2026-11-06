@@ -89,13 +89,14 @@ export function NewMarket({ initial, options, ownerDisplay }: { initial: MarketD
         changes={changes}
         saving={saving}
         onSave={create}
-        saveLabel="Create market"
+        saveLabel="Publish market"
+        saveVariant="publish"
         canSave
         leaving={leaveTo !== null}
         onLeave={() => leaveTo && leave(leaveTo)}
         onStay={() => setLeaveTo(null)}
         onCancel={() => navigate("/admin/markets")}
-        status={values.name.trim() && values.venueId ? `Ready to create ${values.name.trim()}` : "A name and a home place are required"}
+        status={values.name.trim() && values.venueId ? "Not on the site until you publish it." : "A name and a home place are required"}
       />
     </Screen>
   );

@@ -134,13 +134,7 @@ export function HistoryView({
   if (state.lines.length === 0) {
     return (
       <Empty
-        action={
-          anyTimeHref ? (
-            <Link href={anyTimeHref} className={`inline-flex min-h-6 items-center text-sm ${LINK}`}>
-              Show any time
-            </Link>
-          ) : undefined
-        }
+        action={anyTimeHref ? { label: "Show any time", href: anyTimeHref } : undefined}
       >
         {emptyMessage}
       </Empty>

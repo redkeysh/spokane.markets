@@ -1,5 +1,8 @@
 import { cn } from "@/lib/utils";
 
+/** For a key hint inside a control: left off below md, where a phone has no keyboard to press it on. */
+export const HIDDEN_ON_PHONES = "max-md:hidden";
+
 /**
  * A keycap such as "P", "Ctrl+S" or "/". Decorative: the control it sits in carries the
  * shortcut through aria-keyshortcuts.

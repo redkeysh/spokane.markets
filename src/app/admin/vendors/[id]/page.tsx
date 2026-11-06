@@ -4,6 +4,7 @@ import { cache } from "react";
 import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
 import { getHistory } from "@/lib/admin/history";
+import { adminRecordTitle } from "@/lib/admin/record-title";
 import { getListingCommunityBadgeOptions } from "@/lib/listing-community-badges";
 import { extractSocialHandle } from "@/lib/utils";
 import type { VendorEditorInput } from "@/lib/vendors/admin-input";
@@ -33,8 +34,7 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { id } = await params;
-  const vendor = await getVendor(id);
-  return { title: vendor?.businessName ?? "Vendor not found" };
+  return adminRecordTitle("Vendor", async () => (await getVendor(id))?.businessName);
 }
 
 export default async function AdminVendorPage({ params, searchParams }: { params: Params; searchParams: SearchParams }) {

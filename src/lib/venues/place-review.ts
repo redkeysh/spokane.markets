@@ -198,14 +198,16 @@ function normalizeFor(field: MergeField, record: PlaceRecord): string {
   return fieldValue(record, field).toLowerCase();
 }
 
-export type PlaceMemos = { different: Set<string>; same: Set<string> };
+/** Plans for duplicate groups already found, by next event. */
+export function duplicatePlans(groups: readonly (readonly PlaceRecord[])[]): DuplicateGroupPlan[] {
+  return groups
+    .map(planDuplicateGroup)
+    .sort((a, b) => byNext({ next: a.next, name: a.records[0].name }, { next: b.next, name: b.records[0].name }) || a.key.localeCompare(b.key));
+}
 
 /** Duplicate groups among active places, honoring the owner's "different" and "same" pairs, by next event. */
 export function duplicateGroups(places: readonly PlaceRecord[], memos: DuplicateMemos = {}): DuplicateGroupPlan[] {
-  const active = places.filter((p) => !p.deletedAt);
-  return findDuplicateGroups(active, memos)
-    .map(planDuplicateGroup)
-    .sort((a, b) => byNext({ next: a.next, name: a.records[0].name }, { next: b.next, name: b.records[0].name }) || a.key.localeCompare(b.key));
+  return duplicatePlans(findDuplicateGroups(places.filter((p) => !p.deletedAt), memos));
 }
 
 /** Every pair key in a group, for "Different places". */

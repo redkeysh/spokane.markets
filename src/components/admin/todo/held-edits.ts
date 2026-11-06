@@ -77,10 +77,6 @@ export function dayProblem(day: HeldDay): string | null {
   return null;
 }
 
-export function heldDayLabel(day: HeldDay, now: Date): string {
-  return formatDay(day.date, now);
-}
-
 function sameDays(a: HeldDay[], b: HeldDay[]): boolean {
   if (a.length !== b.length) return false;
   return a.every((d, i) => {

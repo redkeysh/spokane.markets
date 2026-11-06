@@ -108,13 +108,7 @@ export function AllPlaces({
     return (
       <Empty
         detail={q ? "Search covers the name, address, town and ZIP." : undefined}
-        action={
-          q ? (
-            <Link href="/admin/venues" className={adminButtonClass({ variant: "outline", size: "sm" })}>
-              Clear search
-            </Link>
-          ) : undefined
-        }
+        action={q ? { label: "Clear search", href: "/admin/venues" } : undefined}
       >
         {q ? `No place matches "${q}".` : "No places yet."}
       </Empty>

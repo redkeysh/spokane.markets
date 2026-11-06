@@ -51,6 +51,8 @@ export type EventsScreenProps = {
   query: string;
   result: EventsListResult;
   empty: { text: string; clearHref: string | null; clearLabel: string };
+  /** Set when more events match than the list read; `href` reads more, null at the most it reads. */
+  more: { href: string | null } | null;
   summary: string;
   markets: PickOption[];
   places: PickOption[];
@@ -74,7 +76,7 @@ function dialogEvent(id: string, rows: ReadonlyMap<string, EventListRow>): Dialo
 }
 
 /** The Events list: header, filters, weekend groups or the table, and the bulk bar. */
-export function EventsScreen({ filters, query, result, empty, summary, markets, places, tags }: EventsScreenProps) {
+export function EventsScreen({ filters, query, result, empty, more, summary, markets, places, tags }: EventsScreenProps) {
   const router = useRouter();
   const announce = useAnnounce();
   const { rail, markLive } = useRail();
@@ -351,13 +353,7 @@ export function EventsScreen({ filters, query, result, empty, summary, markets, 
             {!hasRows ? (
               <Empty
                 className="px-4 md:px-6"
-                action={
-                  empty.clearHref ? (
-                    <Link href={empty.clearHref} className="text-sm text-lilac underline-offset-4 hover:underline">
-                      {empty.clearLabel}
-                    </Link>
-                  ) : undefined
-                }
+                action={empty.clearHref ? { label: empty.clearLabel, href: empty.clearHref } : undefined}
               >
                 {empty.text}
               </Empty>
@@ -369,6 +365,18 @@ export function EventsScreen({ filters, query, result, empty, summary, markets, 
                   <WeekendGroup key={group.key} group={group} />
                 ))}
               </div>
+            )}
+            {more && (
+              <p className="border-t border-seam px-4 py-4 font-text text-sm text-ash md:px-6">
+                More events match than this list shows.{" "}
+                {more.href ? (
+                  <Link href={more.href} className="rounded-sm text-lilac underline-offset-4 hover:underline">
+                    Show more
+                  </Link>
+                ) : (
+                  "Narrow the search or filters to see the rest."
+                )}
+              </p>
             )}
           </div>
         </Pane>

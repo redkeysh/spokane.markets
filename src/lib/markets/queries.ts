@@ -104,8 +104,6 @@ export async function loadMarketRecord(id: string) {
   });
 }
 
-export type MarketRecord = NonNullable<Awaited<ReturnType<typeof loadMarketRecord>>>;
-
 /** A market's own listings (not archived, any date) and the unlinked listings still ahead that could be its own. */
 export async function loadMarketEvents(marketId: string, now: Date): Promise<{ own: BoardEvent[]; unlinked: BoardEvent[]; groups: PlaceGroups }> {
   const [own, unlinked, groups] = await Promise.all([

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { KeyHint } from "@/components/admin/kit/key-hint";
+import { HIDDEN_ON_PHONES, KeyHint } from "@/components/admin/kit/key-hint";
 import type { NeighborhoodRow } from "@/lib/venues/neighborhood-suggest";
 import {
   fieldValue,
@@ -159,7 +159,7 @@ export function MergeTable({
                     >
                       {keptId === r.id ? "Keep" : "Merge in"}
                     </span>
-                    {records.length <= 9 && <KeyHint keys={String(i + 1)} />}
+                    {records.length <= 9 && <KeyHint keys={String(i + 1)} className={HIDDEN_ON_PHONES} />}
                   </label>
                 </th>
               ))}

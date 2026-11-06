@@ -8,7 +8,7 @@ import { Empty } from "@/components/admin/kit/empty";
 import { FilterSelect } from "@/components/admin/kit/filter-bar";
 import { Segmented } from "@/components/admin/kit/segmented";
 import { ToggleChip } from "@/components/admin/kit/toggle-chip";
-import { KeyHint } from "@/components/admin/kit/key-hint";
+import { HIDDEN_ON_PHONES, KeyHint } from "@/components/admin/kit/key-hint";
 import { useRovingFocus } from "@/components/admin/kit/use-roving";
 import { SingleKeysContext } from "@/components/admin/kit/use-shortcuts";
 import { formatDay } from "@/lib/admin/format";
@@ -215,7 +215,7 @@ export function NeighborhoodBucketsView({
                     <div className="flex flex-wrap items-center gap-2">
                       {row.row.candidates.map((slug, n) => (
                         <ToggleChip key={slug} dashed pressed={false} disabled={!!busy} onPressedChange={() => void setFor([row.row.place.id], slug)}>
-                          <KeyHint keys={String(n + 1)} />
+                          <KeyHint keys={String(n + 1)} className={HIDDEN_ON_PHONES} />
                           {labelOf(slug, neighborhoods)}
                         </ToggleChip>
                       ))}

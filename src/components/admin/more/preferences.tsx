@@ -24,7 +24,10 @@ export function Preferences() {
         <span className="text-sm font-medium text-basalt sm:pt-1">Color mode</span>
         <div className="flex flex-col gap-1">
           <Segmented label="Color mode" options={MODE_OPTIONS} value={mode} onChange={setMode} className="self-start" />
-          <p className="text-xs text-ash">System follows your device. The mode button in the top bar cycles the same three.</p>
+          <p className="text-xs text-ash">
+            System follows your device.
+            <span className="hidden md:inline"> The mode button in the top bar cycles the same three.</span>
+          </p>
         </div>
       </div>
       <div className="grid gap-x-6 gap-y-2 px-4 py-3 sm:grid-cols-[12rem_minmax(0,1fr)] sm:items-start">

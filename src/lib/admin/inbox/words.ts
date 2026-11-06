@@ -28,9 +28,6 @@ export function reportReasonText(reason: string | null | undefined): string {
 export const SEVERITY_WORDS: Record<string, string> = { LOW: "Low", MEDIUM: "Medium", HIGH: "High", CRITICAL: "Critical" };
 export const ESCALATION_WORDS: Record<string, string> = { NEW: "New", TRIAGED: "Looked at", ESCALATED: "Escalated", CLOSED: "Closed" };
 
-/** The kind of record a report is about, in words. */
-export const REPORT_TARGET_WORDS: Record<string, string> = { EVENT: "event", MARKET: "market", VENDOR: "vendor", REVIEW: "review" };
-
 export const APPLICATION_FORM_WORDS: Record<string, string> = {
   VENDOR: "Vendor application",
   MARKET: "Market application",

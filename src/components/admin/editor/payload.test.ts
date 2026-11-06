@@ -85,7 +85,7 @@ describe("detailToColumn", () => {
     expect(detailToColumn(field("indoorOutdoor"), "OUTDOOR")).toBe("OUTDOOR");
     expect(() => detailToColumn(field("indoorOutdoor"), "SPACE")).toThrow();
     expect(() => detailToColumn(field("expectedAttendance"), "lots")).toThrow();
-    expect(detailToColumn(field("vendorApplicationDeadline"), "2026-11-20")).toEqual(new Date("2026-11-20T08:00:00.000Z"));
+    expect(detailToColumn(field("vendorApplicationDeadline"), "2026-11-20")).toEqual(new Date("2026-11-21T07:59:59.999Z"));
     expect(detailToColumn(field("parkingSummary"), "  ")).toBeNull();
   });
 

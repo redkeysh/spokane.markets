@@ -3,7 +3,6 @@
 import * as React from "react";
 import Link from "next/link";
 import { Empty } from "@/components/admin/kit/empty";
-import { adminButtonClass } from "@/components/admin/kit/button";
 import { getPublicDecisionData } from "@/app/admin/_actions/inbox";
 import { ApplicationNotes, useNotesDraft } from "@/components/admin/inbox/application-notes";
 import { consequenceNote, itemActions, type ItemAction } from "@/components/admin/inbox/item-actions";
@@ -100,11 +99,7 @@ export function PublicDecision({ decision, position }: DecisionPaneProps) {
       <article aria-labelledby="todo-decision-title">
         <DecisionHeader title={decision.title} meta={position} />
         <Empty
-          action={
-            <Link href={browse.href} className={adminButtonClass({ variant: "outline", size: "sm" })}>
-              {browse.open}
-            </Link>
-          }
+          action={{ label: browse.open, href: browse.href }}
         >
           {data === null ? "This one is gone." : "This one was already answered."}
         </Empty>

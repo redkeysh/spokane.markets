@@ -189,7 +189,6 @@ export function AdminVendorForm({
       } else {
         toast.success(`Saved ${name}.`);
         if (then) shell.leave(then);
-        else router.refresh();
       }
     });
   };
@@ -209,10 +208,8 @@ export function AdminVendorForm({
     announce(`Archived ${result.businessName}.`);
     toastWithUndo(`Archived ${result.businessName}. It is off the site.`, async () => {
       const undone = await settle(restoreVendor(vendor.id));
-      if (undone.ok) router.refresh();
-      else toast.error(undone.error);
+      if (!undone.ok) toast.error(undone.error);
     });
-    router.refresh();
   };
 
   const onRestore = async () => {
@@ -224,7 +221,6 @@ export function AdminVendorForm({
     }
     toast.success(`Restored ${result.businessName}. It is back on the site.`);
     announce(`Restored ${result.businessName}.`);
-    router.refresh();
   };
 
   useShortcuts({

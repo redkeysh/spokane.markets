@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { SECTION_LINK } from "@/components/admin/kit/section-link";
 
 /** In-page links to the sections of a long page. Anchors, not tabs: every section stays on the page. */
 export function SectionLinks({ label, links, className }: { label: string; links: ReadonlyArray<{ id: string; label: string }>; className?: string }) {
@@ -8,7 +9,7 @@ export function SectionLinks({ label, links, className }: { label: string; links
       <ul className="flex flex-wrap gap-x-5 gap-y-1">
         {links.map((link) => (
           <li key={link.id}>
-            <Link href={`#${link.id}`} className="inline-flex min-h-6 items-center rounded-sm text-sm text-lilac underline-offset-4 hover:underline">
+            <Link href={`#${link.id}`} className={SECTION_LINK}>
               {link.label}
             </Link>
           </li>

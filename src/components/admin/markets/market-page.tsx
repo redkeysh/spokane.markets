@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AdminButton, AdminLinkButton } from "@/components/admin/kit/button";
 import { DateLeaf } from "@/components/admin/kit/date-leaf";
@@ -283,7 +282,6 @@ type Panel = { kind: "add" } | { kind: "next"; plan: PlannedDate[]; summary: str
  * season in place, then the details in collapsed groups with the action bar that saves them.
  */
 export function MarketPage({ data }: { data: MarketPageData }) {
-  const router = useRouter();
   const { leave, navigate } = useShell();
   const announce = useAnnounce();
   const phone = useMediaQuery("(max-width: 767.98px)", false);
@@ -379,7 +377,6 @@ export function MarketPage({ data }: { data: MarketPageData }) {
       setBaseline(values);
       toast(result.message);
       announce(result.message);
-      router.refresh();
       return true;
     } finally {
       setSaving(false);
@@ -633,7 +630,6 @@ export function MarketPage({ data }: { data: MarketPageData }) {
                 const words = result.ok ? result.message : result.error;
                 toast(words);
                 announce(words);
-                router.refresh();
               }}
             />
           </section>

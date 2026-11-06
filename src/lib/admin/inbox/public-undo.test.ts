@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   messageFindMany: vi.fn(),
   reviewUpdateMany: vi.fn(),
   auditFindMany: vi.fn(),
+  queryRaw: vi.fn(),
   auditCreate: vi.fn(),
 }));
 
@@ -19,6 +20,7 @@ vi.mock("@/lib/db", () => {
     application: { findMany: mocks.applicationFindMany },
     contactMessage: { findMany: mocks.messageFindMany },
     auditLog: { findMany: mocks.auditFindMany, create: mocks.auditCreate },
+    $queryRaw: mocks.queryRaw,
     $transaction: (fn: (tx: unknown) => unknown) => fn(client),
   };
   return { db: client };
@@ -169,7 +171,7 @@ describe("undoDecision with public items", () => {
       newValue: { status: "APPROVED" },
       details: { decisionId: "d1", title: "the review of X" },
     });
-    mocks.auditFindMany.mockResolvedValueOnce([approved]).mockResolvedValueOnce([]);
+    mocks.queryRaw.mockResolvedValueOnce([approved]).mockResolvedValueOnce([]);
     mocks.reviewFindMany.mockResolvedValue([{ id: "r1", status: "APPROVED" }]);
     mocks.reviewUpdateMany.mockResolvedValue({ count: 1 });
     const result = await undoDecision("d1", "admin");
@@ -181,7 +183,7 @@ describe("undoDecision with public items", () => {
 
   it("restores nothing when the item moved on during the undo", async () => {
     const approved = entry("REVIEW", "r1", "UPDATE_REVIEW_STATUS", { previousValue: { status: "PENDING" }, newValue: { status: "APPROVED" } });
-    mocks.auditFindMany.mockResolvedValueOnce([approved]).mockResolvedValueOnce([]);
+    mocks.queryRaw.mockResolvedValueOnce([approved]).mockResolvedValueOnce([]);
     mocks.reviewFindMany.mockResolvedValue([{ id: "r1", status: "APPROVED" }]);
     mocks.reviewUpdateMany.mockResolvedValue({ count: 0 });
     const result = await undoDecision("d1", "admin");

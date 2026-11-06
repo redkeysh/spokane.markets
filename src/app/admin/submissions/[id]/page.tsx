@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth-utils";
+import { adminRecordTitle } from "@/lib/admin/record-title";
 import { db } from "@/lib/db";
 import { EventEditor } from "@/components/admin/editor/event-editor";
 import { loadSubmissionEditor, type SearchParams } from "@/components/admin/editor/load";
@@ -11,8 +12,10 @@ type Props = { params: Promise<{ id: string }>; searchParams: Promise<SearchPara
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const submission = await db.submission.findUnique({ where: { id }, select: { eventTitle: true } });
-  return { title: submission ? `Sent from the site: ${submission.eventTitle.trim()}` : "Submission not found" };
+  return adminRecordTitle("Sent from the site", async () => {
+    const submission = await db.submission.findUnique({ where: { id }, select: { eventTitle: true } });
+    return submission ? `Sent from the site: ${submission.eventTitle.trim()}` : null;
+  });
 }
 
 /** A pending submission opens in the event editor bound to it; a decided one is a read-only record. */

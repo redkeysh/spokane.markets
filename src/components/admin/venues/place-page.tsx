@@ -163,7 +163,6 @@ function PlacePageInner({ data, neighborhoods, now }: { data: PlacePageData; nei
         setLeaving(null);
         shell.leave(options.then);
       } else if (isNew) router.push(`/admin/venues/${result.id}`);
-      else router.refresh();
       return true;
     } finally {
       setSaving(false);
@@ -489,7 +488,6 @@ function SideColumn({
   run: ReturnType<typeof useVenueAction>["run"];
   onMerge: (row: PlaceSearchRow) => void;
 }) {
-  const router = useRouter();
   const announce = useAnnounce();
   const weeks = new Map<string, UsedByEvent[]>();
   for (const e of data.upcoming) {
@@ -598,7 +596,6 @@ function SideColumn({
             if (result.ok) toast(result.message);
             else toast.error(result.message);
             announce(result.message);
-            router.refresh();
           }}
         />
       </Section>

@@ -312,7 +312,7 @@ describe("saveMarketDetails", () => {
     mocks.marketCreate.mockResolvedValue({ id: "new", name: "Kendall Yards Night Market", slug: "kendall-yards-night-market" });
     const result = await saveMarketDetails({ id: null, values });
     expect(mocks.auditCreate.mock.calls[0][0].data).toMatchObject({ action: "CREATE_MARKET", targetId: "new" });
-    expect(result).toEqual({ ok: true, message: "Made the market Kendall Yards Night Market.", marketId: "new" });
+    expect(result).toEqual({ ok: true, message: "Published Kendall Yards Night Market. Its page is on the site.", marketId: "new" });
   });
 
   it("refuses an archived home place", async () => {

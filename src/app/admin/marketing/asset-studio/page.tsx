@@ -64,11 +64,7 @@ export default async function MarketingAssetStudioPage() {
         {templates.length === 0 ? (
           <Empty
             className="py-2"
-            action={
-              <Link href="/admin/marketing/asset-studio/templates" className={LINK}>
-                Add a template
-              </Link>
-            }
+            action={{ label: "Add a template", href: "/admin/marketing/asset-studio/templates" }}
           >
             There are no templates yet.
           </Empty>

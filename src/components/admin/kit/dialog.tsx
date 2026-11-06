@@ -101,7 +101,7 @@ export function AdminDialog({
                 </p>
               )}
             </div>
-            <div className={cn("min-h-0 flex-1 overflow-y-auto px-6 py-2", bodyClassName)}>{children}</div>
+            <div className={cn("min-h-0 flex-1 overflow-y-auto px-6 py-2 focus-visible:outline-offset-[-2px]", bodyClassName)}>{children}</div>
             {footer && (
               <div className="flex flex-wrap items-center justify-end gap-2 px-6 pt-3 pb-5">{footer}</div>
             )}

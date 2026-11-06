@@ -42,6 +42,11 @@ export const EVENTS_ONLY = ["twins", "series", "trade-shows"] as const;
 export const EVENTS_VIEWS = ["weekends", "table"] as const;
 export const EVENTS_SORTS = ["title", "start", "place", "market", "status", "updated"] as const;
 
+/** Events the list reads from the database at first, and how many more each "Show more" adds. */
+export const EVENTS_PAGE = 500;
+/** The most events "Show more" reads in one list. */
+export const EVENTS_MAX_ROWS = 5000;
+
 export type EventsShow = (typeof EVENTS_SHOW)[number];
 export type EventsWhen = (typeof EVENTS_WHEN)[number];
 export type EventsNeed = (typeof EVENTS_NEEDS)[number];
@@ -92,6 +97,8 @@ export type EventsListFilters = {
   sort: EventsSort;
   dir: SortDir;
   dirSet: boolean;
+  /** How many events each database read takes: EVENTS_PAGE, raised by "Show more". */
+  rows: number;
 };
 
 export type EventsListParams = Record<string, string | string[] | undefined>;
@@ -120,6 +127,12 @@ function validIsoDate(value: string): boolean {
 
 function defaultWhen(show: EventsShow): EventsWhen {
   return show === "everything" ? "all" : "upcoming";
+}
+
+function rowsParam(value: string | undefined): number {
+  const n = Number(value);
+  if (!Number.isInteger(n) || n <= EVENTS_PAGE) return EVENTS_PAGE;
+  return Math.min(Math.ceil(n / EVENTS_PAGE) * EVENTS_PAGE, EVENTS_MAX_ROWS);
 }
 
 function defaultDir(sort: EventsSort, when: EventsWhen): SortDir {
@@ -152,6 +165,7 @@ export function parseEventsListParams(params: EventsListParams): EventsListFilte
     sort,
     dir: dirParam ?? defaultDir(sort, when),
     dirSet: dirParam !== null,
+    rows: rowsParam(firstValue(params.rows)),
   };
 }
 
@@ -159,10 +173,12 @@ export type EventsFilterChange = Partial<Omit<EventsListFilters, "whenSet" | "di
 
 /**
  * The filters after a change. Picking a When equal to the Show's default drops it from the URL;
- * changing Show keeps an explicit When. A sort change resets an explicit direction.
+ * changing Show keeps an explicit When. A sort change resets an explicit direction. Any change
+ * but "Show more" starts again from the first EVENTS_PAGE events.
  */
 export function applyFilterChange(filters: EventsListFilters, change: EventsFilterChange): EventsListFilters {
   const next = { ...filters, ...change };
+  if (!("rows" in change)) next.rows = EVENTS_PAGE;
   if ("when" in change) next.whenSet = change.when !== defaultWhen(next.show);
   if ("show" in change && !("when" in change) && !filters.whenSet) next.when = defaultWhen(next.show);
   if ("sort" in change && !("dir" in change)) next.dirSet = false;
@@ -185,6 +201,7 @@ export function eventsListQuery(filters: EventsListFilters): string {
   if (filters.view !== "weekends") qp.set("view", filters.view);
   if (filters.view === "table" && filters.sort !== "start") qp.set("sort", filters.sort);
   if (filters.view === "table" && filters.dirSet) qp.set("dir", filters.dir);
+  if (filters.rows > EVENTS_PAGE) qp.set("rows", String(filters.rows));
   return qp.toString();
 }
 
@@ -249,6 +266,35 @@ export function buildEventsListWhere(
     ];
   }
   return where;
+}
+
+export type EventsListRead = { where: Prisma.EventWhereInput; orderBy: Prisma.EventOrderByWithRelationInput[] };
+
+/**
+ * The database reads of the list, each to take `rows` events. Each is ordered the way the view
+ * shows its rows, so the cap cuts off the far end: the table's title, place or updated column, or
+ * else by start, soonest first for Upcoming and latest first for Past. All reads the events on
+ * each side of today separately, each side nearest today first.
+ */
+export function eventsListReads(filters: Pick<EventsListFilters, "show" | "when" | "q" | "view" | "sort" | "dir">, now: Date): EventsListRead[] {
+  const where = buildEventsListWhere(filters, now);
+  if (filters.view === "table") {
+    const dir = filters.dir;
+    const then: Prisma.EventOrderByWithRelationInput[] = [{ startDate: "asc" }, { id: "asc" }];
+    if (filters.sort === "title") return [{ where, orderBy: [{ title: dir }, ...then] }];
+    if (filters.sort === "place") return [{ where, orderBy: [{ venue: { name: dir } }, ...then] }];
+    if (filters.sort === "updated") return [{ where, orderBy: [{ updatedAt: dir }, { id: dir }] }];
+  }
+  const byStart = (dir: SortDir): Prisma.EventOrderByWithRelationInput[] => [{ startDate: dir }, { id: dir }];
+  if (filters.when === "all") {
+    const startOfToday = startOfPacificDay(pacificDate(now));
+    return [
+      { where: { AND: [where, { endDate: { gte: startOfToday } }] }, orderBy: byStart("asc") },
+      { where: { AND: [where, { endDate: { lt: startOfToday } }] }, orderBy: byStart("desc") },
+    ];
+  }
+  const dir = filters.view === "table" && filters.sort === "start" ? filters.dir : defaultDir("start", filters.when);
+  return [{ where, orderBy: byStart(dir) }];
 }
 
 /* ------------------------------------------------------------------------------------------------

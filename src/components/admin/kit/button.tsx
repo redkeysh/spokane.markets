@@ -1,7 +1,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { KeyHint, toAriaKeyShortcuts } from "./key-hint";
+import { HIDDEN_ON_PHONES, KeyHint, toAriaKeyShortcuts } from "./key-hint";
 
 export type AdminButtonVariant = "publish" | "ink" | "outline" | "quiet" | "danger" | "danger-outline";
 export type AdminButtonSize = "md" | "sm" | "lg" | "icon" | "icon-sm";
@@ -98,7 +98,7 @@ export const AdminButton = React.forwardRef<HTMLButtonElement, AdminButtonProps>
       <Label busy={busy} busyLabel={busyLabel}>
         {children}
       </Label>
-      {keys && <KeyHint keys={keys} inverse={FILLED.has(variant)} />}
+      {keys && <KeyHint keys={keys} inverse={FILLED.has(variant)} className={HIDDEN_ON_PHONES} />}
     </button>
   );
 });
@@ -121,7 +121,7 @@ export function AdminLinkButton({
       {...props}
     >
       {children}
-      {keys && <KeyHint keys={keys} inverse={FILLED.has(variant)} />}
+      {keys && <KeyHint keys={keys} inverse={FILLED.has(variant)} className={HIDDEN_ON_PHONES} />}
     </Link>
   );
 }

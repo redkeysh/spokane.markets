@@ -1,9 +1,8 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { Empty } from "@/components/admin/kit/empty";
-import { AdminButton, adminButtonClass } from "@/components/admin/kit/button";
+import { AdminButton } from "@/components/admin/kit/button";
 import { useShortcuts } from "@/components/admin/kit/use-shortcuts";
 import type { Decision } from "@/lib/admin/decisions";
 import type { PlaceDecisionData } from "@/lib/venues/place-decision-data";
@@ -140,11 +139,7 @@ export function PlaceDecision({
       {data === undefined && <p className="text-sm text-ash">Loading this decision.</p>}
       {data === null && (
         <Empty
-          action={
-            <Link href={`/admin/venues?view=${view}`} className={adminButtonClass({ variant: "outline", size: "sm" })}>
-              Open Venues
-            </Link>
-          }
+          action={{ label: "Open Venues", href: `/admin/venues?view=${view}` }}
         >
           This one is settled.
         </Empty>

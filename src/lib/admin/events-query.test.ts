@@ -11,6 +11,9 @@ import {
   buildAdminEventsWhere,
   buildEventsList,
   buildEventsListWhere,
+  EVENTS_MAX_ROWS,
+  EVENTS_PAGE,
+  eventsListReads,
   dayHours,
   emptyMessage,
   eventsListHref,
@@ -152,6 +155,44 @@ describe("eventsListQuery and eventsListHref", () => {
 
   it("leaves sort out of the weekend view", () => {
     expect(eventsListQuery(parseEventsListParams({ sort: "title" }))).toBe("");
+  });
+
+  it("reads more rows by pages, and starts from the first page when a filter changes", () => {
+    expect(parseEventsListParams({}).rows).toBe(EVENTS_PAGE);
+    expect(parseEventsListParams({ rows: "1000" }).rows).toBe(1000);
+    expect(parseEventsListParams({ rows: "700" }).rows).toBe(1000);
+    expect(parseEventsListParams({ rows: "999999" }).rows).toBe(EVENTS_MAX_ROWS);
+    expect(parseEventsListParams({ rows: "-3" }).rows).toBe(EVENTS_PAGE);
+    const past = parseEventsListParams({ when: "past" });
+    expect(eventsListHref(past, { rows: past.rows + EVENTS_PAGE })).toBe("/admin/events?when=past&rows=1000");
+    expect(eventsListHref(parseEventsListParams({ when: "past", rows: "1000" }), { q: "fair" })).toBe("/admin/events?q=fair&when=past");
+  });
+});
+
+describe("eventsListReads", () => {
+  const now = new Date("2026-11-03T18:40:00Z");
+  const startOfToday = new Date("2026-11-03T08:00:00Z");
+
+  it("reads Past latest first, so the newest past events are never the ones cut off", () => {
+    const [read] = eventsListReads(parseEventsListParams({ when: "past" }), now);
+    expect(read.orderBy).toEqual([{ startDate: "desc" }, { id: "desc" }]);
+    expect(eventsListReads(parseEventsListParams({}), now)[0].orderBy).toEqual([{ startDate: "asc" }, { id: "asc" }]);
+  });
+
+  it("reads All as the events on each side of today, nearest first", () => {
+    const reads = eventsListReads(parseEventsListParams({ show: "everything" }), now);
+    expect(reads).toHaveLength(2);
+    expect(reads[0]).toEqual({ where: { AND: [{}, { endDate: { gte: startOfToday } }] }, orderBy: [{ startDate: "asc" }, { id: "asc" }] });
+    expect(reads[1]).toEqual({ where: { AND: [{}, { endDate: { lt: startOfToday } }] }, orderBy: [{ startDate: "desc" }, { id: "desc" }] });
+  });
+
+  it("orders the table by its sort column where the database can", () => {
+    const table = (query: Record<string, string>) => eventsListReads(parseEventsListParams({ view: "table", ...query }), now)[0].orderBy;
+    expect(table({ sort: "updated" })).toEqual([{ updatedAt: "desc" }, { id: "desc" }]);
+    expect(table({ sort: "title", dir: "desc" })[0]).toEqual({ title: "desc" });
+    expect(table({ sort: "place" })[0]).toEqual({ venue: { name: "asc" } });
+    expect(table({ sort: "start", dir: "desc" })).toEqual([{ startDate: "desc" }, { id: "desc" }]);
+    expect(table({ sort: "status" })).toEqual([{ startDate: "asc" }, { id: "asc" }]);
   });
 });
 

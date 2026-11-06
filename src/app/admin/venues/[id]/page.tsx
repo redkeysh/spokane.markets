@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
 import { formatLongDay, pacificDate, saturdayOf, startOfPacificDay } from "@/lib/admin/format";
 import { getHistory } from "@/lib/admin/history";
+import { adminRecordTitle } from "@/lib/admin/record-title";
 import { isPossibleDuplicate } from "@/lib/venues/match";
 import { loadNeighborhoods } from "@/lib/venues/place-data";
 import { PlacePage, type PlacePageData, type UsedByEvent } from "@/components/admin/venues/place-page";
@@ -14,8 +15,7 @@ type Params = Promise<{ id: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { id } = await params;
-  const venue = await db.venue.findUnique({ where: { id }, select: { name: true } });
-  return { title: venue?.name ?? "Place not found" };
+  return adminRecordTitle("Place", async () => (await db.venue.findUnique({ where: { id }, select: { name: true } }))?.name);
 }
 
 const PAST_SHOWN = 20;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { snapshotEvents, SNAPSHOT_NOW } from "@/lib/admin/__fixtures__/snapshot";
 import { pacificDate } from "@/lib/admin/format";
-import { looksLikeTradeShow, tradeShowKeyword } from "./trade-shows";
+import { looksLikeTradeShow } from "./trade-shows";
 
 /** The 17 waiting titles that read like trade shows, twins listed twice. */
 const SPEC_TITLES = [
@@ -47,11 +47,5 @@ describe("looksLikeTradeShow", () => {
     expect(looksLikeTradeShow("Fall Holistic Festival")).toBe(false);
     expect(looksLikeTradeShow("Spring RV and Camping Show")).toBe(true);
     expect(looksLikeTradeShow("Home and Yard Show")).toBe(true);
-  });
-
-  it("names the keyword that matched", () => {
-    expect(tradeShowKeyword("Inland Northwest RV Show & Sale")).toBe("RV");
-    expect(tradeShowKeyword("CardCon")).toBe("CardCon");
-    expect(tradeShowKeyword("Holiday Bazaar")).toBeNull();
   });
 });

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth-utils";
+import { adminRecordTitle } from "@/lib/admin/record-title";
 import { db } from "@/lib/db";
 import { EventEditor } from "@/components/admin/editor/event-editor";
 import { loadEventEditor, type SearchParams } from "@/components/admin/editor/load";
@@ -11,8 +12,7 @@ type Props = { params: Promise<{ id: string }>; searchParams: Promise<SearchPara
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const event = await db.event.findUnique({ where: { id }, select: { title: true } });
-  return { title: event?.title.trim() || "Event not found" };
+  return adminRecordTitle("Event", async () => (await db.event.findUnique({ where: { id }, select: { title: true } }))?.title);
 }
 
 export default async function EventEditorPage({ params, searchParams }: Props) {

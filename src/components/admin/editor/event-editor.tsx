@@ -238,9 +238,8 @@ export function EventEditor({ record, initial, options: serverOptions, context }
       const result = await undoEditorDecisionAction(decisionId);
       toast(result.message);
       announce(result.message);
-      router.refresh();
     },
-    [announce, router]
+    [announce]
   );
 
   const afterSaved = (snapshot: EditorValues) => {
@@ -304,7 +303,6 @@ export function EventEditor({ record, initial, options: serverOptions, context }
     }
     if (then) leave(then);
     else if (nav.from === "todo") go(nav.backHref);
-    else router.refresh();
   };
 
   const publish = async () => {
@@ -312,7 +310,6 @@ export function EventEditor({ record, initial, options: serverOptions, context }
     if (!result?.ok) return;
     if (result.refused) {
       fail(`Saved, but not published: ${result.refused}`);
-      router.refresh();
       return;
     }
     announce(result.message);
@@ -325,7 +322,6 @@ export function EventEditor({ record, initial, options: serverOptions, context }
     }
     if (nav.from === "todo") go(nav.backHref);
     else if (mode === "event" && position?.nextId) go(`/admin/events/${position.nextId}${nav.carry}`);
-    else router.refresh();
   };
 
   const reject = async (reason: string) => {
@@ -347,7 +343,6 @@ export function EventEditor({ record, initial, options: serverOptions, context }
       if (result.decisionId) toastWithUndo(result.message, () => void undo(result.decisionId!));
       if (nav.from === "todo") go(nav.backHref);
       else if (mode === "event" && position?.nextId) go(`/admin/events/${position.nextId}${nav.carry}`);
-      else router.refresh();
     } finally {
       setBusy(null);
     }
@@ -383,7 +378,6 @@ export function EventEditor({ record, initial, options: serverOptions, context }
       }
       announce(result.message);
       toast(result.message);
-      router.refresh();
     } finally {
       setBusy(null);
     }

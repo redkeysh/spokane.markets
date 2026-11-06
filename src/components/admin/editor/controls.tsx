@@ -150,11 +150,6 @@ export function EditorSwitch({
   );
 }
 
-/** A small text link that looks like a link (lilac, no arrow). */
-export function TextLink({ className, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) {
-  return <a className={cn("rounded-sm text-sm text-lilac underline-offset-4 hover:underline", className)} {...props} />;
-}
-
 /** A button that reads as a link, for in-place actions such as "Use these hours". */
 export const LinkButton = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement>>(function LinkButton(
   { className, type = "button", ...props },

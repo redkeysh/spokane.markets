@@ -131,6 +131,7 @@ function buildContext(input: DecisionInput): DecisionContext {
     eventById,
     waiting,
     readiness,
+    duplicateGroups: groups,
     placeGroups,
     duplicateVenueIds,
     notSameEvent,
@@ -323,6 +324,7 @@ export function buildDecisions(input: DecisionInput, registry: DecisionKindDefin
     decisions: visible,
     snoozed: sorted.filter((d) => snoozedUntil.has(d.key)).map((decision) => ({ decision, until: snoozedUntil.get(decision.key)! })),
     lanes: laneSummaries(ctx, visible),
+    duplicateVenueIds: ctx.duplicateVenueIds,
   };
 }
 
@@ -459,9 +461,4 @@ export async function loadDecisionInput(now: Date): Promise<DecisionInput> {
     neighborhoods,
     publicItems,
   };
-}
-
-/** The To do pile: every decision, by lane, for the admin home. */
-export async function getDecisions({ now = new Date() }: { now?: Date } = {}): Promise<DecisionsResult> {
-  return buildDecisions(await loadDecisionInput(now));
 }

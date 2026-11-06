@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
 import { formatDay, pacificDate } from "@/lib/admin/format";
+import { adminRecordTitle } from "@/lib/admin/record-title";
 import { PageHeader } from "@/components/admin/kit/page-header";
 import { PromotionForm } from "@/components/admin/promotion-form";
 import { upcomingEventOptions, vendorOptions } from "../../promotion-options";
@@ -21,9 +22,11 @@ async function loadPromotion(id: string) {
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  const promotion = await loadPromotion(id);
-  const name = promotion?.event?.title ?? promotion?.vendorProfile?.businessName;
-  return { title: name ? `Featured: ${name}` : "Featured on the homepage" };
+  return adminRecordTitle("Featured on the homepage", async () => {
+    const promotion = await loadPromotion(id);
+    const name = promotion?.event?.title ?? promotion?.vendorProfile?.businessName;
+    return name ? `Featured: ${name}` : null;
+  });
 }
 
 export default async function EditPromotionPage({ params }: { params: Promise<{ id: string }> }) {

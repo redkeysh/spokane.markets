@@ -334,4 +334,57 @@ describe("findDuplicateGroups", () => {
     expect(groups).toHaveLength(1);
     expect(groups[0]).toHaveLength(3);
   });
+
+  it("finds the same groups as comparing every pair", () => {
+    let seed = 7;
+    const random = () => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed / 2147483648;
+    };
+    const pick = <T,>(list: readonly T[]): T => list[Math.floor(random() * list.length)];
+    const names = ["Spokane Community College", "The Lair", "Kendall Yards", "Kendall Yards (Summit Parkway)", "Emerge", "Pavilion", "St. Luke Lutheran Church", "St Luke Lutheran Church", "Building 7", "Building 8", "Grange Hall", "!!!"];
+    const streets = ["N Greene St", "North Greene Street", "N Havana St Ste 1", "N Havana St", "Broadway Ave", "N Commerce St", "E Sprague Ave Unit 2"];
+    const places = [
+      { city: "Spokane", zip: "99207" },
+      { city: "SPOKANE", zip: "99201" },
+      { city: "Spokane Valley", zip: "99216" },
+      { city: "Coeur d'Alene", zip: "83814" },
+      { city: "Post Falles", zip: "" },
+      { city: "Post Falls", zip: "8385" },
+    ];
+    const spots = Array.from({ length: 12 }, () => ({ lat: 47.5 + random() * 0.2, lng: -117.5 + random() * 0.3 }));
+    const near = (spot: { lat: number; lng: number }) => ({ lat: spot.lat + (random() - 0.5) * 0.0016, lng: spot.lng + (random() - 0.5) * 0.0016 });
+    const venues = Array.from({ length: 400 }, (_, i) => {
+      const roll = random();
+      const coords = roll < 0.3 ? near(pick(spots)) : roll < 0.7 ? { lat: 47.5 + random() * 0.2, lng: -117.5 + random() * 0.3 } : { lat: null, lng: null };
+      const name = `${pick(names)}${random() < 0.6 ? ` ${Math.floor(random() * 40)}` : ""}`;
+      const address = random() < 0.1 ? "" : `${Math.floor(random() * 30) + 100} ${pick(streets)}`;
+      return { id: `v${i}`, name, address, ...pick(places), ...coords };
+    });
+    const different = new Set(Array.from({ length: 300 }, () => pairKey(pick(venues).id, pick(venues).id)));
+    const same = new Set(Array.from({ length: 20 }, () => pairKey(pick(venues).id, pick(venues).id)));
+
+    const everyPair = (memos: { different?: Set<string>; same?: Set<string> }) => {
+      const parent = new Map(venues.map((x) => [x.id, x.id]));
+      const find = (id: string): string => (parent.get(id) === id ? id : find(parent.get(id)!));
+      for (let i = 0; i < venues.length; i++) {
+        for (let j = i + 1; j < venues.length; j++) {
+          const key = pairKey(venues[i].id, venues[j].id);
+          if (memos.same?.has(key) || (!memos.different?.has(key) && isPossibleDuplicate(venues[i], venues[j]))) {
+            parent.set(find(venues[i].id), find(venues[j].id));
+          }
+        }
+      }
+      const groups = new Map<string, string[]>();
+      for (const x of venues) groups.set(find(x.id), [...(groups.get(find(x.id)) ?? []), x.id]);
+      return [...groups.values()].filter((g) => g.length > 1);
+    };
+    const ids = (groups: { id: string }[][]) => groups.map((g) => g.map((x) => x.id));
+
+    const reference = everyPair({});
+    expect(reference.length).toBeGreaterThan(20);
+    expect(Math.max(...reference.map((g) => g.length))).toBeLessThan(40);
+    expect(ids(findDuplicateGroups(venues))).toEqual(reference);
+    expect(ids(findDuplicateGroups(venues, { different, same }))).toEqual(everyPair({ different, same }));
+  });
 });

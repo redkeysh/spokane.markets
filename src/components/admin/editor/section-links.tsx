@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { SECTION_LINK } from "@/components/admin/kit/section-link";
 import { OPEN_SECTION_EVENT } from "./collapsible-section";
 import { EditorSelect } from "./controls";
 
@@ -38,7 +39,7 @@ export function SectionLinks({ links }: { links: SectionLink[] }) {
                   e.preventDefault();
                   goToSection(link.id);
                 }}
-                className="inline-flex min-h-6 items-center rounded-sm text-sm text-ash underline-offset-4 hover:text-basalt hover:underline"
+                className={SECTION_LINK}
               >
                 {link.label}
               </a>

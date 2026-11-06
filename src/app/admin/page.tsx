@@ -3,7 +3,8 @@ import { requireAdmin } from "@/lib/auth-utils";
 import { loadTodoData } from "@/components/admin/todo/load";
 import { TodoScreen } from "@/components/admin/todo/todo-screen";
 
-export const metadata: Metadata = { title: "To do" };
+/** The admin layout's title template applies to child segments only, so this page names itself in full. */
+export const metadata: Metadata = { title: { absolute: "To do, Spokane Markets admin" } };
 
 export const dynamic = "force-dynamic";
 

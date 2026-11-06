@@ -80,8 +80,11 @@ export function decisionTimes(entries: AuditRow[]): Map<string, number> {
   return times;
 }
 
-/** `until` is set for memos only; `status` for items sent from the public. */
-type CurrentRow = { updatedAt: Date; title: string | null; until?: Date | null; status?: string };
+/**
+ * `until` is set for memos only; `status` for items sent from the public; `eventIds` for a market a
+ * decision created: the events not archived that are in it now.
+ */
+type CurrentRow = { updatedAt: Date; title: string | null; until?: Date | null; status?: string; eventIds?: string[] };
 type CurrentRows = Map<string, CurrentRow | null>;
 
 /** Current state of every row the entries touch: one query per table. */
@@ -92,7 +95,8 @@ export async function currentRows(entries: AuditRow[]): Promise<CurrentRows> {
     .map((e) => metaOf(e).newValue?.createdEventId)
     .filter((id): id is string => typeof id === "string");
   const eventIds = [...new Set([...ids("EVENT"), ...createdEvents])];
-  const [events, submissions, markets, venues, memos, neighborhoods, publicRows] = await Promise.all([
+  const createdMarkets = [...new Set(entries.filter((e) => e.action === "CREATE_MARKET" && e.targetId).map((e) => e.targetId!))];
+  const [events, submissions, markets, venues, memos, neighborhoods, publicRows, marketEvents] = await Promise.all([
     eventIds.length ? db.event.findMany({ where: { id: { in: eventIds } }, select: { id: true, updatedAt: true, title: true } }) : [],
     ids("SUBMISSION").length
       ? db.submission.findMany({ where: { id: { in: ids("SUBMISSION") } }, select: { id: true, updatedAt: true, eventTitle: true } })
@@ -106,11 +110,17 @@ export async function currentRows(entries: AuditRow[]): Promise<CurrentRows> {
       ? db.neighborhood.findMany({ where: { id: { in: ids("NEIGHBORHOOD") } }, select: { id: true, updatedAt: true, label: true } })
       : [],
     entries.some((e) => isPublicTarget(e.targetType)) ? loadPublicRows(entries) : new Map<string, { status: string; title: string | null }>(),
+    createdMarkets.length
+      ? db.event.findMany({ where: { marketId: { in: createdMarkets }, deletedAt: null }, select: { id: true, marketId: true } })
+      : [],
   ]);
   const rows: CurrentRows = new Map();
   for (const e of events) rows.set(`EVENT:${e.id}`, { updatedAt: e.updatedAt, title: e.title });
   for (const s of submissions) rows.set(`SUBMISSION:${s.id}`, { updatedAt: s.updatedAt, title: s.eventTitle });
-  for (const m of markets) rows.set(`MARKET:${m.id}`, { updatedAt: m.updatedAt, title: m.name });
+  for (const m of markets) {
+    const inMarket = createdMarkets.includes(m.id) ? marketEvents.filter((e) => e.marketId === m.id).map((e) => e.id) : undefined;
+    rows.set(`MARKET:${m.id}`, { updatedAt: m.updatedAt, title: m.name, ...(inMarket ? { eventIds: inMarket } : {}) });
+  }
   for (const v of venues) rows.set(`VENUE:${v.id}`, { updatedAt: v.updatedAt, title: v.name });
   for (const m of memos) rows.set(`ADMIN_MEMO:${m.id}`, { updatedAt: m.createdAt, title: null, until: m.until });
   for (const n of neighborhoods) rows.set(`NEIGHBORHOOD:${n.id}`, { updatedAt: n.updatedAt, title: n.label });
@@ -127,18 +137,27 @@ function memoUntilAfter(entries: AuditRow[], key: string): number | null {
   return typeof until === "string" ? Date.parse(until) : null;
 }
 
+/** Events the decision itself put in market `marketId`: created there, or linked to it. */
+function linkedToMarket(entries: AuditRow[], marketId: string): Set<string> {
+  return new Set(
+    entries.filter((e) => e.targetType === "EVENT" && e.targetId && metaOf(e).newValue?.marketId === marketId).map((e) => e.targetId!)
+  );
+}
+
 /** Why each row of a decision cannot be restored; an empty list means the whole decision can be undone. */
 export function undoBlockers(entries: AuditRow[], rows: CurrentRows): Blocker[] {
   const times = decisionTimes(entries);
   const blockers: Blocker[] = [];
-  const seen = new Set<string>();
+  const byTarget = new Map<string, AuditRow[]>();
   for (const entry of entries) {
     const key = targetKey(entry);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    const title = metaOf(entry).details?.title ?? null;
-    const base = { targetType: entry.targetType ?? "", targetId: entry.targetId ?? "", title };
-    if (!isUndoable(entry)) {
+    byTarget.set(key, [...(byTarget.get(key) ?? []), entry]);
+  }
+  for (const [key, list] of byTarget) {
+    const first = list[0];
+    const title = metaOf(first).details?.title ?? null;
+    const base = { targetType: first.targetType ?? "", targetId: first.targetId ?? "", title };
+    if (!list.every(isUndoable)) {
       blockers.push({ ...base, reason: "This change cannot be undone here." });
       continue;
     }
@@ -147,45 +166,72 @@ export function undoBlockers(entries: AuditRow[], rows: CurrentRows): Blocker[] 
       blockers.push({ ...base, reason: "It no longer exists." });
       continue;
     }
-    if (isPublicTarget(entry.targetType)) {
+    if (isPublicTarget(first.targetType)) {
       if (row.status !== statusAfter(entries, key)) blockers.push({ ...base, reason: "It changed after this decision." });
       continue;
     }
-    if (entry.targetType === "ADMIN_MEMO") {
+    if (first.targetType === "ADMIN_MEMO") {
       if ((row.until?.getTime() ?? null) !== memoUntilAfter(entries, key)) {
         blockers.push({ ...base, reason: "It changed after this decision." });
       }
       continue;
     }
-    if (row.updatedAt.getTime() > (times.get(key) ?? 0) + SAME_WRITE_MS) {
+    const decidedAt = (times.get(key) ?? 0) + SAME_WRITE_MS;
+    if (row.updatedAt.getTime() > decidedAt) {
       blockers.push({ ...base, title: row.title ?? title, reason: "It changed after this decision." });
     }
-    const created = metaOf(entry).newValue?.createdEventId;
-    if (entry.action === "UPDATE_SUBMISSION_STATUS" && typeof created === "string") {
+    for (const entry of list) {
+      const created = metaOf(entry).newValue?.createdEventId;
+      if (entry.action !== "UPDATE_SUBMISSION_STATUS" || typeof created !== "string") continue;
       const event = rows.get(`EVENT:${created}`);
-      if (event && event.updatedAt.getTime() > (times.get(key) ?? 0) + SAME_WRITE_MS) {
+      if (event && event.updatedAt.getTime() > decidedAt) {
         blockers.push({ targetType: "EVENT", targetId: created, title: event.title, reason: "Its event changed after it was published." });
+      }
+    }
+    if (first.targetType === "MARKET" && list.some((e) => e.action === "CREATE_MARKET")) {
+      const linked = linkedToMarket(entries, first.targetId!);
+      const added = (row.eventIds ?? []).filter((id) => !linked.has(id)).length;
+      if (added > 0) {
+        blockers.push({
+          ...base,
+          title: row.title ?? title,
+          reason: added === 1 ? "A date added to it since would be left in an archived market." : `${added} dates added to it since would be left in an archived market.`,
+        });
       }
     }
   }
   return blockers;
 }
 
+/*
+ * The two reads below match the expression indexes audit_logs_decision_id_idx and
+ * audit_logs_undo_of_idx word for word; Prisma's JSON path filters cannot use them.
+ */
+
+/** The audit entries of the decisions `decisionIds`, oldest first. */
+export async function decisionEntries(decisionIds: string[]): Promise<AuditRow[]> {
+  if (decisionIds.length === 0) return [];
+  return db.$queryRaw<AuditRow[]>`
+    SELECT "id", "action", "targetType", "targetId", "metadata", "createdAt"
+    FROM "audit_logs"
+    WHERE ("metadata" #>> '{details,decisionId}') = ANY(${decisionIds}::text[])
+    ORDER BY "createdAt" ASC, "id" ASC`;
+}
+
+/** The audit entries that undid any of the decisions `decisionIds`. */
+async function undoEntries(decisionIds: string[]): Promise<Pick<AuditRow, "metadata">[]> {
+  if (decisionIds.length === 0) return [];
+  return db.$queryRaw<Pick<AuditRow, "metadata">[]>`
+    SELECT "metadata"
+    FROM "audit_logs"
+    WHERE ("metadata" #>> '{details,undoOf}') = ANY(${decisionIds}::text[])`;
+}
+
 /** Audit entries of decisions, and the ids among them already undone. */
 export async function loadDecisions(decisionIds: string[]): Promise<{ entries: Map<string, AuditRow[]>; undone: Set<string> }> {
   const entries = new Map<string, AuditRow[]>();
   if (decisionIds.length === 0) return { entries, undone: new Set() };
-  const [rows, undoRows] = await Promise.all([
-    db.auditLog.findMany({
-      where: { OR: decisionIds.map((id) => ({ metadata: { path: ["details", "decisionId"], equals: id } })) },
-      orderBy: { createdAt: "asc" },
-      select: { id: true, action: true, targetType: true, targetId: true, metadata: true, createdAt: true },
-    }),
-    db.auditLog.findMany({
-      where: { OR: decisionIds.map((id) => ({ metadata: { path: ["details", "undoOf"], equals: id } })) },
-      select: { metadata: true },
-    }),
-  ]);
+  const [rows, undoRows] = await Promise.all([decisionEntries(decisionIds), undoEntries(decisionIds)]);
   for (const row of rows) {
     const id = decisionIdOf(row);
     if (id) entries.set(id, [...(entries.get(id) ?? []), row]);
@@ -415,12 +461,19 @@ export async function undoDecision(decisionId: string, actorId: string): Promise
   const rows = await currentRows(list);
   const refused = undoBlockers(list, rows);
   const blocked = new Set(refused.map((b) => `${b.targetType}:${b.targetId}`));
+  // A submission whose created event is left stays as published, and the dates linked to a market that is left stay in it.
+  const skipped = new Set(blocked);
+  for (const entry of list) {
+    const created = metaOf(entry).newValue?.createdEventId;
+    if (typeof created === "string" && blocked.has(`EVENT:${created}`)) skipped.add(targetKey(entry));
+  }
+  for (const blocker of refused) {
+    if (blocker.targetType === "MARKET") for (const eventId of linkedToMarket(list, blocker.targetId)) skipped.add(`EVENT:${eventId}`);
+  }
   const byTarget = new Map<string, AuditRow[]>();
   for (const entry of list) {
     const key = targetKey(entry);
-    if (blocked.has(key)) continue;
-    const created = metaOf(entry).newValue?.createdEventId;
-    if (typeof created === "string" && blocked.has(`EVENT:${created}`)) continue;
+    if (skipped.has(key)) continue;
     byTarget.set(key, [...(byTarget.get(key) ?? []), entry]);
   }
 

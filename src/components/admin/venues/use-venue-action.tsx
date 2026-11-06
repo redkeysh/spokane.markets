@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { toastWithUndo } from "@/components/admin/kit/toaster";
 import { useShortcuts } from "@/components/admin/kit/use-shortcuts";
@@ -58,7 +57,6 @@ export function VenueActionEvents({ listener, children }: { listener: VenueActio
 }
 
 function useUndo() {
-  const router = useRouter();
   const announce = useAnnounce();
   const listener = React.useContext(ListenerContext);
   return React.useCallback(
@@ -67,19 +65,18 @@ function useUndo() {
       if (result.ok) toast(result.message);
       else toast.error(result.message);
       announce(result.message);
-      router.refresh();
       listener?.onUndone?.();
     },
-    [announce, listener, router]
+    [announce, listener]
   );
 }
 
 /**
- * Runs a venue server action: busy state, a toast (with Undo when the decision can be undone),
- * the same sentence in the live region, and a refresh of the screen's data.
+ * Runs a venue server action: busy state, a toast (with Undo when the decision can be undone) and
+ * the same sentence in the live region. The action revalidates the admin, so its response
+ * carries the screen's fresh data.
  */
 export function useVenueAction() {
-  const router = useRouter();
   const announce = useAnnounce();
   const shared = React.useContext(LastDecisionContext);
   const listener = React.useContext(ListenerContext);
@@ -109,7 +106,6 @@ export function useVenueAction() {
         announce(result.message);
         options.onDone?.(result);
         listener?.onDone?.(result);
-        router.refresh();
         return true;
       } catch (error) {
         const message = error instanceof Error ? error.message : "Something went wrong.";
@@ -120,7 +116,7 @@ export function useVenueAction() {
         setBusy(null);
       }
     },
-    [announce, listener, router, shared, undo]
+    [announce, listener, shared, undo]
   );
 
   return { run, busy };

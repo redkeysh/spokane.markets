@@ -101,10 +101,6 @@ export function hasEnded(event: { startDate: Date; endDate: Date; scheduleDays: 
   return eventEndDate(event) < today;
 }
 
-export function isMultiDay(event: { startDate: Date; endDate: Date; scheduleDays: { date: string }[] }): boolean {
-  return eventLocalDates(event, { maxDays: 2 }).length > 1;
-}
-
 const VENUE_PARTS = [
   ["name", "name"],
   ["address", "street"],

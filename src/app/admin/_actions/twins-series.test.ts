@@ -51,7 +51,6 @@ vi.mock("@/lib/db", () => ({
 
 import {
   applyToSeriesDates,
-  fixSeriesAddresses,
   keepCombined,
   linkSeriesToMarket,
   makeSeriesMarket,
@@ -125,6 +124,26 @@ describe("publishSeries", () => {
     expect(result).toEqual({ ok: false, error: "Someone else changed it." });
   });
 
+  it("undoes the dates already changed when a later date's write fails", async () => {
+    mocks.eventFindMany.mockResolvedValue([kendall("e1", "2026-11-27"), kendall("e2", "2026-11-28")]);
+    mocks.updateEventFields.mockResolvedValueOnce({}).mockRejectedValueOnce(new mocks.EventMutationError("Event not found or archived."));
+    const result = await publishSeries({ decisionKey: KEY, eventIds: ["e1", "e2"], fixAddresses: true });
+    expect(mocks.undoDecision).toHaveBeenCalledWith("d_test", "admin");
+    expect(mocks.setEventStatuses).not.toHaveBeenCalled();
+    expect(result).toEqual({ ok: false, error: "Event not found or archived." });
+  });
+
+  it("gives two same-day dates with one title different addresses", async () => {
+    const morning = kendall("e1", "2026-12-05", { title: "Holiday Craft Fair", slug: "craft-fair-am" });
+    const evening = kendall("e2", "2026-12-05", { title: "Holiday Craft Fair", slug: "craft-fair-pm" });
+    mocks.eventFindMany.mockResolvedValue([morning, evening]);
+    await applyToSeriesDates({ decisionKey: KEY, eventIds: ["e1", "e2"], fixAddresses: true });
+    expect(mocks.updateEventFields.mock.calls.map(([eventId, change]) => [eventId, change])).toEqual([
+      ["e1", { slug: "holiday-craft-fair-2026-12-05" }],
+      ["e2", { slug: "holiday-craft-fair-2026-12-05-2" }],
+    ]);
+  });
+
   it("refuses a picture link that is not a link", async () => {
     const result = await publishSeries({ decisionKey: KEY, eventIds: ["e1"], fixAddresses: false, imageUrl: "picture.jpg" });
     expect(result).toEqual({ ok: false, error: "A picture link starts with https://." });
@@ -137,10 +156,10 @@ describe("publishSeries", () => {
   });
 });
 
-describe("applyToSeriesDates and fixSeriesAddresses", () => {
+describe("applyToSeriesDates", () => {
   it("writes the fixes without publishing, and reports no decision when nothing changed", async () => {
     mocks.eventFindMany.mockResolvedValue([kendall("e1", "2026-11-27", { slug: "kendall-yards-christmas-market-2026-11-27" })]);
-    expect(await fixSeriesAddresses({ decisionKey: KEY, eventIds: ["e1"] })).toEqual({
+    expect(await applyToSeriesDates({ decisionKey: KEY, eventIds: ["e1"], fixAddresses: true })).toEqual({
       ok: true,
       decisionId: null,
       changed: [],

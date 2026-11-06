@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ auditFindMany: vi.fn(), userFindMany: vi.fn(), undoability: vi.fn() }));
+const mocks = vi.hoisted(() => ({ auditFindMany: vi.fn(), queryRaw: vi.fn(), userFindMany: vi.fn(), undoability: vi.fn() }));
 
 vi.mock("@/lib/db", () => ({
   db: {
     auditLog: { findMany: mocks.auditFindMany },
     user: { findMany: mocks.userFindMany },
+    $queryRaw: mocks.queryRaw,
   },
 }));
 
@@ -39,6 +40,7 @@ function row(id: string, at: string, decisionId?: string, title = id): HistoryAu
 
 beforeEach(() => {
   mocks.auditFindMany.mockReset();
+  mocks.queryRaw.mockReset();
   mocks.userFindMany.mockReset();
   mocks.undoability.mockReset();
   mocks.undoability.mockImplementation(async (ids: string[]) => new Map(ids.map((id) => [id, true])));
@@ -61,13 +63,15 @@ describe("loadHistoryPage", () => {
         row("d1-new", "2026-11-03T16:00:01Z", "d_1"),
         row("x", "2026-11-03T15:00:00Z"),
       ])
-      .mockResolvedValueOnce([row("d1-new", "2026-11-03T16:00:01Z", "d_1"), row("d1-old", "2026-11-03T16:00:00Z", "d_1")]);
+      .mockResolvedValueOnce([row("d1-old", "2026-11-03T16:00:00Z", "d_1")]);
+    mocks.queryRaw.mockResolvedValueOnce([row("d1-new", "2026-11-03T16:00:01Z", "d_1"), row("d1-old", "2026-11-03T16:00:00Z", "d_1")]);
     const page = await loadHistoryPage(DEFAULT_HISTORY_FILTERS, "admin", { limit: 2, now: NOW });
     expect(page.lines.map((l) => l.id)).toEqual(["c", "d_1"]);
     expect(page.lines[1].sentence).toBe("You published 2 events.");
     expect(page.lines[1].canUndo).toBe(true);
     expect(page.next).toEqual({ at: "2026-11-03T16:00:00.000Z", id: "d1-old" });
     expect(mocks.undoability).toHaveBeenCalledWith(["d_1"]);
+    expect(mocks.auditFindMany.mock.calls[1][0].where).toEqual({ id: { in: ["d1-old"] } });
   });
 
   it("asks only for rows older than the cursor", async () => {

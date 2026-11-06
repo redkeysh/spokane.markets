@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { addDays } from "@/lib/admin/format";
 import { AdminButton } from "@/components/admin/kit/button";
 import { Field, FieldRow } from "@/components/admin/kit/field";
+import { TimeOptions } from "@/components/admin/kit/time-select";
 import { Segmented } from "@/components/admin/kit/segmented";
 import { ToggleChip } from "@/components/admin/kit/toggle-chip";
 import {
@@ -252,10 +253,24 @@ export function AddDates({
       <div className="space-y-2">
         <FieldRow className="max-w-[560px]">
           <Field id="add-opens" label="Opens">
-            <TextInput type="time" value={hours.startTime} disabled={hours.allDay} onChange={(e) => setHours({ ...hours, startTime: e.target.value })} />
+            <SelectInput
+              className="tabular-nums"
+              value={hours.allDay ? "" : hours.startTime}
+              disabled={hours.allDay}
+              onChange={(e) => setHours({ ...hours, startTime: e.target.value })}
+            >
+              <TimeOptions value={hours.allDay ? "" : hours.startTime} />
+            </SelectInput>
           </Field>
           <Field id="add-closes" label="Closes">
-            <TextInput type="time" value={hours.endTime} disabled={hours.allDay} onChange={(e) => setHours({ ...hours, endTime: e.target.value })} />
+            <SelectInput
+              className="tabular-nums"
+              value={hours.allDay ? "" : hours.endTime}
+              disabled={hours.allDay}
+              onChange={(e) => setHours({ ...hours, endTime: e.target.value })}
+            >
+              <TimeOptions value={hours.allDay ? "" : hours.endTime} />
+            </SelectInput>
           </Field>
         </FieldRow>
         <CheckLine checked={hours.allDay} onChange={(allDay) => setHours({ ...hours, allDay })}>

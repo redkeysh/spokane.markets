@@ -103,11 +103,6 @@ export function samePlace(a: string, b: string, actorId: string, options: MemoOp
   return writeMemo("same-place", pairKey(a, b), null, actorId, options);
 }
 
-/** Forgets a pair memo, so the pair can be offered again. False when there was none. */
-export function forgetPair(kind: Exclude<MemoKind, "later">, a: string, b: string, actorId: string, options: MemoOptions = {}): Promise<boolean> {
-  return removeMemo(kind, pairKey(a, b), actorId, options);
-}
-
 /** Snoozed decision keys that have not come back yet. */
 export async function getSnoozed(now: Date = new Date()): Promise<{ key: string; until: Date }[]> {
   const rows = await db.adminMemo.findMany({

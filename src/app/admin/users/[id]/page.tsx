@@ -5,6 +5,7 @@ import type { ModerationStatus } from "@prisma/client";
 import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
 import { formatFullDate, pacificDate } from "@/lib/admin/format";
+import { adminRecordTitle } from "@/lib/admin/record-title";
 import { PageHeader } from "@/components/admin/kit/page-header";
 import { Field, Section } from "@/components/admin/kit/field";
 import { UserRoleSelect } from "@/components/admin/user-role-select";
@@ -52,8 +53,10 @@ async function loadUser(id: string) {
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  const user = await db.user.findUnique({ where: { id }, select: { name: true, email: true } });
-  return { title: user ? user.name?.trim() || user.email : "Person not found" };
+  return adminRecordTitle("Person", async () => {
+    const user = await db.user.findUnique({ where: { id }, select: { name: true, email: true } });
+    return user ? user.name?.trim() || user.email : null;
+  });
 }
 
 function Fact({ term, children }: { term: string; children: React.ReactNode }) {

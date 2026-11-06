@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
 import { formatDay, pacificDate } from "@/lib/admin/format";
+import { adminRecordTitle } from "@/lib/admin/record-title";
 import { toHistoryEntries } from "@/lib/admin/history";
 import { decisionIdOf, undoability } from "@/lib/admin/undo";
 import { getListingCommunityBadgeOptions } from "@/lib/listing-community-badges";
@@ -30,8 +31,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  const market = await db.market.findUnique({ where: { id }, select: { name: true } });
-  return { title: market?.name ?? "Market not found" };
+  return adminRecordTitle("Market", async () => (await db.market.findUnique({ where: { id }, select: { name: true } }))?.name);
 }
 
 const HISTORY_LIMIT = 8;

@@ -196,10 +196,32 @@ describe("saveEventAction", () => {
 
   it("sends the shared fields to the other dates of the series", async () => {
     mocks.getSeriesFor.mockResolvedValue({ key: "s", name: "Kendall Yards Christmas Market", eventIds: ["e1", "e2", "e3"], marketId: null, suggestMarket: true });
-    await saveEventAction("e1", { title: "Date title", description: "Shared" }, { applyToSeries: true });
+    const result = await saveEventAction("e1", { title: "Date title", description: "Shared" }, { applyToSeries: true });
     expect(mocks.updateEventFields).toHaveBeenCalledWith("e1", { title: "Date title", description: "Shared" }, ACTOR, { decisionId: "d_test" });
     expect(mocks.updateEventFields).toHaveBeenCalledWith("e2", { description: "Shared" }, ACTOR, { decisionId: "d_test" });
     expect(mocks.updateEventFields).toHaveBeenCalledWith("e3", { description: "Shared" }, ACTOR, { decisionId: "d_test" });
+    expect(result).toMatchObject({ ok: true, message: "Saved on all 3 dates of the series." });
+  });
+
+  it("finds the series before the save that moves the date to another market", async () => {
+    const order: string[] = [];
+    mocks.getSeriesFor.mockImplementation(async () => {
+      order.push("series");
+      return { key: "s", name: "Holiday Craft Fair", eventIds: ["e1", "e2"], marketId: null, suggestMarket: true };
+    });
+    mocks.updateEventFields.mockImplementation(async (id: string) => {
+      order.push(`save ${id}`);
+      return { title: "Holiday Craft Fair" };
+    });
+    await saveEventAction("e1", { marketId: "m1", description: "Shared" }, { applyToSeries: true });
+    expect(order).toEqual(["series", "save e1", "save e2"]);
+    expect(mocks.updateEventFields).toHaveBeenCalledWith("e2", { marketId: "m1", description: "Shared" }, ACTOR, { decisionId: "d_test" });
+  });
+
+  it("says Saved when the series has no other date", async () => {
+    mocks.getSeriesFor.mockResolvedValue(null);
+    expect(await saveEventAction("e1", { description: "Shared" }, { applyToSeries: true })).toMatchObject({ ok: true, message: "Saved." });
+    expect(mocks.updateEventFields).toHaveBeenCalledOnce();
   });
 
   it("shows the message of an EventMutationError", async () => {

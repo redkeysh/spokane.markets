@@ -45,6 +45,11 @@ export function startOfPacificDay(isoDate: string): Date {
   return new Date(guess - (seen - wanted));
 }
 
+/** The last millisecond of a Pacific calendar date, also on the days the clocks change. */
+export function endOfPacificDay(isoDate: string): Date {
+  return new Date(startOfPacificDay(addDays(isoDate, 1)).getTime() - 1);
+}
+
 /** Noon UTC on a calendar date: the same date in every time zone used here. */
 function noonUtc(isoDate: string): Date {
   return new Date(`${isoDate}T12:00:00.000Z`);
@@ -175,11 +180,6 @@ export function formatClock(instant: Date): string {
 /** "Nov 3, 2026 at 9:41 am" in Pacific time. */
 export function formatTimestamp(instant: Date): string {
   return `${formatFullDate(pacificDate(instant))} at ${formatClock(instant)}`;
-}
-
-/** "Sat 11 am": the weekday and dense start time of an instant. */
-export function formatWeekdayTime(instant: Date): string {
-  return `${formatWeekday(pacificDate(instant))} ${formatTime(pacificTime(instant), { dense: true })}`;
 }
 
 /** "Saved just now", "Saved 2 min ago", "Saved 1 hr ago", else null (show the timestamp). */

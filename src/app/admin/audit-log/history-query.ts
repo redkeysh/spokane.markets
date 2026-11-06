@@ -8,7 +8,7 @@ import {
   type HistoryCursor,
   type HistoryFilters,
 } from "@/lib/admin/history";
-import { decisionIdOf, undoability } from "@/lib/admin/undo";
+import { decisionEntries, decisionIdOf, undoability } from "@/lib/admin/undo";
 import { groupRows, toHistoryLines } from "./history-lines";
 import type { HistoryLine } from "./history-shared";
 
@@ -30,11 +30,10 @@ export async function loadHistoryPage(
   const page = rows.slice(0, limit);
 
   const decisionIds = [...new Set(page.map(decisionIdOf).filter((id): id is string => !!id))];
-  const siblings: HistoryAuditRow[] = decisionIds.length
-    ? await db.auditLog.findMany({
-        where: { OR: decisionIds.map((id) => ({ metadata: { path: ["details", "decisionId"], equals: id } })) },
-        select: HISTORY_SELECT,
-      })
+  const pageIds = new Set(page.map((row) => row.id));
+  const siblingIds = (await decisionEntries(decisionIds)).map((row) => row.id).filter((id) => !pageIds.has(id));
+  const siblings: HistoryAuditRow[] = siblingIds.length
+    ? await db.auditLog.findMany({ where: { id: { in: siblingIds } }, select: HISTORY_SELECT })
     : [];
   const shown = [...page, ...siblings];
   const [undoable, accounts] = await Promise.all([undoability(decisionIds), accountNames(shown)]);

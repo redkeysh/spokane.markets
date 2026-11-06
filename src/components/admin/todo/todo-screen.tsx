@@ -709,6 +709,7 @@ export function TodoScreen({ data }: { data: TodoData }) {
         bottomBar={!phoneOpen}
         className="lg:[@media(min-height:600px)]:grid lg:[@media(min-height:600px)]:grid-cols-[296px_minmax(0,1fr)] lg:[@media(min-height:600px)]:grid-rows-[minmax(0,1fr)] xl:[@media(min-height:600px)]:grid-cols-[320px_minmax(0,1fr)_360px]"
       >
+        <h1 className="sr-only">To do</h1>
         <Pane
           label="Waiting on you"
           tone="fog"

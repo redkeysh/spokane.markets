@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { VerificationStatus } from "@prisma/client";
 import { AdminButton } from "@/components/admin/kit/button";
@@ -79,7 +78,6 @@ function ownerTip(owner: NonNullable<VendorRowData["owner"]>) {
 }
 
 function VendorRow({ row, back }: { row: VendorRowData; back: string }) {
-  const router = useRouter();
   const announce = useAnnounce();
   const link = React.useRef<HTMLAnchorElement>(null);
   const [busy, setBusy] = React.useState(false);
@@ -98,7 +96,6 @@ function VendorRow({ row, back }: { row: VendorRowData; back: string }) {
     }
     toast.success(`Restored ${result.businessName}. It is back on the site.`);
     announce(`Restored ${result.businessName}.`);
-    router.refresh();
   };
 
   const archive = async () => {
@@ -110,12 +107,9 @@ function VendorRow({ row, back }: { row: VendorRowData; back: string }) {
     announce(`Archived ${result.businessName}.`);
     toastWithUndo(`Archived ${result.businessName}. It is off the site.`, async () => {
       const undone = await settle(restoreVendor(row.id));
-      if (undone.ok) {
-        announce(`Restored ${undone.businessName}.`);
-        router.refresh();
-      } else toast.error(undone.error);
+      if (undone.ok) announce(`Restored ${undone.businessName}.`);
+      else toast.error(undone.error);
     });
-    router.refresh();
   };
 
   return (

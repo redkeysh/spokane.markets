@@ -8,7 +8,7 @@ import { buildDecisions } from "@/lib/admin/decisions";
 import type { DecisionInput } from "@/lib/admin/decisions/types";
 import { pairKey } from "@/lib/events/twins";
 import { FIXTURE_NEIGHBORHOODS } from "./__fixtures__/neighborhoods";
-import type { DecisionInputWithNeighborhoods, DecisionVenueWithUses } from "./place-decisions";
+import { spellingSummary, type DecisionInputWithNeighborhoods, type DecisionVenueWithUses } from "./place-decisions";
 
 const usesById = new Map(venuesJson.map((v) => [v.id, { events: v._count.events, markets: v._count.markets }]));
 
@@ -72,6 +72,7 @@ describe("place decisions", () => {
 
   it("gathers spelling, unused places and archived places in use", () => {
     expect(places.find((d) => d.kind === "spelling")).toMatchObject({ key: "spelling", title: "Spelling on 7 places", primary: { label: "Fix 7" } });
+    expect(places.find((d) => d.kind === "spelling")!.detail).toMatch(/^Wa to WA on 4, /);
     expect(places.find((d) => d.kind === "unused-places")).toMatchObject({
       key: "unused-places",
       title: "10 places nothing uses",
@@ -82,6 +83,16 @@ describe("place decisions", () => {
     expect(archived.map((d) => d.title)).toEqual(["University High School: archived, still in use"]);
     expect(archived[0].detail).toBe("1 market");
     expect(archived[0].primary).toEqual({ label: "Move its listings to University High School", action: "merge" });
+  });
+
+  it("names each kind of spelling fix once, most common first", () => {
+    const row = (...fixes: [string, string][]) => ({ place: {} as never, fixes: fixes.map(([before, after]) => ({ field: "city" as const, before, after })) });
+    expect(
+      spellingSummary([row(["Wa", "WA"]), row(["Wa", "WA"], ["SPOKANE", "Spokane"]), row(["Post Falles", "Post Falls"]), row(["Wa", "WA"])])
+    ).toBe("Wa to WA on 3, SPOKANE to Spokane and Post Falles to Post Falls");
+    expect(spellingSummary([row(["Wa", "WA"]), row(["Idaho", "ID"]), row(["SPOKANE", "Spokane"]), row(["Post Falles", "Post Falls"])])).toBe(
+      "Wa to WA, Idaho to ID and 2 more"
+    );
   });
 
   it("drops a group the owner marked as different places", () => {

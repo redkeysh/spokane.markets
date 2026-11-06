@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth-utils";
 import { db } from "@/lib/db";
@@ -110,17 +109,6 @@ export default async function AdminVendorsPage({ searchParams }: { searchParams:
         </div>
       ) : (
         <Empty
-          action={
-            filtered ? (
-              <Link href="/admin/vendors" className={adminButtonClass({ variant: "outline", size: "sm" })}>
-                Clear filters
-              </Link>
-            ) : (
-              <AdminLinkButton href="/admin/vendors/new" variant="outline" size="sm">
-                Add the first vendor
-              </AdminLinkButton>
-            )
-          }
           detail={filtered ? undefined : "Vendors appear here when they make a profile on the site, or when you add one."}
         >
           {vendorEmptyMessage(params)}

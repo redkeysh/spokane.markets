@@ -125,20 +125,18 @@ export async function saveEventAction(
     const changes = { ...write.changes };
     if (target && target !== "PUBLISHED" && target !== "REJECTED") changes.status = target;
 
+    // The series is read before the save: its market, place and title decide which dates belong to it.
+    const shared = sharedPart(write);
+    const otherDates =
+      options.applyToSeries && hasChanges(shared) ? ((await getSeriesFor(id))?.eventIds ?? []).filter((otherId) => otherId !== id) : [];
+
     let title: string | null = null;
     if (hasChanges(changes)) {
       const saved = await updateEventFields(id, changes, actorId, { decisionId });
       title = saved.title;
     }
 
-    if (options.applyToSeries) {
-      const series = await getSeriesFor(id);
-      const shared = sharedPart(write);
-      for (const otherId of series?.eventIds ?? []) {
-        if (otherId === id) continue;
-        if (hasChanges(shared)) await updateEventFields(otherId, shared, actorId, { decisionId });
-      }
-    }
+    for (const otherId of otherDates) await updateEventFields(otherId, shared, actorId, { decisionId });
 
     title ??= (await db.event.findUnique({ where: { id }, select: { title: true } }))?.title ?? "the event";
 
@@ -156,7 +154,7 @@ export async function saveEventAction(
       return { ok: true, message: `Rejected ${title}.`, decisionId, notified: result.notified };
     }
     revalidateAdmin();
-    return { ok: true, message: options.applyToSeries ? "Saved on every date of the series." : "Saved.", decisionId };
+    return { ok: true, message: otherDates.length > 0 ? `Saved on all ${otherDates.length + 1} dates of the series.` : "Saved.", decisionId };
   } catch (err) {
     return failure(err, "The event could not be saved. Try again.");
   }

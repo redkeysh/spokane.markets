@@ -110,11 +110,13 @@ async function seriesRows(eventIds: string[]): Promise<SeriesRowData[]> {
 
 /**
  * The address each date's title gives, made free: when another event (or a redirect) holds it,
- * "-2", "-3" and so on are tried. `problem` says why no free address was found, else null.
+ * or an earlier date of the same plan (`planned`) takes it, "-2", "-3" and so on are tried.
+ * `problem` says why no free address was found, else null.
  */
-async function freeAddress(fix: AddressFix): Promise<{ to: string; problem: string | null }> {
+async function freeAddress(fix: AddressFix, planned: ReadonlySet<string>): Promise<{ to: string; problem: string | null }> {
   for (let n = 1; n <= 9; n += 1) {
     const to = n === 1 ? fix.to : `${fix.to}-${n}`;
+    if (planned.has(to)) continue;
     const problem = await eventSlugProblem(fix.eventId, to);
     if (!problem) return { to, problem: null };
     if (n === 1 && !/already uses|redirects there/.test(problem)) return { to, problem };
@@ -125,9 +127,17 @@ async function freeAddress(fix: AddressFix): Promise<{ to: string; problem: stri
 async function addressPlan(rows: SeriesRowData[]): Promise<(AddressFix & { problem: string | null })[]> {
   const fixes = addressFixes(rows.map((r) => ({ id: r.id, title: r.title, slug: r.slug, status: r.status, date: pacificDate(r.startDate) })));
   const plan: (AddressFix & { problem: string | null })[] = [];
-  for (const fix of fixes) plan.push({ ...fix, ...(await freeAddress(fix)) });
+  const planned = new Set<string>();
+  for (const fix of fixes) {
+    const free = await freeAddress(fix, planned);
+    if (!free.problem) planned.add(free.to);
+    plan.push({ ...fix, ...free });
+  }
   return plan;
 }
+
+/** Set once the first write of a decision has gone through, so a later failure knows to undo it. */
+type Progress = { wrote: boolean };
 
 /**
  * The held fixes of a series, written to every date as part of decision `decisionId`: the web
@@ -137,9 +147,9 @@ async function writeFixes(
   rows: SeriesRowData[],
   input: { fixAddresses: boolean; imageUrl?: string | null },
   actor: string,
-  ref: { decisionId: string; decisionKey: string }
-): Promise<boolean> {
-  let wrote = false;
+  ref: { decisionId: string; decisionKey: string },
+  progress: Progress
+): Promise<void> {
   const changes = new Map<string, EventFieldChanges>();
   if (input.fixAddresses) {
     for (const fix of await addressPlan(rows)) {
@@ -155,9 +165,8 @@ async function writeFixes(
   }
   for (const [eventId, change] of changes) {
     await updateEventFields(eventId, change, actor, ref);
-    wrote = true;
+    progress.wrote = true;
   }
-  return wrote;
 }
 
 export type SeriesDetails = {
@@ -282,10 +291,10 @@ export async function publishSeries(input: z.input<typeof fixesInput>): Promise<
     const ref = { decisionId: newDecisionId(), decisionKey: parsed.data.decisionKey };
     const rows = await seriesRows(parsed.data.eventIds);
     if (rows.length === 0) return { ok: false, error: "These dates no longer exist or are archived." };
-    let wrote = false;
+    const progress: Progress = { wrote: false };
     let status: Awaited<ReturnType<typeof setEventStatuses>>;
     try {
-      wrote = await writeFixes(rows, parsed.data, actor, ref);
+      await writeFixes(rows, parsed.data, actor, ref, progress);
       status = await setEventStatuses(
         rows.map((r) => r.id),
         "PUBLISHED",
@@ -293,12 +302,12 @@ export async function publishSeries(input: z.input<typeof fixesInput>): Promise<
         ref
       );
     } catch (err) {
-      return await rollBack(ref.decisionId, actor, wrote, err);
+      return await rollBack(ref.decisionId, actor, progress.wrote, err);
     }
     revalidateAdmin();
     return {
       ok: true,
-      decisionId: wrote || status.changed.length ? ref.decisionId : null,
+      decisionId: progress.wrote || status.changed.length ? ref.decisionId : null,
       changed: status.changed,
       alreadyThere: status.alreadyThere,
       refused: status.refused,
@@ -319,22 +328,17 @@ export async function applyToSeriesDates(input: z.input<typeof fixesInput>): Pro
     const ref = { decisionId: newDecisionId(), decisionKey: parsed.data.decisionKey };
     const rows = await seriesRows(parsed.data.eventIds);
     if (rows.length === 0) return { ok: false, error: "These dates no longer exist or are archived." };
-    let wrote = false;
+    const progress: Progress = { wrote: false };
     try {
-      wrote = await writeFixes(rows, parsed.data, actor, ref);
+      await writeFixes(rows, parsed.data, actor, ref, progress);
     } catch (err) {
-      return await rollBack(ref.decisionId, actor, wrote, err);
+      return await rollBack(ref.decisionId, actor, progress.wrote, err);
     }
     revalidateAdmin();
-    return { ok: true, decisionId: wrote ? ref.decisionId : null, ...NOTHING };
+    return { ok: true, decisionId: progress.wrote ? ref.decisionId : null, ...NOTHING };
   } catch (err) {
     return failure(err);
   }
-}
-
-/** Changes the web addresses of a series' dates to the ones their titles give; old public addresses keep redirecting. */
-export async function fixSeriesAddresses(input: { decisionKey: string; eventIds: string[] }): Promise<TodoActionResult> {
-  return applyToSeriesDates({ ...input, fixAddresses: true });
 }
 
 /** Links the dates to a market, as one decision. */

@@ -428,7 +428,7 @@ export async function saveMarketDetails(input: { id: string | null; values: Mark
         return market;
       });
       revalidateAdmin({ marketSlugs: [created.slug] });
-      return { ok: true, message: `Made the market ${created.name}.`, marketId: created.id };
+      return { ok: true, message: `Published ${created.name}. Its page is on the site.`, marketId: created.id };
     }
 
     const existing = await db.market.findFirst({

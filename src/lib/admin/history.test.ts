@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ auditFindMany: vi.fn(), eventFindMany: vi.fn(), userFindMany: vi.fn() }));
+const mocks = vi.hoisted(() => ({ auditFindMany: vi.fn(), queryRaw: vi.fn(), eventFindMany: vi.fn(), userFindMany: vi.fn() }));
 
 vi.mock("@/lib/db", () => ({
   db: {
@@ -10,6 +10,7 @@ vi.mock("@/lib/db", () => ({
     submission: { findMany: vi.fn() },
     market: { findMany: vi.fn() },
     venue: { findMany: vi.fn() },
+    $queryRaw: mocks.queryRaw,
   },
 }));
 
@@ -152,7 +153,8 @@ describe("getDoneToday", () => {
 describe("getHistory", () => {
   it("reads one record's entries newest first, as sentences", async () => {
     mocks.auditFindMany.mockReset();
-    mocks.auditFindMany.mockResolvedValueOnce([row({})]).mockResolvedValueOnce([row({})]).mockResolvedValueOnce([]);
+    mocks.auditFindMany.mockResolvedValueOnce([row({})]);
+    mocks.queryRaw.mockResolvedValueOnce([row({})]).mockResolvedValueOnce([]);
     mocks.eventFindMany.mockResolvedValue([{ id: "e1", updatedAt: new Date("2026-11-03T17:41:00Z"), title: "Emerge Holiday Market" }]);
     const entries = await getHistory({ targetType: "EVENT", targetId: "e1", limit: 3, viewerId: "admin" });
     expect(mocks.auditFindMany.mock.calls[0][0]).toMatchObject({ where: { targetType: "EVENT", targetId: "e1" }, take: 3 });

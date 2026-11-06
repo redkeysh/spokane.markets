@@ -3,9 +3,10 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { formatDay } from "@/lib/admin/format";
+import { TimeOptions } from "@/components/admin/kit/time-select";
 import { dayProblem, type HeldDay } from "./held-edits";
 
-const TIME_INPUT =
+const TIME_SELECT =
   "h-[30px] w-[7.5rem] rounded-md border border-seam-strong bg-sheet px-2 text-sm tabular-nums text-basalt disabled:opacity-50 pointer-coarse:h-11 pointer-coarse:text-base";
 
 /**
@@ -49,28 +50,30 @@ export function HoursEditor({
             <label className="sr-only" htmlFor={`${id}-${i}-start`}>
               {label} opens at
             </label>
-            <input
+            <select
               id={`${id}-${i}-start`}
-              type="time"
               value={day.allDay ? "" : day.startTime}
               disabled={day.allDay}
               onChange={(e) => update(i, { startTime: e.target.value })}
-              className={TIME_INPUT}
-            />
+              className={TIME_SELECT}
+            >
+              <TimeOptions value={day.allDay ? "" : day.startTime} />
+            </select>
             <span aria-hidden="true" className="text-sm">
               to
             </span>
             <label className="sr-only" htmlFor={`${id}-${i}-end`}>
               {label} closes at
             </label>
-            <input
+            <select
               id={`${id}-${i}-end`}
-              type="time"
               value={day.allDay ? "" : day.endTime}
               disabled={day.allDay}
               onChange={(e) => update(i, { endTime: e.target.value })}
-              className={TIME_INPUT}
-            />
+              className={TIME_SELECT}
+            >
+              <TimeOptions value={day.allDay ? "" : day.endTime} />
+            </select>
             <label className="ml-1 inline-flex min-h-6 cursor-pointer items-center gap-1.5 text-sm">
               <input
                 type="checkbox"

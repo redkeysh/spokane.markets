@@ -17,7 +17,7 @@ vi.mock("@/lib/db", () => {
   return { db: client };
 });
 
-import { bringBack, dismissPair, forgetPair, later, laterUntil } from "./memo";
+import { bringBack, dismissPair, later, laterUntil } from "./memo";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -86,7 +86,7 @@ describe("memos", () => {
 
   it("writes nothing when there is no memo to forget", async () => {
     mocks.findUnique.mockResolvedValue(null);
-    await expect(forgetPair("not-same-event", "a", "b", "admin")).resolves.toBe(false);
+    await expect(bringBack("trade-shows", "admin")).resolves.toBe(false);
     expect(mocks.deleteMany).not.toHaveBeenCalled();
     expect(mocks.auditCreate).not.toHaveBeenCalled();
   });

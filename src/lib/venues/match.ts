@@ -259,31 +259,124 @@ export function placeMemosOf(memos: readonly { kind: string; key: string }[]): D
   };
 }
 
+/** Meters in one degree of latitude on the sphere distanceMeters uses. */
+const METERS_PER_DEGREE_LAT = (6371000 * Math.PI) / 180;
+
 /**
- * Groups (2 or more venues each) linked by isPossibleDuplicate or a "same"
- * memo, transitively. A "different" memo removes only its own pair's link, so
- * a group the owner split pair by pair falls apart.
+ * Index pairs (i, j) of pinned venues that may be within SAME_SPOT_METERS of each other. The pins go
+ * into a grid of cells at least that wide in both directions (the width in longitude is set for the
+ * pin farthest from the equator, with the columns dividing 360 degrees evenly so the grid wraps), and
+ * each pin is paired with the pins of its own and the eight neighboring cells.
  */
-export function findDuplicateGroups<T extends VenueLike & { id: string }>(venues: T[], memos: DuplicateMemos = {}): T[][] {
-  const parent = new Map(venues.map((v) => [v.id, v.id]));
-  const find = (id: string): string => {
-    let root = id;
-    while (parent.get(root) !== root) root = parent.get(root)!;
-    parent.set(id, root);
-    return root;
-  };
-  for (let i = 0; i < venues.length; i++) {
-    for (let j = i + 1; j < venues.length; j++) {
-      const key = pairKey(venues[i].id, venues[j].id);
-      if (memos.same?.has(key) || (!memos.different?.has(key) && isPossibleDuplicate(venues[i], venues[j]))) {
-        parent.set(find(venues[i].id), find(venues[j].id));
+function nearbyPairs(venues: readonly VenueLike[], add: (i: number, j: number) => void): void {
+  const pins = venues.flatMap((venue, i) => {
+    const coords = realCoords(venue);
+    return coords ? [{ i, lat: coords.lat, lng: (((coords.lng + 180) % 360) + 360) % 360 }] : [];
+  });
+  if (pins.length < 2) return;
+  const latSpan = (SAME_SPOT_METERS / METERS_PER_DEGREE_LAT) * 1.01;
+  const farthest = Math.min(90, pins.reduce((most, p) => Math.max(most, Math.abs(p.lat)), 0) + latSpan);
+  const cos = Math.cos((farthest * Math.PI) / 180);
+  const columns = cos > latSpan / 360 ? Math.max(1, Math.floor((360 * cos) / latSpan)) : 1;
+  const lngSpan = 360 / columns;
+  const cells = new Map<string, number[]>();
+  const cellKey = (row: number, column: number) => `${row}:${((column % columns) + columns) % columns}`;
+  const placed = pins.map((pin) => {
+    const row = Math.floor(pin.lat / latSpan);
+    const column = Math.floor(pin.lng / lngSpan);
+    const key = cellKey(row, column);
+    cells.set(key, [...(cells.get(key) ?? []), pin.i]);
+    return { i: pin.i, row, column };
+  });
+  for (const { i, row, column } of placed) {
+    const seen = new Set<string>();
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const key = cellKey(row + dr, column + dc);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        for (const j of cells.get(key) ?? []) if (j > i) add(i, j);
       }
     }
   }
-  const groups = new Map<string, T[]>();
-  for (const venue of venues) {
-    const root = find(venue.id);
-    groups.set(root, [...(groups.get(root) ?? []), venue]);
+}
+
+/**
+ * Index pairs (i < j) that isPossibleDuplicate can hold for, and more: every rule it applies needs
+ * the same street core, the same normalized name, or two real pins within SAME_SPOT_METERS, so
+ * only venues sharing a street core or a name, or pinned close together, are paired.
+ */
+function candidatePairs(venues: readonly VenueLike[]): [number, number][] {
+  const pairs = new Map<string, [number, number]>();
+  const add = (i: number, j: number) => {
+    const [a, b] = i < j ? [i, j] : [j, i];
+    pairs.set(`${a},${b}`, [a, b]);
+  };
+  const addBuckets = (keyOf: (v: VenueLike) => string | null) => {
+    const buckets = new Map<string, number[]>();
+    venues.forEach((venue, i) => {
+      const key = keyOf(venue);
+      if (key === null) return;
+      const bucket = buckets.get(key);
+      if (bucket) bucket.push(i);
+      else buckets.set(key, [i]);
+    });
+    for (const bucket of buckets.values()) {
+      for (let x = 0; x < bucket.length; x++) for (let y = x + 1; y < bucket.length; y++) add(bucket[x], bucket[y]);
+    }
+  };
+  addBuckets((v) => streetCore(v.address) || null);
+  addBuckets((v) => normalizeVenueName(v.name));
+  nearbyPairs(venues, add);
+  return [...pairs.values()];
+}
+
+/** Index pairs of the venues whose ids form a key of `keys` (pairKey of two ids). */
+function memoPairs(venues: readonly { id: string }[], keys: ReadonlySet<string>): [number, number][] {
+  const indexOf = new Map(venues.map((v, i) => [v.id, i]));
+  const pairs: [number, number][] = [];
+  for (const key of keys) {
+    for (let at = key.indexOf("|"); at !== -1; at = key.indexOf("|", at + 1)) {
+      const i = indexOf.get(key.slice(0, at));
+      const j = indexOf.get(key.slice(at + 1));
+      if (i !== undefined && j !== undefined && i !== j && pairKey(venues[i].id, venues[j].id) === key) {
+        pairs.push(i < j ? [i, j] : [j, i]);
+        break;
+      }
+    }
   }
+  return pairs;
+}
+
+/**
+ * Groups (2 or more venues each) linked by isPossibleDuplicate or a "same"
+ * memo, transitively. A "different" memo removes only its own pair's link, so
+ * a group the owner split pair by pair falls apart. Only candidate pairs are
+ * compared (see candidatePairs), so the cost grows about linearly with the
+ * number of venues.
+ */
+export function findDuplicateGroups<T extends VenueLike & { id: string }>(venues: T[], memos: DuplicateMemos = {}): T[][] {
+  const parent = venues.map((_, i) => i);
+  const find = (i: number): number => {
+    let root = i;
+    while (parent[root] !== root) root = parent[root];
+    parent[i] = root;
+    return root;
+  };
+  const join = (i: number, j: number) => {
+    parent[find(i)] = find(j);
+  };
+  if (memos.same?.size) for (const [i, j] of memoPairs(venues, memos.same)) join(i, j);
+  for (const [i, j] of candidatePairs(venues)) {
+    if (memos.different?.has(pairKey(venues[i].id, venues[j].id))) continue;
+    if (isPossibleDuplicate(venues[i], venues[j])) join(i, j);
+  }
+  const groups = new Map<number, T[]>();
+  venues.forEach((venue, i) => {
+    const root = find(i);
+    const group = groups.get(root);
+    if (group) group.push(venue);
+    else groups.set(root, [venue]);
+  });
   return [...groups.values()].filter((group) => group.length > 1);
 }

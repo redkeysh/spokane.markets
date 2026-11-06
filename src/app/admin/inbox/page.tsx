@@ -112,11 +112,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Search
                 <ItemView item={item} />
               ) : (
                 <Empty
-                  action={
-                    <Link href={inboxHref({ view: params.view })} className={adminButtonClass({ variant: "outline", size: "sm" })}>
-                      Show every {NOUNS[params.view][0]}
-                    </Link>
-                  }
+                  action={{ label: `Show every ${NOUNS[params.view][0]}`, href: inboxHref({ view: params.view }) }}
                 >
                   Nothing from the public has this address. It may have been deleted.
                 </Empty>
@@ -237,17 +233,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Search
             <InboxFilters params={params} resultSentence={resultSentence(params, total)} />
             {body ?? (
               <Empty
-                action={
-                  filtered ? (
-                    <Link href={inboxHref({ view: params.view })} className={adminButtonClass({ variant: "outline", size: "sm" })}>
-                      Clear filters
-                    </Link>
-                  ) : params.view !== "all" ? (
-                    <Link href="/admin/inbox" className={adminButtonClass({ variant: "outline", size: "sm" })}>
-                      Show everything from the public
-                    </Link>
-                  ) : undefined
-                }
+                action={!filtered && params.view !== "all" ? { label: "Show everything from the public", href: "/admin/inbox" } : undefined}
                 detail={filtered ? undefined : "Waiting items also show on To do under From the public."}
               >
                 {filtered ? resultSentence(params, 0) : params.view === "all" ? "Nothing from the public yet." : `No ${NOUNS[params.view][1]} yet.`}

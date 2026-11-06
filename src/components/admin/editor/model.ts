@@ -6,7 +6,6 @@
 import {
   addDays,
   dateColumnToIso,
-  formatShortDate,
   formatMonthDay,
   pacificDate,
   pacificTime,
@@ -575,11 +574,6 @@ export function comingSaturday(today: string): string {
   return addDays(today, (5 - weekdayIndex(today) + 7) % 7);
 }
 
-/** "Nov 7" or "Nov 7, 2027" for a short label. */
-export function shortDay(date: string, now: Date = new Date()): string {
-  return date.slice(0, 4) === pacificDate(now).slice(0, 4) ? formatShortDate(date) : formatMonthDay(date, now);
-}
-
 export { REJECT_REASONS } from "@/lib/admin/reject-reasons";
 
 /** Record pages the editor can be opened from, by the first segment after /admin. */
@@ -719,15 +713,7 @@ export function repeatedDates(days: readonly EditorDay[]): Set<string> {
   return repeated;
 }
 
-/** Time choices in 15 minute steps from 6:00 am round the clock, plus 11:59 pm for closing. */
-export function timeChoices(): string[] {
-  const all: string[] = [];
-  for (let minutes = 0; minutes < 24 * 60; minutes += 15) {
-    all.push(`${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`);
-  }
-  const pivot = all.indexOf("06:00");
-  return [...all.slice(pivot), ...all.slice(0, pivot), "23:59"];
-}
+export { timeChoices } from "@/components/admin/kit/time-select";
 
 /**
  * The first thing that stops a save, with the section that holds it. With `changed`, only the

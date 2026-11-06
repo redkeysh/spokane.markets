@@ -29,18 +29,6 @@ export const TextArea = React.forwardRef<
   );
 });
 
-/** A native select styled like the text fields. */
-export const SelectInput = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(function SelectInput(
-  { className, children, ...props },
-  ref
-) {
-  return (
-    <select ref={ref} className={cn(BASE, "h-9 px-2 pointer-coarse:h-11", className)} {...props}>
-      {children}
-    </select>
-  );
-});
-
 /** A line under a form: the error in ponderosa, announced when it appears. */
 export function FormError({ children, className }: { children?: React.ReactNode; className?: string }) {
   if (!children) return null;
